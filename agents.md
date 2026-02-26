@@ -1,0 +1,1122 @@
+# OpenCode Mobile - AI Coding Agent
+
+> **A powerful AI-powered coding assistant that runs natively on Android, bringing the capabilities of modern AI coding agents like Claude Code, Cursor, and GitHub Copilot directly to your mobile device.**
+
+[![Android](https://img.shields.io/badge/Android-15+-green.svg)](https://developer.android.com)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0-purple.svg)](https://kotlinlang.org)
+[![Jetpack Compose](https://img.shields.io/badge/Jetpack_Compose-1.7-blue.svg)](https://developer.android.com/jetpack/compose)
+
+---
+
+## 📋 Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Supported AI Providers](#-supported-ai-providers)
+- [Available Tools](#-available-tools)
+- [Security Architecture](#-security-architecture)
+- [System Prompt](#-system-prompt)
+- [Tool Definitions](#-tool-definitions)
+- [Agentic Loop](#-agentic-loop)
+- [Project Structure](#-project-structure)
+- [Database Schema](#-database-schema)
+- [API Integration](#-api-integration)
+- [Configuration](#️-configuration)
+- [Theme & Design](#-theme--design)
+- [Permissions](#-permissions)
+- [Building & Running](#-building--running)
+- [Example Conversations](#-example-conversations)
+- [Troubleshooting](#-troubleshooting)
+- [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
+
+## Overview
+
+OpenCode Mobile is an **autonomous AI coding agent** that can:
+- Read, write, and modify source code files
+- Navigate project structures
+- Execute shell commands (git, build tools, etc.)
+- Understand project context through file indexing
+- Stream responses in real-time
+- Request confirmation for dangerous operations
+
+Unlike simple code completion tools, OpenCode Mobile operates as a **full agent** that can:
+1. Understand your request
+2. Plan the necessary steps
+3. Execute tools to accomplish the task
+4. Verify the results
+5. Iterate if needed
+
+---
+
+## Features
+
+### ✅ Core Features
+- **Multi-provider AI support** - Use Claude, GPT-4, Gemini, or local models
+- **Real-time streaming** - See responses as they're generated
+- **Tool execution** - AI can read/write files, run commands
+- **Security guardrails** - Dangerous operations require confirmation
+- **Atomic file writes** - Files are never left in corrupted state
+- **Automatic backups** - Original files preserved before modification
+- **Syntax validation** - Code is validated before saving
+- **Project indexing** - Fast file search with FTS4
+
+### 🔮 Planned Features
+- Settings screen for API key configuration
+- Project browser for folder selection
+- Markdown rendering in chat
+- Syntax highlighting for code blocks
+- File diff viewer
+- Voice input support
+- Foreground service for long operations
+
+---
+
+## 🤖 Supported AI Providers
+
+### Anthropic (Claude)
+
+| Model | Context | Best For |
+|-------|---------|----------|
+| `claude-sonnet-4-20250514` | 200K | Best balance of speed and intelligence |
+| `claude-3-5-sonnet-20241022` | 200K | Fast, great for coding |
+| `claude-3-opus-20240229` | 200K | Most capable, complex reasoning |
+| `claude-3-haiku-20240307` | 200K | Fastest, simple tasks |
+
+**API Endpoint:** `https://api.anthropic.com/v1/messages`
+
+**Features:**
+- Native tool use support
+- Extended thinking (Claude 3.5+)
+- Streaming with Server-Sent Events
+
+---
+
+### OpenAI (GPT)
+
+| Model | Context | Best For |
+|-------|---------|----------|
+| `gpt-4o` | 128K | Best overall, multimodal |
+| `gpt-4o-mini` | 128K | Fast and cheap |
+| `gpt-4-turbo` | 128K | Powerful, JSON mode |
+| `gpt-3.5-turbo` | 16K | Budget option |
+
+**API Endpoint:** `https://api.openai.com/v1/chat/completions`
+
+**Features:**
+- Function calling
+- JSON mode
+- Streaming responses
+- Compatible with Azure OpenAI
+
+---
+
+### Google Gemini
+
+| Model | Context | Best For |
+|-------|---------|----------|
+| `gemini-1.5-pro` | 1M | Longest context, complex projects |
+| `gemini-1.5-flash` | 1M | Fast, efficient |
+| `gemini-2.0-flash` | 1M | Latest and fastest |
+
+**API Endpoint:** `https://generativelanguage.googleapis.com/v1beta/models`
+
+**Features:**
+- Function declarations
+- Massive context window
+- Multimodal support
+- Streaming with newline-delimited JSON
+
+---
+
+### Local Models (Ollama/LM Studio)
+
+Any OpenAI-compatible API can be used:
+
+```
+Base URL: http://localhost:11434/v1  (Ollama)
+Base URL: http://localhost:1234/v1   (LM Studio)
+```
+
+**Recommended Models:**
+- `codellama:34b`
+- `deepseek-coder:33b`
+- `qwen2.5-coder:32b`
+- `mistral-large`
+
+---
+
+## 🛠️ Available Tools
+
+### 1. read_file
+
+Read the content of a text file with safety limits.
+
+```json
+{
+  "name": "read_file",
+  "description": "Read the content of a text file",
+  "parameters": {
+    "path": {
+      "type": "string",
+      "description": "Absolute path to the file",
+      "required": true
+    },
+    "max_size": {
+      "type": "integer",
+      "description": "Maximum file size in bytes (default: 1MB, max: 10MB)",
+      "required": false
+    },
+    "start_line": {
+      "type": "integer",
+      "description": "Start reading from this line (1-indexed)",
+      "required": false
+    },
+    "end_line": {
+      "type": "integer",
+      "description": "Stop reading at this line (inclusive)",
+      "required": false
+    },
+    "encoding": {
+      "type": "string",
+      "description": "Character encoding (default: UTF-8)",
+      "required": false
+    }
+  }
+}
+```
+
+**Safety Features:**
+- Size limit prevents OOM on large files
+- Binary file detection
+- Charset detection with fallback
+- Line range support for large files
+
+---
+
+### 2. write_file
+
+Write content to a file with atomic operations and automatic backup.
+
+```json
+{
+  "name": "write_file",
+  "description": "Write content to a file with safety features",
+  "parameters": {
+    "path": {
+      "type": "string",
+      "description": "Absolute path to the file",
+      "required": true
+    },
+    "content": {
+      "type": "string",
+      "description": "Content to write",
+      "required": true
+    },
+    "create_backup": {
+      "type": "boolean",
+      "description": "Create backup before write (default: true)",
+      "required": false
+    },
+    "validate_syntax": {
+      "type": "boolean",
+      "description": "Validate code syntax (default: true for code files)",
+      "required": false
+    },
+    "create_dirs": {
+      "type": "boolean",
+      "description": "Create parent directories if needed (default: true)",
+      "required": false
+    },
+    "append": {
+      "type": "boolean",
+      "description": "Append instead of overwrite (default: false)",
+      "required": false
+    }
+  }
+}
+```
+
+**Safety Features:**
+- **Atomic writes**: Write to temp file, then atomic rename
+- **Automatic backup**: `filename.bak.{timestamp}`
+- **Syntax validation**: Bracket matching, quote matching
+- **Auto rollback**: Restore from backup on failure
+- **Backup retention**: Keeps last 5 backups per file
+
+---
+
+### 3. list_files
+
+List directory contents with filtering.
+
+```json
+{
+  "name": "list_files",
+  "description": "List files and directories",
+  "parameters": {
+    "path": {
+      "type": "string",
+      "description": "Directory path to list",
+      "required": true
+    },
+    "recursive": {
+      "type": "boolean",
+      "description": "List subdirectories recursively (default: false)",
+      "required": false
+    },
+    "max_depth": {
+      "type": "integer",
+      "description": "Maximum depth for recursive listing (default: 3)",
+      "required": false
+    },
+    "pattern": {
+      "type": "string",
+      "description": "Filter by glob pattern (e.g., '*.kt')",
+      "required": false
+    },
+    "include_hidden": {
+      "type": "boolean",
+      "description": "Include hidden files (default: false)",
+      "required": false
+    }
+  }
+}
+```
+
+---
+
+### 4. create_directory
+
+Create a directory with recursive creation.
+
+```json
+{
+  "name": "create_directory",
+  "description": "Create a directory and any necessary parent directories",
+  "parameters": {
+    "path": {
+      "type": "string",
+      "description": "Path of directory to create",
+      "required": true
+    }
+  }
+}
+```
+
+---
+
+### 5. delete_file
+
+Delete a file safely by moving to trash.
+
+```json
+{
+  "name": "delete_file",
+  "description": "Delete a file by moving to trash (recoverable)",
+  "parameters": {
+    "path": {
+      "type": "string",
+      "description": "Path of file to delete",
+      "required": true
+    },
+    "permanent": {
+      "type": "boolean",
+      "description": "Permanently delete (not recoverable, default: false)",
+      "required": false
+    }
+  }
+}
+```
+
+**Safety Features:**
+- Default moves to `.trash` folder (recoverable)
+- Permanent deletion requires explicit flag
+- Requires confirmation for protected paths
+
+---
+
+### 6. run_shell
+
+Execute shell commands with security validation.
+
+```json
+{
+  "name": "run_shell",
+  "description": "Execute a shell command",
+  "parameters": {
+    "command": {
+      "type": "string",
+      "description": "Shell command to execute",
+      "required": true
+    },
+    "working_directory": {
+      "type": "string",
+      "description": "Working directory for command execution",
+      "required": false
+    },
+    "timeout": {
+      "type": "integer",
+      "description": "Timeout in seconds (default: 30, max: 300)",
+      "required": false
+    }
+  }
+}
+```
+
+**Whitelisted Commands:**
+```
+git, ls, cat, head, tail, grep, find, wc, diff, 
+pwd, echo, mkdir, touch, cp, mv, rm,
+gradle, gradlew, npm, node, python, python3,
+adb, aapt, apksigner
+```
+
+**Blacklisted Patterns:**
+```
+rm -rf /
+sudo, su
+chmod 777
+> /dev, > /sys, > /proc
+curl | sh, wget | sh
+mkfs, dd if=
+:(){ :|:& };:
+```
+
+---
+
+## 🔒 Security Architecture
+
+### Multi-Layer Security Model
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     USER REQUEST                         │
+└─────────────────────────┬───────────────────────────────┘
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│              LAYER 1: INPUT VALIDATION                   │
+│  • Path sanitization (no ../ traversal)                  │
+│  • Command parsing and tokenization                      │
+│  • Argument type validation                              │
+└─────────────────────────┬───────────────────────────────┘
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│              LAYER 2: COMMAND VALIDATOR                  │
+│  • Whitelist check for shell commands                    │
+│  • Blacklist patterns for dangerous operations           │
+│  • Path access validation                                │
+│  • Protected paths enforcement                           │
+└─────────────────────────┬───────────────────────────────┘
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│              LAYER 3: CONFIRMATION GATE                  │
+│  • User prompt for sensitive operations                  │
+│  • Shows command/path details                            │
+│  • Explicit allow/deny                                   │
+└─────────────────────────┬───────────────────────────────┘
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│              LAYER 4: SAFE EXECUTION                     │
+│  • Atomic file operations                                │
+│  • Automatic backups                                     │
+│  • Timeout enforcement                                   │
+│  • Rollback on failure                                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Protected Paths
+
+These paths are **read-only** or **blocked**:
+
+| Path | Access Level |
+|------|--------------|
+| `/system` | Blocked |
+| `/data/data` (other apps) | Blocked |
+| `/proc`, `/sys`, `/dev` | Blocked |
+| `~/.ssh` | Confirmation required |
+| `~/.gnupg` | Confirmation required |
+| `/sdcard/Android/data` | Confirmation required |
+
+### Validation Results
+
+```kotlin
+sealed class ValidationResult {
+    object Allowed : ValidationResult()
+    
+    data class RequiresConfirmation(
+        val reason: String
+    ) : ValidationResult()
+    
+    data class Denied(
+        val reason: String
+    ) : ValidationResult()
+}
+```
+
+---
+
+## 📝 System Prompt
+
+The AI agent uses this system prompt:
+
+```
+You are an expert AI coding assistant running on an Android device.
+You help users write, edit, and debug code directly on their mobile device.
+
+CAPABILITIES:
+- Read and write files using native Android APIs
+- List directory contents
+- Run shell commands (for git, grep, build tools)
+- Create and delete files safely (with backup/trash)
+
+GUIDELINES:
+1. Always explain what you're doing before using tools
+2. Use native file tools instead of shell commands when possible
+3. Create backups before modifying important files
+4. Ask for confirmation before destructive operations
+5. Keep responses concise but informative
+6. When writing code, follow the project's existing style
+
+PROJECT STRUCTURE:
+[Dynamically injected based on indexed files]
+```
+
+---
+
+## 🔄 Agentic Loop
+
+The agent operates in a continuous loop:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    USER MESSAGE                          │
+└─────────────────────────┬───────────────────────────────┘
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│               BUILD REQUEST WITH CONTEXT                 │
+│  • Add system prompt                                     │
+│  • Add project structure                                 │
+│  • Add tool definitions                                  │
+│  • Add conversation history                              │
+└─────────────────────────┬───────────────────────────────┘
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│                  SEND TO AI PROVIDER                     │
+│  • Stream response tokens                                │
+│  • Collect tool calls                                    │
+└─────────────────────────┬───────────────────────────────┘
+                          ▼
+                 ┌────────┴────────┐
+                 │  Tool Calls?    │
+                 └────────┬────────┘
+              No          │          Yes
+               ▼          │           ▼
+    ┌──────────────┐      │    ┌──────────────────────┐
+    │    DONE      │      │    │   EXECUTE TOOLS      │
+    │ Show response│      │    │ • Validate security  │
+    └──────────────┘      │    │ • Request confirm    │
+                          │    │ • Execute operation  │
+                          │    │ • Collect results    │
+                          │    └──────────┬───────────┘
+                          │               │
+                          │               ▼
+                          │    ┌──────────────────────┐
+                          │    │ ADD TOOL RESULTS     │
+                          │    │ TO CONVERSATION      │
+                          └────┴──────────────────────┘
+                                         │
+                          ┌──────────────┘
+                          ▼
+                   (Loop continues)
+```
+
+**Maximum Iterations:** 10 (prevents infinite loops)
+
+---
+
+## 📁 Project Structure
+
+```
+app/src/main/java/com/opencode/mobile/
+│
+├── 📂 data/
+│   ├── 📂 local/db/
+│   │   ├── entity/
+│   │   │   ├── ProjectEntity.kt       # Project tracking
+│   │   │   ├── FileEntity.kt          # File index
+│   │   │   ├── FileMetadataEntity.kt  # Code symbols
+│   │   │   └── FileFtsEntity.kt       # Full-text search
+│   │   ├── dao/
+│   │   │   ├── ProjectDao.kt          # Project CRUD
+│   │   │   ├── FileDao.kt             # File queries + FTS
+│   │   │   └── FileMetadataDao.kt     # Symbol queries
+│   │   └── AppDatabase.kt             # Room database
+│   │
+│   ├── 📂 remote/api/
+│   │   ├── AiProvider.kt              # Unified interface
+│   │   ├── AnthropicProvider.kt       # Claude implementation
+│   │   ├── OpenAiProvider.kt          # GPT implementation
+│   │   ├── GeminiProvider.kt          # Gemini implementation
+│   │   ├── AiSettings.kt              # API key storage
+│   │   └── Models.kt                  # Request/Response types
+│   │
+│   └── 📂 repository/
+│       ├── AiRepository.kt            # AI orchestration
+│       └── FileIndexRepository.kt     # File system sync
+│
+├── 📂 di/
+│   ├── DatabaseModule.kt              # Room dependencies
+│   ├── NetworkModule.kt               # OkHttp, Moshi
+│   └── AiModule.kt                    # AI providers
+│
+├── 📂 domain/security/
+│   └── CommandValidator.kt            # Security validation
+│
+├── 📂 tools/
+│   ├── Tool.kt                        # Base interface
+│   ├── ToolResult.kt                  # Result types
+│   ├── ToolExecutor.kt                # Routing & execution
+│   ├── ReadFileTool.kt                # read_file
+│   ├── WriteFileTool.kt               # write_file
+│   ├── ListFilesTool.kt               # list_files
+│   ├── CreateDirectoryTool.kt         # create_directory
+│   ├── DeleteFileTool.kt              # delete_file
+│   └── RunShellTool.kt                # run_shell
+│
+├── 📂 ui/
+│   ├── 📂 chat/
+│   │   ├── ChatScreen.kt              # Main UI
+│   │   └── ChatViewModel.kt           # State management
+│   ├── 📂 theme/
+│   │   └── Theme.kt                   # Material 3 theme
+│   └── MainActivity.kt                # Entry point
+│
+└── OpenCodeApplication.kt             # Hilt application
+```
+
+---
+
+## 🗄️ Database Schema
+
+### Projects Table
+```sql
+CREATE TABLE projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    root_path TEXT NOT NULL UNIQUE,
+    last_opened_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    file_count INTEGER DEFAULT 0,
+    total_size_bytes INTEGER DEFAULT 0
+);
+```
+
+### Files Table
+```sql
+CREATE TABLE files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    file_name TEXT NOT NULL,
+    relative_path TEXT NOT NULL,
+    extension TEXT,
+    size_bytes INTEGER NOT NULL,
+    last_modified INTEGER NOT NULL,
+    content_hash TEXT,
+    is_directory INTEGER NOT NULL DEFAULT 0,
+    indexed_at INTEGER NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_files_project ON files(project_id);
+CREATE INDEX idx_files_path ON files(project_id, relative_path);
+CREATE INDEX idx_files_extension ON files(project_id, extension);
+```
+
+### Files FTS (Full-Text Search)
+```sql
+CREATE VIRTUAL TABLE files_fts USING fts4(
+    file_name,
+    relative_path,
+    content=files
+);
+```
+
+### File Metadata Table
+```sql
+CREATE TABLE file_metadata (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_id INTEGER NOT NULL,
+    language TEXT,
+    line_count INTEGER,
+    has_syntax_errors INTEGER DEFAULT 0,
+    symbols TEXT,  -- JSON array of symbols
+    imports TEXT,  -- JSON array of imports
+    analyzed_at INTEGER,
+    FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+);
+```
+
+---
+
+## 🌐 API Integration
+
+### Anthropic Messages API
+
+**Request:**
+```http
+POST https://api.anthropic.com/v1/messages
+Content-Type: application/json
+x-api-key: YOUR_API_KEY
+anthropic-version: 2023-06-01
+
+{
+  "model": "claude-sonnet-4-20250514",
+  "max_tokens": 8192,
+  "stream": true,
+  "system": "You are an AI coding assistant...",
+  "tools": [...],
+  "messages": [
+    {"role": "user", "content": "Read the MainActivity.kt file"}
+  ]
+}
+```
+
+**Stream Events:**
+```
+event: content_block_start
+data: {"type":"content_block_start","content_block":{"type":"text"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"I'll read"}}
+
+event: content_block_start
+data: {"type":"content_block_start","content_block":{"type":"tool_use","name":"read_file"}}
+
+event: message_stop
+data: {"type":"message_stop"}
+```
+
+### OpenAI Chat Completions API
+
+**Request:**
+```http
+POST https://api.openai.com/v1/chat/completions
+Content-Type: application/json
+Authorization: Bearer YOUR_API_KEY
+
+{
+  "model": "gpt-4o",
+  "stream": true,
+  "messages": [...],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read file content",
+        "parameters": {...}
+      }
+    }
+  ]
+}
+```
+
+### Gemini Generate Content API
+
+**Request:**
+```http
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:streamGenerateContent?key=YOUR_API_KEY
+Content-Type: application/json
+
+{
+  "contents": [...],
+  "tools": [
+    {
+      "function_declarations": [
+        {
+          "name": "read_file",
+          "description": "Read file content",
+          "parameters": {...}
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## ⚙️ Configuration
+
+### Environment Setup
+
+1. **Android SDK**: Install via Android Studio or command line
+2. **JDK 17+**: Required for Gradle 8.x
+3. **Gradle 8.9**: Included via wrapper
+
+### local.properties
+```properties
+sdk.dir=C\:\\Users\\YourName\\AppData\\Local\\Android\\sdk
+```
+
+### gradle.properties
+```properties
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+org.gradle.parallel=true
+org.gradle.configuration-cache=true
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+```
+
+### API Key Configuration
+
+API keys are stored in encrypted DataStore:
+
+```kotlin
+// In AiSettingsManager
+suspend fun setAnthropicApiKey(key: String)
+suspend fun setOpenAiApiKey(key: String)
+suspend fun setGeminiApiKey(key: String)
+```
+
+---
+
+## 🎨 Theme & Design (Material 3 Expensive)
+
+The app strictly adheres to a "Material 3 Expensive" design language, prioritizing absolute premium feel over basic functional UI.
+
+### Core Visual Language
+- **Generous Padding**: Minimum `16.dp` global margins, `24.dp` spacing between major sections.
+- **Expressive Shapes**: Heavy use of `RoundedCornerShape(24.dp)` instead of standard `12.dp`.
+- **Tonal Elevation**: Use `surfaceContainer`, `surfaceContainerHigh`, and `surfaceContainerHighest` instead of stark shadows (`elevation = 0.dp` is preferred for modern flatness with tonal differentiation).
+- **Edge-to-Edge**: Full screen rendering. Layouts MUST pad exactly to system status bars and navigation bars (e.g., `statusBarsPadding()`, `navigationBarsPadding()`). DO NOT hardcode padding that overlaps with system UI.
+
+### Color Palette (VS Code Inspired)
+
+| Role | Light | Dark | Usage |
+|------|-------|------|-------|
+| Primary | `#0066CC` | `#569CD6` | Buttons, links, keywords |
+| Secondary | `#008080` | `#4EC9B0` | Types, classes |
+| Tertiary | `#A31515` | `#CE9178` | Strings |
+| Background | `#FFFFFF` | `#1E1E1E` | Main background |
+| Surface | `#F3F3F3` | `#252526` | Cards, dialogs |
+| Error | `#E51400` | `#F44747` | Errors |
+| Success | `#008000` | `#4EC9B0` | Success states |
+
+### AI Chat UI Strict Rules
+The chat interface intentionally deviates from standard SMS-style apps to feel like an integrated IDE terminal/assistant:
+
+1. **NO Chat Bubbles**: Text messages must flow naturally without being enclosed in rounded bubbles.
+2. **Minimal Tool Calls**: `ToolCallCard` components must be extra minimal (no green dot header).
+3. **Exit Codes**: Tool results use exit codes. `exit 0` = minimal green background. `exit 1` = minimal red background.
+4. **Shimmering Thinking Indicator**: Never use static "AI is thinking" text. Use exactly "Thinking.." with an animated gradient shimmering effect (Black -> White -> Black on Light mode, inverse on Dark mode).
+5. **Dynamic Input Bar**: The message input area contains a single dynamic button: Send icon when typing, Stop icon (square) during AI streaming to halt generation. The input bar's padding MUST perfectly align with the screen edges and navigation bars.
+
+### Settings & Persona UI Rules
+1. **Agent Configuration**: Provider selection must use space-saving layouts like `ExposedDropdownMenuBox` to keep forms clean. Standard providers (OpenAI, Anthropic, Gemini) handle base URLs automatically under-the-hood to simplify UX.
+2. **Persona Simple Mode**: Configuration fields must be neatly separated (e.g., using `HorizontalDivider`) and include quick-select `AssistChip` rows (Suggestion Pills) for rapid styling (e.g., "Friendly", "Analytical").
+3. **Persona Pro Mode**: File editors for `.md` guidelines (like `AGENTS.md`) must use a sleek `ScrollableTabRow` interface resembling a professional IDE, avoiding massive vertical scrolling text fields.
+
+---
+
+## 🧭 Navigation & Transitions (Pure Android 16 Stock)
+
+To achieve the absolute **Pure Vanilla Android 16 / Pixel UI** feel with flawless **Predictive Back Gestures**, this project strictly abandons custom Jetpack Compose NavHost transitions for major screens.
+
+### The "Standalone Activity" Rule
+- **Main Chat Flow**: Handled by a single `NavHost` in `MainActivity` with **ZERO custom transitions** (`enterTransition`, `exitTransition`, etc. must not be defined).
+- **Major Screens (Settings, Workspace)**: Must be deployed as **Standalone Activities** (e.g., `SettingsActivity`, `WorkspaceActivity`), entirely outside the `NavHost`.
+- **Navigation Pattern**: Use standard Android `startActivity(Intent(this, WorkspaceActivity::class.java))` instead of `navController.navigate("workspace")`.
+
+### Why Activity-Based Navigation?
+By splitting major screens into separate Activities, we force the Android Operating System's `SurfaceFlinger` to handle all deep hierarchical transitions at the system level. This guarantees:
+1. Flawless **Android 16 Material 3 Expressive motion physics**.
+2. Zero "black screen" or "transparency" glitches during the predictive back swipe drag.
+3. 100% native Z-depth scaling (the outgoing screen shrinks to 90%, the incoming screen scales up).
+4. Uninterrupted 60/120fps scrubbing when the user reverses a back gesture midway.
+
+**Any attempt to recreate these system-level predictive back animations manually using Compose `AnimatedContentTransitionScope` overrides is strictly forbidden for major context switches.**
+
+---
+
+## 📱 Permissions
+
+### Required Permissions
+
+| Permission | Purpose | When Requested |
+|------------|---------|----------------|
+| `INTERNET` | AI API calls | Always granted |
+| `ACCESS_NETWORK_STATE` | Check connectivity | Always granted |
+| `MANAGE_EXTERNAL_STORAGE` | Access project files | On first project open |
+| `FOREGROUND_SERVICE` | Long operations | When starting service |
+
+### Runtime Permission Flow
+
+```kotlin
+// Check for file access permission
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+    if (!Environment.isExternalStorageManager()) {
+        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+        intent.data = Uri.parse("package:$packageName")
+        startActivity(intent)
+    }
+}
+```
+
+---
+
+## 🔨 Building & Running
+
+### Prerequisites
+- Android SDK (API 35)
+- JDK 17+
+- Connected Android device with USB debugging
+
+### Build Commands
+
+```bash
+# Build debug APK
+./gradlew assembleDebug
+
+# Install on connected device
+./gradlew installDebug
+
+# Run tests
+./gradlew test
+
+# Build release APK
+./gradlew assembleRelease
+```
+
+### ADB Commands
+
+```bash
+# List connected devices
+adb devices
+
+# Install APK
+adb install app/build/outputs/apk/debug/app-debug.apk
+
+# Launch app
+adb shell am start -n com.opencode.mobile.debug/com.opencode.mobile.ui.MainActivity
+
+# View logs
+adb logcat -s "OpenCode:*" "AndroidRuntime:E"
+
+# Uninstall
+adb uninstall com.opencode.mobile.debug
+```
+
+---
+
+## 💬 Example Conversations
+
+### Example 1: Reading a File
+
+**User:** Read the MainActivity.kt file
+
+**Agent:** I'll read the MainActivity.kt file for you.
+
+```tool_use
+{
+  "name": "read_file",
+  "arguments": {
+    "path": "/storage/emulated/0/Projects/MyApp/app/src/main/java/com/example/MainActivity.kt"
+  }
+}
+```
+
+**Tool Result:**
+```kotlin
+package com.example
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+...
+```
+
+**Agent:** Here's the content of MainActivity.kt. It's a standard Compose activity that...
+
+---
+
+### Example 2: Modifying Code
+
+**User:** Add a new button called "Settings" to the main screen
+
+**Agent:** I'll add a Settings button to the main screen. Let me first read the current implementation, then make the modification.
+
+```tool_use
+{
+  "name": "read_file",
+  "arguments": {"path": "...MainActivity.kt"}
+}
+```
+
+Now I'll add the Settings button:
+
+```tool_use
+{
+  "name": "write_file",
+  "arguments": {
+    "path": "...MainActivity.kt",
+    "content": "...updated content with Settings button..."
+  }
+}
+```
+
+**Tool Result:** Successfully written to: MainActivity.kt (1523 chars)
+Backup created: MainActivity.kt.bak.1706745600000
+
+**Agent:** Done! I've added a Settings button to the main screen. The button is placed in the top app bar...
+
+---
+
+### Example 3: Running Commands
+
+**User:** Run the tests and show me the results
+
+**Agent:** I'll run the tests for you.
+
+```tool_use
+{
+  "name": "run_shell",
+  "arguments": {
+    "command": "./gradlew test",
+    "working_directory": "/storage/emulated/0/Projects/MyApp",
+    "timeout": 120
+  }
+}
+```
+
+**Tool Result:**
+```
+> Task :app:testDebugUnitTest
+
+com.example.MyTest > testAddition PASSED
+com.example.MyTest > testSubtraction PASSED
+com.example.MyTest > testMultiplication FAILED
+
+3 tests, 1 failure
+
+FAILURE: Build failed with an exception.
+```
+
+**Agent:** The tests completed with 1 failure. Let me show you the failing test...
+
+---
+
+## 🐛 Troubleshooting
+
+### App Crashes on Launch
+
+**Cause:** Missing Hilt injection
+**Solution:** Ensure `OpenCodeApplication` is annotated with `@HiltAndroidApp`
+
+### "API Key Not Set" Error
+
+**Cause:** No API key configured
+**Solution:** Add API key in Settings (or hardcode for testing)
+
+### File Permission Denied
+
+**Cause:** Missing MANAGE_EXTERNAL_STORAGE permission
+**Solution:** Grant permission in Settings > Apps > OpenCode > Permissions
+
+### Tool Execution Timeout
+
+**Cause:** Command taking too long
+**Solution:** Increase timeout parameter or break into smaller operations
+
+### Build Fails with SDK Error
+
+**Cause:** Missing compileSdk 35
+**Solution:** Update Android SDK via SDK Manager
+
+---
+
+## 🗺️ Roadmap
+
+### v1.0 (Current)
+- [x] Core agent functionality
+- [x] Multi-provider support
+- [x] Tool execution engine
+- [x] Security validation
+- [x] Basic chat UI
+
+### v1.1 (Next)
+- [x] Settings screen (Agent & Persona UI)
+- [ ] Project browser
+- [ ] Markdown rendering
+- [ ] Syntax highlighting
+
+### v1.2
+- [ ] Foreground service
+- [ ] Voice input
+- [ ] File diff viewer
+- [ ] Git integration UI
+
+### v2.0
+- [ ] Multi-file context
+- [ ] Code search
+- [ ] Refactoring tools
+- [ ] Plugin system
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
+
+### Code Style
+- Follow Kotlin coding conventions
+- Use meaningful variable names
+- Add KDoc comments for public APIs
+- Write unit tests for new features
+
+---
+
+## 📄 License
+
+MIT License
+
+```
+Copyright (c) 2024 OpenCode Mobile
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
+<p align="center">
+  Built with ❤️ using Kotlin, Jetpack Compose, and AI
+</p>
+
+<p align="center">
+  <strong>OpenCode Mobile</strong> - Code Anywhere, Anytime
+</p>

@@ -154,19 +154,31 @@ Base URL: http://localhost:1234/v1   (LM Studio)
 
 ## 🛠️ Available Tools
 
+> **11 tools total** (simplified from 17 in v1.0). Tools are merged for clarity and efficiency.
+
 ### 1. read_file
 
-Read the content of a text file with safety limits.
+Read one or more files, or get file metadata.
 
 ```json
 {
   "name": "read_file",
-  "description": "Read the content of a text file",
+  "description": "Read file content, batch-read multiple files, or get file info",
   "parameters": {
     "path": {
       "type": "string",
-      "description": "Absolute path to the file",
-      "required": true
+      "description": "Absolute path to the file (single file mode)",
+      "required": false
+    },
+    "paths": {
+      "type": "array",
+      "description": "List of paths for batch read",
+      "required": false
+    },
+    "info_only": {
+      "type": "boolean",
+      "description": "Return file metadata only (size, modified, line count) without content",
+      "required": false
     },
     "max_size": {
       "type": "integer",
@@ -197,6 +209,7 @@ Read the content of a text file with safety limits.
 - Binary file detection
 - Charset detection with fallback
 - Line range support for large files
+- Batch mode: reads multiple files in one call
 
 ---
 
@@ -252,7 +265,51 @@ Write content to a file with atomic operations and automatic backup.
 
 ---
 
-### 3. list_files
+### 3. edit_file
+
+Apply targeted edits to a file — find/replace or unified diff patch. Preferred over `write_file` for partial changes.
+
+```json
+{
+  "name": "edit_file",
+  "description": "Edit a file using find/replace or unified diff",
+  "parameters": {
+    "path": {
+      "type": "string",
+      "description": "Absolute path to the file",
+      "required": true
+    },
+    "find": {
+      "type": "string",
+      "description": "Exact text to find (for find/replace mode)",
+      "required": false
+    },
+    "replace": {
+      "type": "string",
+      "description": "Replacement text (for find/replace mode)",
+      "required": false
+    },
+    "diff": {
+      "type": "string",
+      "description": "Unified diff patch to apply (for diff mode)",
+      "required": false
+    },
+    "create_backup": {
+      "type": "boolean",
+      "description": "Create backup before edit (default: true)",
+      "required": false
+    }
+  }
+}
+```
+
+**Modes:**
+- **Find/replace**: provide `find` + `replace` — replaces first occurrence
+- **Diff patch**: provide `diff` as unified diff — applies patch hunks
+
+---
+
+### 4. list_files
 
 List directory contents with filtering.
 
@@ -292,7 +349,47 @@ List directory contents with filtering.
 
 ---
 
-### 4. create_directory
+### 5. find_files
+
+Search for files by name pattern or content (replaces `search_files`).
+
+```json
+{
+  "name": "find_files",
+  "description": "Search for files by name pattern or content",
+  "parameters": {
+    "path": {
+      "type": "string",
+      "description": "Root directory to search in",
+      "required": true
+    },
+    "name_pattern": {
+      "type": "string",
+      "description": "Glob pattern for file names (e.g., '*.kt')",
+      "required": false
+    },
+    "content": {
+      "type": "string",
+      "description": "Search for files containing this text (grep-style)",
+      "required": false
+    },
+    "recursive": {
+      "type": "boolean",
+      "description": "Search subdirectories recursively (default: true)",
+      "required": false
+    },
+    "max_results": {
+      "type": "integer",
+      "description": "Maximum number of results (default: 50)",
+      "required": false
+    }
+  }
+}
+```
+
+---
+
+### 6. create_directory
 
 Create a directory with recursive creation.
 
@@ -312,7 +409,7 @@ Create a directory with recursive creation.
 
 ---
 
-### 5. delete_file
+### 7. delete_file
 
 Delete a file safely by moving to trash.
 
@@ -342,7 +439,42 @@ Delete a file safely by moving to trash.
 
 ---
 
-### 6. run_shell
+### 8. transfer_file
+
+Copy or move a file (replaces `copy_file` + `move_file`).
+
+```json
+{
+  "name": "transfer_file",
+  "description": "Copy or move a file from source to destination",
+  "parameters": {
+    "source": {
+      "type": "string",
+      "description": "Absolute path of the source file",
+      "required": true
+    },
+    "destination": {
+      "type": "string",
+      "description": "Absolute path of the destination",
+      "required": true
+    },
+    "move": {
+      "type": "boolean",
+      "description": "If true, move (rename) instead of copy (default: false)",
+      "required": false
+    },
+    "overwrite": {
+      "type": "boolean",
+      "description": "Overwrite destination if it exists (default: false)",
+      "required": false
+    }
+  }
+}
+```
+
+---
+
+### 9. run_shell
 
 Execute shell commands with security validation.
 
@@ -391,7 +523,7 @@ mkfs, dd if=
 
 ---
 
-### 7. update_todo
+### 10. update_todo
 
 Update the live task list shown above the chat input. AI uses this to communicate plan and progress.
 
@@ -443,10 +575,11 @@ Update the live task list shown above the chat input. AI uses this to communicat
 - **Position**: Sits directly below `TopAppBar` (in `topBar` Column of `Scaffold`), NOT in `bottomBar`
 - **Collapsed** (default): Shows step number pill + current `active_form`/`content` with shimmer + `2/5` progress fraction
 - **Expanded** (tap to open): Full list with icons — ✅ completed (green), ● in_progress (shimmer), ○ pending (dimmed)
-- **Shimmer technique**: Text must have **solid `color = onSurface`** first, then `BlendMode.SrcAtop` overlay via `drawWithContent`. Requires `CompositingStrategy.Offscreen` on the modifier. Same as `Thinking..` indicator.
+- **Shimmer technique**: Text must have **solid `color = onSurface`** first, then `BlendMode.SrcAtop` overlay via `drawWithContent`. Requires `CompositingStrategy.Offscreen` on the modifier. Same as `Thinking..` indicator. **DO NOT use `alpha=0.99f` + `BlendMode.SrcIn` — this is incorrect and produces wrong results.**
 - **Shimmer colors**: `baseShimmer = Color(0xFF9E9E9E)` dark / `Color(0xFF757575)` light; `peakShimmer = Color.White` dark / `Color.Black` light
 - **Only active items shimmer**: `in_progress` items get shimmer in both collapsed row and expanded list. `pending`/`completed` use plain muted color.
 - Cleared automatically on new conversation (`todoRepository.clear()` called in `clearConversation()`)
+- **ToolResultPreview for `update_todo`**: Shows real task list with status icons (`✓` completed green, `●` in_progress blue, `○` pending muted) + progress bar. Reads from `arguments["todos"]` list, NOT from result string.
 
 ```kotlin
 // Correct shimmer pattern (identical to Thinking.. indicator):
@@ -464,7 +597,7 @@ Text(
 
 ---
 
-### 8. invoke_subagents
+### 11. invoke_subagents
 
 Spawn multiple independent AI subagents that run in parallel. Each subagent is a full AI chat call with its own tools.
 
@@ -1545,6 +1678,12 @@ FAILURE: Build failed with an exception.
 - [x] DAO `@Singleton` — all 5 DAO providers now singleton in `DatabaseModule`
 - [x] Dead code removal — `selectProvider()`, `providers`/`selectedProvider` from `ChatUiState`
 - [x] UUID tool call IDs — GeminiProvider now uses `UUID.randomUUID()` instead of timestamp
+- [x] Tool simplification — 17 → 11 tools: merged `batch_read`→`read_file`, `search_files`→`find_files`, `apply_diff`→`edit_file`, `copy_file`+`move_file`→`transfer_file`, `get_file_info`→`read_file(info_only)`
+- [x] ToolCallCard polish — no delete button, minimal clean design
+- [x] Shimmer fix — all RUNNING texts use `CompositingStrategy.Offscreen` + `BlendMode.SrcAtop` (consistent with `Thinking..` and `TodoBar`)
+- [x] `update_todo` ToolResultPreview — shows real task list with status icons + progress bar (not just numbers)
+- [x] `formatToolName` for `invoke_subagents` — shows task name list (e.g. `Audit UI · Backend  +2`)
+- [x] `SubagentChildCard` — each subagent has its own shimmer card in expanded `ToolCallCard`
 - [ ] Project browser
 - [ ] Syntax highlighting for code blocks
 

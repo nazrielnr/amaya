@@ -1,10 +1,6 @@
-﻿package com.amaya.intelligence.ui.settings
+package com.amaya.intelligence.ui.settings
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,7 +16,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -40,7 +37,6 @@ fun AgentsScreen(
         initial = com.amaya.intelligence.data.remote.api.AiSettings()
     )
 
-    // Which config is being edited in the bottom sheet (null = sheet is closed)
     var editingConfig by remember { mutableStateOf<AgentConfig?>(null) }
     var editingIsNew by remember { mutableStateOf(false) }
 
@@ -74,16 +70,15 @@ fun AgentsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(vertical = 12.dp)
         ) {
-            // ── Existing Agents ──────────────────────────────────────
             if (settings.agentConfigs.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 40.dp),
+                            .padding(top = 60.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -91,7 +86,7 @@ fun AgentsScreen(
                                 Icons.Default.SmartToy,
                                 contentDescription = null,
                                 modifier = Modifier.size(56.dp),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
                             )
                             Spacer(Modifier.height(12.dp))
                             Text(
@@ -109,149 +104,198 @@ fun AgentsScreen(
                 }
             }
 
-            items(settings.agentConfigs, key = { it.id }) { config ->
-                val isActive  = config.id == settings.activeAgentId
+            // Active agents section
+            val activeAgents = settings.agentConfigs.filter { it.enabled }
+            val disabledAgents = settings.agentConfigs.filter { !it.enabled }
 
-                AgentSummaryCard(
-                    config = config,
-                    isActive = isActive,
-                    onClick = {
-                        editingConfig = config
-                        editingIsNew = false
-                    },
-                    onSetActive = {
-                        scope.launch {
-                            aiSettingsManager.setActiveAgent(config.id, config.modelId)
-                            aiSettingsManager.setOpenAiSettings(
-                                aiSettingsManager.getAgentApiKey(config.id),
-                                config.baseUrl
-                            )
-                            snackbarHostState.showSnackbar("Active agent: ${config.name}")
-                        }
-                    }
-                )
-            }
-
-            item { Spacer(Modifier.height(32.dp)) }
-        }
-
-        editingConfig?.let { currentConfig ->
-            val sheetState = rememberModalBottomSheetState(
-                skipPartiallyExpanded = true,
-                confirmValueChange = { false } // Prevent closing by swipe
-            )
-            val currentApiKey = remember(currentConfig.id) {
-                if (editingIsNew) "" else aiSettingsManager.getAgentApiKey(currentConfig.id)
-            }
-            val isActive = currentConfig.id == settings.activeAgentId
-
-            ModalBottomSheet(
-                onDismissRequest = {
-                    scope.launch {
-                        sheetState.hide()
-                        editingConfig = null
-                    }
-                },
-                sheetState = sheetState,
-                containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                dragHandle = null
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                        .imePadding()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 32.dp, top = 16.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    AgentEditCard(
-                        config = currentConfig,
-                        apiKey = currentApiKey,
-                        isNew = editingIsNew,
+            if (activeAgents.isNotEmpty()) {
+                item {
+                    Text(
+                        "Active",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                    )
+                }
+                items(activeAgents, key = { "active_${it.id}" }) { config ->
+                    val isActive = config.id == settings.activeAgentId
+                    AgentCard(
+                        config = config,
                         isActive = isActive,
-                        onSave = { updatedConfig, key ->
-                            editingConfig = null // Instantly close modal
+                        onClick = { editingConfig = config; editingIsNew = false },
+                        onToggleEnabled = { enabled ->
                             scope.launch {
-                                aiSettingsManager.saveAgentConfig(updatedConfig, key)
-                                snackbarHostState.showSnackbar("Agent saved ✓")
+                                aiSettingsManager.saveAgentConfig(
+                                    config.copy(enabled = enabled),
+                                    aiSettingsManager.getAgentApiKey(config.id)
+                                )
                             }
                         },
-                        onDiscard = {
-                            editingConfig = null // Instantly close modal
-                        },
-                        onDelete = if (editingIsNew) null else {
-                            {
-                                editingConfig = null // Instantly close modal
-                                scope.launch {
-                                    aiSettingsManager.deleteAgentConfig(currentConfig.id)
-                                    snackbarHostState.showSnackbar("Agent deleted")
-                                }
-                            }
-                        },
-                        onSetActive = if (editingIsNew || isActive) null else {
-                            {
-                                editingConfig = null // Instantly close modal
-                                scope.launch {
-                                    aiSettingsManager.setActiveAgent(currentConfig.id, currentConfig.modelId)
-                                    aiSettingsManager.setOpenAiSettings(
-                                        aiSettingsManager.getAgentApiKey(currentConfig.id),
-                                        currentConfig.baseUrl
-                                    )
-                                    snackbarHostState.showSnackbar("Active agent: ${currentConfig.name}")
-                                }
+                        onSetActive = {
+                            scope.launch {
+                                aiSettingsManager.setActiveAgent(config.id, config.modelId)
+                                aiSettingsManager.setOpenAiSettings(
+                                    aiSettingsManager.getAgentApiKey(config.id),
+                                    config.baseUrl
+                                )
+                                snackbarHostState.showSnackbar("Active: ${config.name}")
                             }
                         }
                     )
                 }
             }
+
+            if (disabledAgents.isNotEmpty()) {
+                item {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Disabled",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                    )
+                }
+                items(disabledAgents, key = { "disabled_${it.id}" }) { config ->
+                    AgentCard(
+                        config = config,
+                        isActive = false,
+                        onClick = { editingConfig = config; editingIsNew = false },
+                        onToggleEnabled = { enabled ->
+                            scope.launch {
+                                aiSettingsManager.saveAgentConfig(
+                                    config.copy(enabled = enabled),
+                                    aiSettingsManager.getAgentApiKey(config.id)
+                                )
+                            }
+                        },
+                        onSetActive = null
+                    )
+                }
+            }
+
+            item { Spacer(Modifier.height(32.dp)) }
+        }
+    }
+
+    // BottomSheet drawer for add/edit — full-height, square top, fills statusbar
+    editingConfig?.let { currentConfig ->
+        val sheetScope = rememberCoroutineScope()
+        val sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true,
+            confirmValueChange = { false }
+        )
+        // Predictive back: animate sheet down, then dismiss
+        BackHandler {
+            sheetScope.launch {
+                sheetState.hide()
+                editingConfig = null
+            }
+        }
+        val currentApiKey = remember(currentConfig.id) {
+            if (editingIsNew) "" else aiSettingsManager.getAgentApiKey(currentConfig.id)
+        }
+        val isActive = currentConfig.id == settings.activeAgentId
+
+        ModalBottomSheet(
+            onDismissRequest = { editingConfig = null },
+            sheetState = sheetState,
+            containerColor = Color.Transparent,
+            dragHandle = null
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .imePadding(),
+                color = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(0.dp)
+            ) {
+                AgentEditSheet(
+                    config = currentConfig,
+                    apiKey = currentApiKey,
+                    isNew = editingIsNew,
+                    isActive = isActive,
+                    onDismiss = { editingConfig = null },
+                    onSave = { updatedConfig, key ->
+                        editingConfig = null
+                        scope.launch {
+                            aiSettingsManager.saveAgentConfig(updatedConfig, key)
+                            snackbarHostState.showSnackbar("Agent saved ✓")
+                        }
+                    },
+                    onDelete = if (editingIsNew) null else {
+                        {
+                            editingConfig = null
+                            scope.launch {
+                                aiSettingsManager.deleteAgentConfig(currentConfig.id)
+                                snackbarHostState.showSnackbar("Agent deleted")
+                            }
+                        }
+                    },
+                    onSetActive = if (editingIsNew || isActive) null else {
+                        {
+                            editingConfig = null
+                            scope.launch {
+                                aiSettingsManager.setActiveAgent(currentConfig.id, currentConfig.modelId)
+                                aiSettingsManager.setOpenAiSettings(
+                                    aiSettingsManager.getAgentApiKey(currentConfig.id),
+                                    currentConfig.baseUrl
+                                )
+                                snackbarHostState.showSnackbar("Active: ${currentConfig.name}")
+                            }
+                        }
+                    }
+                )
+            }
         }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Summary card (collapsed view)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Agent Card (list item) ───────────────────────────────────────────────────
 
 @Composable
-private fun AgentSummaryCard(
+private fun AgentCard(
     config: AgentConfig,
     isActive: Boolean,
     onClick: () -> Unit,
-    onSetActive: () -> Unit
+    onToggleEnabled: (Boolean) -> Unit,
+    onSetActive: (() -> Unit)?
 ) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
-        color = if (isActive)
-            MaterialTheme.colorScheme.primaryContainer
-        else
-            MaterialTheme.colorScheme.surface,
-        tonalElevation = if (isActive) 0.dp else 1.dp,
+        color = when {
+            isActive -> MaterialTheme.colorScheme.primaryContainer
+            !config.enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            else -> MaterialTheme.colorScheme.surface
+        },
+        tonalElevation = if (config.enabled && !isActive) 1.dp else 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon badge
+            // Avatar badge
             Surface(
                 shape = CircleShape,
-                color = if (isActive)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.size(42.dp)
+                color = when {
+                    isActive -> MaterialTheme.colorScheme.primary
+                    config.enabled -> MaterialTheme.colorScheme.secondaryContainer
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                },
+                modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         if (isActive) Icons.Default.CheckCircle else Icons.Default.SmartToy,
                         contentDescription = null,
-                        tint = if (isActive)
-                            MaterialTheme.colorScheme.onPrimary
-                        else
-                            MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(22.dp)
+                        tint = when {
+                            isActive -> MaterialTheme.colorScheme.onPrimary
+                            config.enabled -> MaterialTheme.colorScheme.onSecondaryContainer
+                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                        },
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -263,13 +307,15 @@ private fun AgentSummaryCard(
                     Text(
                         config.name.ifBlank { "Unnamed Agent" },
                         style = MaterialTheme.typography.titleSmall,
-                        color = if (isActive)
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        else
-                            MaterialTheme.colorScheme.onSurface
+                        fontWeight = FontWeight.SemiBold,
+                        color = when {
+                            isActive -> MaterialTheme.colorScheme.onPrimaryContainer
+                            config.enabled -> MaterialTheme.colorScheme.onSurface
+                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                        }
                     )
                     if (isActive) {
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(6.dp))
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.primary
@@ -278,37 +324,42 @@ private fun AgentSummaryCard(
                                 "ACTIVE",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                             )
                         }
                     }
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    config.modelId.ifBlank { "No model set" } + " • " + config.providerType,
+                    buildString {
+                        if (config.modelId.isNotBlank()) append(config.modelId)
+                        else append("No model")
+                        append(" · ")
+                        append(config.providerType.lowercase().replaceFirstChar { it.uppercaseChar() })
+                    },
                     style = MaterialTheme.typography.bodySmall,
-                    color = (if (isActive)
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    else
-                        MaterialTheme.colorScheme.onSurface).copy(alpha = 0.65f)
-                )
-                Text(
-                    config.baseUrl.ifBlank { "No base URL" },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = (if (isActive)
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    else
-                        MaterialTheme.colorScheme.onSurface).copy(alpha = 0.45f)
+                    color = (if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.onSurface).copy(alpha = 0.6f)
                 )
             }
 
-            // Set active button
-            if (!isActive) {
+            // Enable/Disable toggle — only if model is set
+            if (config.modelId.isNotBlank()) {
+                Switch(
+                    checked = config.enabled,
+                    onCheckedChange = onToggleEnabled,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+
+            // Set active button (only for enabled, non-active agents)
+            if (config.enabled && !isActive && onSetActive != null) {
                 IconButton(onClick = onSetActive) {
                     Icon(
                         Icons.Default.PlayArrow,
                         contentDescription = "Use this agent",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -316,49 +367,49 @@ private fun AgentSummaryCard(
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = "Edit",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                modifier = Modifier.size(20.dp)
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+                modifier = Modifier.size(18.dp)
             )
         }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Edit card (expanded form)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Edit Sheet (inside BottomSheet Surface) ─────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AgentEditCard(
+private fun AgentEditSheet(
     config: AgentConfig,
     apiKey: String,
     isNew: Boolean,
     isActive: Boolean,
+    onDismiss: () -> Unit,
     onSave: (AgentConfig, String) -> Unit,
-    onDiscard: () -> Unit,
     onDelete: (() -> Unit)?,
     onSetActive: (() -> Unit)?
 ) {
-    var name    by remember(config.id) { mutableStateOf(config.name) }
+    var name         by remember(config.id) { mutableStateOf(config.name) }
     var providerType by remember(config.id) { mutableStateOf(config.providerType) }
-    var baseUrl by remember(config.id) { mutableStateOf(config.baseUrl) }
-    var modelId by remember(config.id) { mutableStateOf(config.modelId) }
-    var key     by remember(config.id) { mutableStateOf(apiKey) }
-    var showKey by remember { mutableStateOf(false) }
+    var baseUrl      by remember(config.id) { mutableStateOf(config.baseUrl) }
+    var modelId      by remember(config.id) { mutableStateOf(config.modelId) }
+    var key          by remember(config.id) { mutableStateOf(apiKey) }
+    var enabled      by remember(config.id) { mutableStateOf(config.enabled) }
+    var showKey      by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(top = 20.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+        // Header row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Title row
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     if (isNew) Icons.Default.Add else Icons.Default.Edit,
@@ -372,177 +423,185 @@ private fun AgentEditCard(
                     style = MaterialTheme.typography.titleMedium
                 )
             }
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
+            }
+        }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-            // Name
+        // Name
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Name") },
+            placeholder = { Text("e.g. My GPT-4o") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            leadingIcon = { Icon(Icons.Default.Label, null, modifier = Modifier.size(18.dp)) }
+        )
+
+        // Provider type dropdown
+        var providerExpanded by remember { mutableStateOf(false) }
+        val providerOptions = listOf("OPENAI", "ANTHROPIC", "GEMINI", "CUSTOM")
+        ExposedDropdownMenuBox(
+            expanded = providerExpanded,
+            onExpandedChange = { providerExpanded = it }
+        ) {
             OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Name") },
-                placeholder = { Text("e.g. OpenRouter Free") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+                value = providerType.lowercase().replaceFirstChar { it.uppercaseChar() },
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Provider") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerExpanded) },
+                modifier = Modifier.menuAnchor().fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.Label, null, modifier = Modifier.size(18.dp)) }
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
             )
-
-            // Provider Type
-            var providerExpanded by remember { mutableStateOf(false) }
-            val options = listOf("OPENAI", "ANTHROPIC", "GEMINI", "CUSTOM")
-
-            ExposedDropdownMenuBox(
+            ExposedDropdownMenu(
                 expanded = providerExpanded,
-                onExpandedChange = { providerExpanded = it }
+                onDismissRequest = { providerExpanded = false },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                OutlinedTextField(
-                    value = providerType.lowercase().replaceFirstChar { it.uppercaseChar() },
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Provider") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                )
-                ExposedDropdownMenu(
-                    expanded = providerExpanded,
-                    onDismissRequest = { providerExpanded = false },
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    options.forEach { selectionOption ->
-                        DropdownMenuItem(
-                            text = { Text(selectionOption.lowercase().replaceFirstChar { it.uppercaseChar() }) },
-                            onClick = {
-                                providerType = selectionOption
-                                providerExpanded = false
-                            },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                        )
-                    }
+                providerOptions.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option.lowercase().replaceFirstChar { it.uppercaseChar() }) },
+                        onClick = { providerType = option; providerExpanded = false },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    )
                 }
             }
+        }
 
-            // API Key
+        // API Key
+        OutlinedTextField(
+            value = key,
+            onValueChange = { key = it },
+            label = { Text("API Key") },
+            placeholder = { Text("sk-... (leave blank if not needed)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+            leadingIcon = { Icon(Icons.Default.Key, null, modifier = Modifier.size(18.dp)) },
+            trailingIcon = {
+                IconButton(onClick = { showKey = !showKey }) {
+                    Icon(
+                        if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        )
+
+        // Base URL (only for CUSTOM)
+        if (providerType == "CUSTOM") {
             OutlinedTextField(
-                value = key,
-                onValueChange = { key = it },
-                label = { Text("API Key") },
-                placeholder = { Text("sk-...") },
+                value = baseUrl,
+                onValueChange = { baseUrl = it },
+                label = { Text("Base URL") },
+                placeholder = { Text("https://openrouter.ai/api/v1") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
-                visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-                leadingIcon = { Icon(Icons.Default.Key, null, modifier = Modifier.size(18.dp)) },
-                trailingIcon = {
-                    IconButton(onClick = { showKey = !showKey }) {
-                        Icon(
-                            if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
+                leadingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(18.dp)) }
             )
+        }
 
-            // Base URL (Hidden if not CUSTOM)
-            if (providerType == "CUSTOM") {
-                OutlinedTextField(
-                    value = baseUrl,
-                    onValueChange = { baseUrl = it },
-                    label = { Text("Base URL") },
-                    placeholder = { Text("https://openrouter.ai/api/v1") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    leadingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(18.dp)) }
-                )
-            }
+        // Model ID
+        OutlinedTextField(
+            value = modelId,
+            onValueChange = { modelId = it },
+            label = { Text("Model ID") },
+            placeholder = { Text("e.g. gpt-4o, claude-sonnet-4-20250514") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            leadingIcon = { Icon(Icons.Default.Psychology, null, modifier = Modifier.size(18.dp)) }
+        )
 
-            // Model ID
-            OutlinedTextField(
-                value = modelId,
-                onValueChange = { modelId = it },
-                label = { Text("Model ID") },
-                placeholder = { Text("e.g. openai/gpt-4o-mini") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.Psychology, null, modifier = Modifier.size(18.dp)) }
-            )
-
-            // Action buttons
+        // Enabled toggle
+        if (modelId.isNotBlank()) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Delete
-                if (onDelete != null) {
-                    OutlinedButton(
-                        onClick = { showDeleteConfirm = true },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Delete")
-                    }
+                Column {
+                    Text("Enabled", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        if (enabled) "Agent available to AI" else "Agent will be skipped",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-
-                Spacer(Modifier.weight(1f))
-
-                // Discard
-                OutlinedButton(onClick = onDiscard) {
-                    Text("Cancel")
-                }
-
-                // Save
-                Button(
-                    onClick = {
-                        val finalBaseUrl = when (providerType) {
-                            "OPENAI" -> "https://api.openai.com/v1"
-                            "ANTHROPIC" -> "https://api.anthropic.com/v1"
-                            "GEMINI" -> "https://generativelanguage.googleapis.com/v1beta"
-                            else -> baseUrl.trim()
-                        }
-                        onSave(
-                            config.copy(
-                                name         = name.trim(),
-                                providerType = providerType,
-                                baseUrl      = finalBaseUrl,
-                                modelId      = modelId.trim()
-                            ),
-                            key.trim()
-                        )
-                    },
-                    enabled = name.isNotBlank() && modelId.isNotBlank()
-                ) {
-                    Icon(Icons.Default.Save, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Save")
-                }
+                Switch(checked = enabled, onCheckedChange = { enabled = it })
             }
+        }
 
-            // Set as active (only for existing)
-            if (!isNew && !isActive && onSetActive != null) {
-                Button(
-                    onClick = onSetActive,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        // Set as active
+        if (!isNew && !isActive && onSetActive != null) {
+            OutlinedButton(
+                onClick = onSetActive,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Use This Agent")
+            }
+        }
+
+        // Save + Delete row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (onDelete != null) {
+                OutlinedButton(
+                    onClick = { showDeleteConfirm = true },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Use This Agent")
+                    Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Delete")
                 }
+            }
+            Spacer(Modifier.weight(1f))
+            Button(
+                onClick = {
+                    val finalBaseUrl = when (providerType) {
+                        "OPENAI"    -> "https://api.openai.com/v1"
+                        "ANTHROPIC" -> "https://api.anthropic.com/v1"
+                        "GEMINI"    -> "https://generativelanguage.googleapis.com/v1beta"
+                        else        -> baseUrl.trim()
+                    }
+                    onSave(
+                        config.copy(
+                            name         = name.trim(),
+                            providerType = providerType,
+                            baseUrl      = finalBaseUrl,
+                            modelId      = modelId.trim(),
+                            enabled      = enabled
+                        ),
+                        key.trim()
+                    )
+                },
+                enabled = name.isNotBlank()
+            ) {
+                Icon(Icons.Default.Save, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Save")
             }
         }
     }
 
-    // Delete confirmation dialog
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },

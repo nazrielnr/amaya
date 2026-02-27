@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Context
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -12,7 +13,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -259,7 +262,18 @@ private fun AddCronJobSheet(
     onAdd: (CronJobEntity) -> Unit
 ) {
     val context = LocalContext.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { false }
+    )
+    // Predictive back: animate sheet down, then dismiss
+    BackHandler {
+        scope.launch {
+            sheetState.hide()
+            onDismiss()
+        }
+    }
 
     var title by remember { mutableStateOf("") }
     var prompt by remember { mutableStateOf("") }
@@ -296,15 +310,34 @@ private fun AddCronJobSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        dragHandle = null
     ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .imePadding(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(0.dp)
+        ) {
         Column(
             modifier = Modifier
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp),
+                .padding(top = 20.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("New Reminder", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("New Reminder", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
+                }
+            }
 
             OutlinedTextField(
                 value = title,
@@ -381,5 +414,6 @@ private fun AddCronJobSheet(
                 Text("Set Reminder")
             }
         }
+        } // Surface
     }
 }

@@ -8,12 +8,15 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +32,8 @@ data class AgentConfig(
     val name:         String = "",
     val providerType: String = "CUSTOM",
     val baseUrl:      String = "",
-    val modelId:      String = ""
+    val modelId:      String = "",
+    val enabled:      Boolean = true
 )
 
 private val Context.dataStore by preferencesDataStore(name = "ai_settings")
@@ -47,11 +51,14 @@ class AiSettingsManager @Inject constructor(
         private val KEY_ACCENT_COLOR    = stringPreferencesKey("accent_color")
         private val KEY_AGENT_CONFIGS   = stringPreferencesKey("agent_configs")
         private val KEY_ACTIVE_AGENT_ID = stringPreferencesKey("active_agent_id")
+        private val KEY_MCP_CONFIG_JSON = stringPreferencesKey("mcp_config_json")
 
         private const val ENC_OPENAI_KEY        = "openai_api_key"
         private const val ENC_ANTHROPIC_KEY     = "anthropic_api_key"
         private const val ENC_GEMINI_KEY        = "gemini_api_key"
         private const val ENC_AGENT_KEY_PREFIX  = "agent_key_"
+
+        const val MCP_FIXED_PATH = "/storage/emulated/0/Amaya/mcp.json"
     }
 
     private val encryptedPrefs: SharedPreferences by lazy {
@@ -79,7 +86,8 @@ class AiSettingsManager @Inject constructor(
             theme           = prefs[KEY_THEME] ?: "system",
             accentColor     = prefs[KEY_ACCENT_COLOR] ?: "Purple",
             agentConfigs    = configs,
-            activeAgentId   = prefs[KEY_ACTIVE_AGENT_ID] ?: ""
+            activeAgentId   = prefs[KEY_ACTIVE_AGENT_ID] ?: "",
+            mcpConfigJson   = prefs[KEY_MCP_CONFIG_JSON] ?: ""
         )
     }
 
@@ -162,6 +170,27 @@ class AiSettingsManager @Inject constructor(
         context.dataStore.edit { prefs -> prefs[KEY_ACCENT_COLOR] = color }
     }
 
+    suspend fun setMcpConfigJson(json: String) {
+        context.dataStore.edit { prefs -> prefs[KEY_MCP_CONFIG_JSON] = json }
+        writeMcpConfigToFixedPath(json)
+    }
+
+    suspend fun loadMcpConfigFromFixedPath(): String? {
+        return withContext(Dispatchers.IO) {
+            val file = File(MCP_FIXED_PATH)
+            if (!file.exists()) return@withContext null
+            return@withContext runCatching { file.readText() }.getOrNull()
+        }
+    }
+
+    suspend fun writeMcpConfigToFixedPath(json: String) {
+        withContext(Dispatchers.IO) {
+            val file = File(MCP_FIXED_PATH)
+            file.parentFile?.mkdirs()
+            file.writeText(json)
+        }
+    }
+
     // ── JSON helpers ─────────────────────────────────────────────────
 
     private fun parseAgentConfigs(json: String): List<AgentConfig> = try {
@@ -173,7 +202,8 @@ class AiSettingsManager @Inject constructor(
                     name         = obj.optString("name", ""),
                     providerType = obj.optString("providerType", "CUSTOM"),
                     baseUrl      = obj.optString("baseUrl", ""),
-                    modelId      = obj.optString("modelId", "")
+                    modelId      = obj.optString("modelId", ""),
+                    enabled      = obj.optBoolean("enabled", true)
                 )
             }
         }
@@ -188,6 +218,7 @@ class AiSettingsManager @Inject constructor(
                     put("providerType", c.providerType)
                     put("baseUrl",      c.baseUrl)
                     put("modelId",      c.modelId)
+                    put("enabled",      c.enabled)
                 })
             }
         }.toString()
@@ -203,7 +234,8 @@ data class AiSettings(
     val theme:           String          = "system",
     val accentColor:     String          = "Purple",
     val agentConfigs:    List<AgentConfig> = emptyList(),
-    val activeAgentId:   String          = ""
+    val activeAgentId:   String          = "",
+    val mcpConfigJson:   String          = ""
 )
 
 enum class ProviderType { ANTHROPIC, OPENAI, GEMINI }

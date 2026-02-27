@@ -1,13 +1,19 @@
 ﻿package com.amaya.intelligence.data.repository
 
 import com.amaya.intelligence.data.remote.api.*
+import com.amaya.intelligence.data.remote.mcp.McpClientManager
 import com.amaya.intelligence.tools.ConfirmationRequest
-import com.amaya.intelligence.tools.ToolDefinition
 import com.amaya.intelligence.tools.ToolExecutor
 import com.amaya.intelligence.tools.ToolResult
+import com.amaya.intelligence.util.debugLog
+import com.amaya.intelligence.util.errorLog
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,9 +38,31 @@ class AiRepository @Inject constructor(
     private val geminiProvider: GeminiProvider,
     private val settingsManager: AiSettingsManager,
     private val toolExecutor: ToolExecutor,
+    private val mcpToolExecutor: com.amaya.intelligence.data.remote.mcp.McpToolExecutor,
     private val fileIndexRepository: FileIndexRepository,
-    private val personaRepository: PersonaRepository
+    private val personaRepository: PersonaRepository,
+    private val mcpClientManager: McpClientManager
 ) {
+    private val repoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    init {
+        // Watch for MCP config changes and refresh tools automatically
+        repoScope.launch {
+            var lastMcpJson = ""
+            settingsManager.settingsFlow.collect { settings ->
+                if (settings.mcpConfigJson != lastMcpJson) {
+                    lastMcpJson = settings.mcpConfigJson
+                    debugLog("AiRepository") { "MCP config changed, refreshing tools..." }
+                    try {
+                        val tools = mcpClientManager.refreshTools()
+                        debugLog("AiRepository") { "MCP tools refreshed: ${tools.size} tools" }
+                    } catch (e: Exception) {
+                        errorLog("AiRepository", "Failed to refresh MCP tools", e)
+                    }
+                }
+            }
+        }
+    }
     
     /**
      * Get list of all providers with their status.
@@ -184,7 +212,7 @@ class AiRepository @Inject constructor(
                 
                 // Execute each tool call
                 for (toolCall in toolCalls) {
-                    val result = toolExecutor.execute(
+                    val result = mcpToolExecutor.execute(
                         toolName = toolCall.name,
                         arguments = toolCall.arguments,
                         workspacePath = workspacePath,
@@ -316,9 +344,10 @@ class AiRepository @Inject constructor(
     
     /**
      * Build tool definitions for AI.
+     * Uses cached MCP tools — refresh happens automatically via settingsFlow watcher in init.
      */
     private fun buildToolDefinitions(): List<AiToolDefinition> {
-        return toolExecutor.getToolDefinitions().map { def ->
+        val localTools = toolExecutor.getToolDefinitions().map { def ->
             AiToolDefinition(
                 name = def.name,
                 description = def.description,
@@ -336,6 +365,9 @@ class AiRepository @Inject constructor(
                 )
             )
         }
+        val mcpTools = mcpClientManager.getCachedToolDefinitions()
+        debugLog("AiRepository") { "Building tool defs: local=${localTools.size}, mcp=${mcpTools.size}" }
+        return localTools + mcpTools
     }
 }
 

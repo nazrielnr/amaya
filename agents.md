@@ -1,6 +1,6 @@
-# OpenCode Mobile - AI Coding Agent
+# Amaya Intelligence - AI Coding Agent
 
-> **A powerful AI-powered coding assistant that runs natively on Android, bringing the capabilities of modern AI coding agents like Claude Code, Cursor, and GitHub Copilot directly to your mobile device.**
+> **A powerful AI-powered coding assistant that runs natively on Android, bringing the capabilities of modern AI coding agents directly to your mobile device.**
 
 [![Android](https://img.shields.io/badge/Android-15+-green.svg)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0-purple.svg)](https://kotlinlang.org)
@@ -21,6 +21,7 @@
 - [Project Structure](#-project-structure)
 - [Database Schema](#-database-schema)
 - [API Integration](#-api-integration)
+- [MCP Servers](#-mcp-servers)
 - [Configuration](#️-configuration)
 - [Theme & Design](#-theme--design)
 - [Permissions](#-permissions)
@@ -35,15 +36,16 @@
 
 ## Overview
 
-OpenCode Mobile is an **autonomous AI coding agent** that can:
+Amaya Intelligence is an **autonomous AI coding agent** that can:
 - Read, write, and modify source code files
 - Navigate project structures
 - Execute shell commands (git, build tools, etc.)
 - Understand project context through file indexing
 - Stream responses in real-time
 - Request confirmation for dangerous operations
+- Connect to external MCP servers via HTTP to extend tool capabilities
 
-Unlike simple code completion tools, OpenCode Mobile operates as a **full agent** that can:
+Unlike simple code completion tools, Amaya Intelligence operates as a **full agent** that can:
 1. Understand your request
 2. Plan the necessary steps
 3. Execute tools to accomplish the task
@@ -59,15 +61,14 @@ Unlike simple code completion tools, OpenCode Mobile operates as a **full agent*
 - **Real-time streaming** - See responses as they're generated
 - **Tool execution** - AI can read/write files, run commands
 - **Security guardrails** - Dangerous operations require confirmation
-- **Atomic file writes** - Files are never left in corrupted state
-- **Automatic backups** - Original files preserved before modification
-- **Syntax validation** - Code is validated before saving
-- **Project indexing** - Fast file search with FTS4
+- **Rich Markdown Rendering** - Support for bold/italic in headings, clickable links, and table cell formatting
+- **Advanced Reminder System** - AI-powered reminders with background execution via WorkManager
+- **Project Indexing** - Fast file search with FTS4
+- **Security Confirmation** - Explicit approval for sensitive operations
+- **MCP Servers** - HTTP-based Model Context Protocol support with editable JSON config and auto-refresh
 
 ### 🔮 Planned Features
-- Settings screen for API key configuration
 - Project browser for folder selection
-- Markdown rendering in chat
 - Syntax highlighting for code blocks
 - File diff viewer
 - Voice input support
@@ -518,8 +519,8 @@ The agent operates in a continuous loop:
     ┌──────────────┐      │    ┌──────────────────────┐
     │    DONE      │      │    │   EXECUTE TOOLS      │
     │ Show response│      │    │ • Validate security  │
-    └──────────────┘      │    │ • Request confirm    │
-                          │    │ • Execute operation  │
+    │              │      │    │ • Request confirm    │
+    └──────────────┘      │    │ • Execute operation  │
                           │    │ • Collect results    │
                           │    └──────────┬───────────┘
                           │               │
@@ -541,7 +542,7 @@ The agent operates in a continuous loop:
 ## 📁 Project Structure
 
 ```
-app/src/main/java/com/opencode/mobile/
+app/src/main/java/com/amaya/intelligence/
 │
 ├── 📂 data/
 │   ├── 📂 local/db/
@@ -561,11 +562,16 @@ app/src/main/java/com/opencode/mobile/
 │   │   ├── AnthropicProvider.kt       # Claude implementation
 │   │   ├── OpenAiProvider.kt          # GPT implementation
 │   │   ├── GeminiProvider.kt          # Gemini implementation
-│   │   ├── AiSettings.kt              # API key storage
+│   │   ├── AiSettings.kt              # API key storage + MCP config storage
+│   │   ├── McpModels.kt               # McpConfig, McpServerConfig data models
 │   │   └── Models.kt                  # Request/Response types
 │   │
+│   ├── 📂 remote/mcp/
+│   │   ├── McpClientManager.kt        # HTTP MCP client (listTools, callTool)
+│   │   └── McpToolExecutor.kt         # Routes MCP vs local tool calls
+│   │
 │   └── 📂 repository/
-│       ├── AiRepository.kt            # AI orchestration
+│       ├── AiRepository.kt            # AI orchestration + MCP tool injection
 │       └── FileIndexRepository.kt     # File system sync
 │
 ├── 📂 di/
@@ -577,9 +583,8 @@ app/src/main/java/com/opencode/mobile/
 │   └── CommandValidator.kt            # Security validation
 │
 ├── 📂 tools/
-│   ├── Tool.kt                        # Base interface
-│   ├── ToolResult.kt                  # Result types
-│   ├── ToolExecutor.kt                # Routing & execution
+│   ├── ToolResult.kt                  # Tool interface + result types
+│   ├── ToolExecutor.kt                # Routing & local tool execution
 │   ├── ReadFileTool.kt                # read_file
 │   ├── WriteFileTool.kt               # write_file
 │   ├── ListFilesTool.kt               # list_files
@@ -589,18 +594,46 @@ app/src/main/java/com/opencode/mobile/
 │
 ├── 📂 ui/
 │   ├── 📂 chat/
-│   │   ├── ChatScreen.kt              # Main UI
+│   │   ├── ChatScreen.kt              # Main UI + sidebar drawer
 │   │   └── ChatViewModel.kt           # State management
+│   ├── 📂 settings/
+│   │   ├── SettingsActivity.kt        # Settings standalone activity
+│   │   ├── SettingsScreen.kt          # Settings list UI
+│   │   ├── AgentsActivity.kt          # AI agents standalone activity
+│   │   ├── AgentsScreen.kt            # Agent list + add/edit BottomSheet
+│   │   ├── McpActivity.kt             # MCP servers standalone activity
+│   │   ├── McpScreen.kt               # MCP server list + add/edit BottomSheet
+│   │   ├── CronJobActivity.kt         # Reminders standalone activity
+│   │   ├── CronJobScreen.kt           # Reminder list + add BottomSheet
+│   │   ├── PersonaActivity.kt         # Persona standalone activity
+│   │   └── PersonaScreen.kt           # Persona edit UI
 │   ├── 📂 theme/
 │   │   └── Theme.kt                   # Material 3 theme
 │   └── MainActivity.kt                # Entry point
 │
-└── OpenCodeApplication.kt             # Hilt application
+└── AmayaApplication.kt                # Hilt application
 ```
 
 ---
 
 ## 🗄️ Database Schema
+
+Amaya Intelligence uses Room with multiple tables for project and persistent AI state.
+
+### Cron Jobs Table
+```sql
+CREATE TABLE cron_jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    schedule_time INTEGER NOT NULL,
+    recurring_type TEXT NOT NULL, -- "NONE", "DAILY", "WEEKLY"
+    is_active INTEGER NOT NULL DEFAULT 1,
+    fire_count INTEGER NOT NULL DEFAULT 0,
+    conversation_id INTEGER, -- Optional link to chat
+    created_at INTEGER NOT NULL
+);
+```
 
 ### Projects Table
 ```sql
@@ -750,6 +783,126 @@ Content-Type: application/json
 
 ---
 
+## 🔌 MCP Servers
+
+Amaya Intelligence supports **Model Context Protocol (MCP)** over HTTP, allowing the AI agent to dynamically discover and invoke tools from external MCP-compatible servers.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│              AI AGENT (AiRepository)         │
+│  buildToolDefinitions()                      │
+│  = local tools + mcpClientManager.cached()  │
+└──────────────────┬──────────────────────────┘
+                   │
+       ┌───────────┴───────────┐
+       │                       │
+┌──────▼──────┐       ┌───────▼────────────┐
+│ Local Tools │       │  McpClientManager   │
+│ (ToolExecutor)      │  HTTP JSON-RPC 2.0  │
+└─────────────┘       │  tools/list         │
+                      │  tools/call         │
+                      └───────┬─────────────┘
+                              │ HTTP POST
+                      ┌───────▼─────────────┐
+                      │  External MCP Server │
+                      │  (any serverUrl)     │
+                      └─────────────────────┘
+```
+
+### Transport
+
+Only **HTTP transport** is supported (Android cannot run `npx`/stdio servers). MCP servers must expose a `serverUrl` endpoint accepting JSON-RPC 2.0 POST requests with:
+
+```
+Content-Type: application/json
+Accept: application/json, text/event-stream
+```
+
+Responses can be **plain JSON** or **SSE (Server-Sent Events)** — both are handled automatically.
+
+### Configuration Format
+
+MCP servers are configured via JSON, editable in Settings → **MCP Servers**:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "serverUrl": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "your-api-key-here"
+      },
+      "enabled": true
+    },
+    "my-server": {
+      "serverUrl": "http://192.168.1.100:3000/mcp",
+      "headers": {},
+      "enabled": false
+    }
+  }
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `serverUrl` | string | ✅ | Full HTTP(S) URL to the MCP endpoint |
+| `headers` | object | ❌ | Key-value headers (API keys, auth tokens) |
+| `enabled` | boolean | ❌ | Skip this server if `false` (default: `true`) |
+
+### Tool Naming Convention
+
+MCP tools are registered with a namespaced prefix to avoid collisions with local tools:
+
+```
+mcp__{serverName}__{toolName}
+
+Examples:
+  mcp__context7__resolve-library-id
+  mcp__context7__query-docs
+  mcp__my-server__search
+```
+
+### Settings UI
+
+- **Editor**: Raw JSON textarea in Settings → MCP Servers.
+- **Import**: File picker to import a `.json` file from external storage.
+- **Fixed path**: Config is also written to `/storage/emulated/0/Amaya/mcp.json` on every save/import.
+- **Auto-load**: On app start, if `/storage/emulated/0/Amaya/mcp.json` is newer than the stored config, it is loaded automatically.
+
+### Tool Refresh
+
+MCP tools are refreshed automatically in the background whenever `mcpConfigJson` changes (detected via `settingsFlow`). No app restart required after updating the config.
+
+### Key Classes
+
+| Class | Location | Responsibility |
+|-------|----------|----------------|
+| `McpServerConfig` | `McpModels.kt` | Single server config (url, headers, enabled) |
+| `McpConfig` | `McpModels.kt` | Full config with list of servers + JSON parse/emit |
+| `McpClientManager` | `McpClientManager.kt` | HTTP client: `listTools()`, `callTool()`, tool cache |
+| `McpToolExecutor` | `McpToolExecutor.kt` | Routes tool calls: MCP prefix → McpClientManager, else → ToolExecutor |
+
+### Troubleshooting MCP
+
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| No MCP tools in AI | Config JSON empty or `enabled: false` | Check Settings → MCP Servers |
+| HTTP 406 error | Missing `Accept` header | Already fixed in `McpClientManager` |
+| Tools list empty | Server URL wrong or unreachable | Check `serverUrl` and network |
+| Tools appear but call fails | Wrong header/API key | Check `headers` in config |
+| Config not persisting | Fixed path write failed | Grant `MANAGE_EXTERNAL_STORAGE` permission |
+
+### Example MCP Servers
+
+| Server | serverUrl | Notes |
+|--------|-----------|-------|
+| Context7 | `https://mcp.context7.com/mcp` | Library docs. Needs `CONTEXT7_API_KEY` header |
+| Custom Node | `http://your-host:3000/mcp` | Any MCP-compatible server hosted externally |
+
+---
+
 ## ⚙️ Configuration
 
 ### Environment Setup
@@ -821,6 +974,70 @@ The chat interface intentionally deviates from standard SMS-style apps to feel l
 2. **Persona Simple Mode**: Configuration fields must be neatly separated (e.g., using `HorizontalDivider`) and include quick-select `AssistChip` rows (Suggestion Pills) for rapid styling (e.g., "Friendly", "Analytical").
 3. **Persona Pro Mode**: File editors for `.md` guidelines (like `AGENTS.md`) must use a sleek `ScrollableTabRow` interface resembling a professional IDE, avoiding massive vertical scrolling text fields.
 
+### BottomSheet Drawer Rules (STRICT)
+
+All add/edit forms in Settings screens (MCP, Agents, Reminders, etc.) use `ModalBottomSheet` as a full-screen drawer. The following rules are **mandatory**:
+
+1. **Square top, fills statusbar**: Use `containerColor = Color.Transparent` + `dragHandle = null`. Wrap content in a `Surface(shape = RoundedCornerShape(0.dp))` with `windowInsetsPadding(WindowInsets.statusBars)`. This ensures the sheet fills corner-to-corner, including the statusbar area.
+
+2. **No swipe/drag gesture**: Always set `confirmValueChange = { false }` in `rememberModalBottomSheetState`. Users must use the explicit ✕ close button only.
+
+3. **Predictive back = sheet slides down**: Install a `BackHandler` **outside** the `ModalBottomSheet` lambda (must be in `@Composable` scope). On back gesture: call `sheetState.hide()` first (animates sheet downward), then call `onDismiss()`.
+
+4. **Keyboard-aware**: Add `.imePadding()` to the `Surface` modifier so content lifts when keyboard appears.
+
+5. **Scrollable content**: Wrap the inner `Column` with `.verticalScroll(rememberScrollState())` for long forms.
+
+6. **Header with close button**: Every sheet must have a title + `IconButton(Icons.Default.Close)` in a `Row` at the top.
+
+```kotlin
+// Correct pattern for all BottomSheet drawers:
+val sheetState = rememberModalBottomSheetState(
+    skipPartiallyExpanded = true,
+    confirmValueChange = { false }  // disables swipe gesture
+)
+val scope = rememberCoroutineScope()
+
+BackHandler {
+    scope.launch {
+        sheetState.hide()  // animate sheet down first
+        onDismiss()
+    }
+}
+
+ModalBottomSheet(
+    onDismissRequest = onDismiss,
+    sheetState = sheetState,
+    containerColor = Color.Transparent,
+    dragHandle = null
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .imePadding(),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(top = 20.dp, bottom = 32.dp)
+        ) {
+            // Header
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Title", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = { scope.launch { sheetState.hide(); onDismiss() } }) {
+                    Icon(Icons.Default.Close, "Dismiss")
+                }
+            }
+            // ... form content ...
+        }
+    }
+}
+```
+
 ---
 
 ## 🧭 Navigation & Transitions (Pure Android 16 Stock)
@@ -840,6 +1057,18 @@ By splitting major screens into separate Activities, we force the Android Operat
 4. Uninterrupted 60/120fps scrubbing when the user reverses a back gesture midway.
 
 **Any attempt to recreate these system-level predictive back animations manually using Compose `AnimatedContentTransitionScope` overrides is strictly forbidden for major context switches.**
+
+### Sidebar Navigation Drawer Rules
+
+The main screen sidebar (`ModalNavigationDrawer` in `ChatScreen.kt`) follows these design rules:
+
+1. **Width**: Fixed `300.dp`, `RectangleShape` (no rounded corners on drawer).
+2. **Header**: App name bold left + close `✕` button right.
+3. **Action buttons**: Two equal-width `Surface` pill buttons side by side — "New chat" (`primaryContainer`) and "Project" (`surfaceVariant`). No `NavigationDrawerItem` for actions.
+4. **Search**: Inline `BasicTextField` embedded in `Surface(rounded)` — not a fullscreen mode. Filters conversations live. Shows "No results" state.
+5. **Conversation list**: `Surface(onClick)` items with `ChatBubbleOutline` icon — no `NavigationDrawerItem`. Empty state with centered icon + text.
+6. **Footer**: Settings as a row with avatar `Surface(36dp)` + label + `ChevronRight`. Uses `navigationBarsPadding()`.
+7. **Section labels**: `Text(labelMedium)` in `onSurfaceVariant` color above list (e.g. "Recent").
 
 ---
 
@@ -902,13 +1131,13 @@ adb devices
 adb install app/build/outputs/apk/debug/app-debug.apk
 
 # Launch app
-adb shell am start -n com.opencode.mobile.debug/com.opencode.mobile.ui.MainActivity
+adb shell am start -n com.amaya.intelligence.debug/com.amaya.intelligence.ui.MainActivity
 
 # View logs
-adb logcat -s "OpenCode:*" "AndroidRuntime:E"
+adb logcat -s "Amaya:*" "AndroidRuntime:E"
 
 # Uninstall
-adb uninstall com.opencode.mobile.debug
+adb uninstall com.amaya.intelligence.debug
 ```
 
 ---
@@ -1014,7 +1243,7 @@ FAILURE: Build failed with an exception.
 ### App Crashes on Launch
 
 **Cause:** Missing Hilt injection
-**Solution:** Ensure `OpenCodeApplication` is annotated with `@HiltAndroidApp`
+**Solution:** Ensure `AmayaApplication` is annotated with `@HiltAndroidApp`
 
 ### "API Key Not Set" Error
 
@@ -1024,7 +1253,7 @@ FAILURE: Build failed with an exception.
 ### File Permission Denied
 
 **Cause:** Missing MANAGE_EXTERNAL_STORAGE permission
-**Solution:** Grant permission in Settings > Apps > OpenCode > Permissions
+**Solution:** Grant permission in Settings > Apps > Amaya > Permissions
 
 ### Tool Execution Timeout
 
@@ -1040,18 +1269,26 @@ FAILURE: Build failed with an exception.
 
 ## 🗺️ Roadmap
 
-### v1.0 (Current)
+### v1.0
 - [x] Core agent functionality
 - [x] Multi-provider support
 - [x] Tool execution engine
 - [x] Security validation
 - [x] Basic chat UI
 
-### v1.1 (Next)
+### v1.1 (Current)
 - [x] Settings screen (Agent & Persona UI)
+- [x] Rich Markdown rendering in chat
+- [x] Advanced Reminder System (WorkManager + Hilt)
+- [x] Multi-Activity Architecture (Predictive Back support)
+- [x] Package Rename & Refactor (`com.amaya.intelligence`)
+- [x] MCP HTTP client (JSON-RPC 2.0, SSE + plain JSON, tool cache, auto-refresh)
+- [x] MCP Settings UI (list, add/edit BottomSheet, file picker import, fixed path sync)
+- [x] AI Agents redesign (list sections Active/Disabled, enable toggle, BottomSheet drawer)
+- [x] Sidebar redesign (search inline, action buttons, modern conversation list, settings footer)
+- [x] BottomSheet UX (no swipe dismiss, square top fills statusbar, predictive back slides down)
 - [ ] Project browser
-- [ ] Markdown rendering
-- [ ] Syntax highlighting
+- [ ] Syntax highlighting for code blocks
 
 ### v1.2
 - [ ] Foreground service
@@ -1090,7 +1327,7 @@ Contributions are welcome! Please:
 MIT License
 
 ```
-Copyright (c) 2024 OpenCode Mobile
+Copyright (c) 2024 Amaya Intelligence
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1118,5 +1355,5 @@ SOFTWARE.
 </p>
 
 <p align="center">
-  <strong>OpenCode Mobile</strong> - Code Anywhere, Anytime
+  <strong>Amaya Intelligence</strong> - Code Anywhere, Anytime
 </p>

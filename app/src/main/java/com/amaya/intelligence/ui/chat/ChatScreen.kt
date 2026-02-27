@@ -97,142 +97,321 @@ fun ChatScreen(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            var isSearchExpanded by remember { mutableStateOf(false) }
-            val sidebarWidth = if (isSearchExpanded) Modifier.fillMaxWidth() else Modifier.width(280.dp)
+            var searchQuery by remember { mutableStateOf("") }
+            val filteredConversations = remember(conversations, searchQuery) {
+                if (searchQuery.isBlank()) conversations
+                else conversations.filter { it.title.contains(searchQuery, ignoreCase = true) }
+            }
 
             ModalDrawerSheet(
-                modifier = sidebarWidth.fillMaxHeight(),
+                modifier = Modifier.width(300.dp).fillMaxHeight(),
                 drawerContainerColor = MaterialTheme.colorScheme.surface,
                 drawerShape = androidx.compose.ui.graphics.RectangleShape
             ) {
-                if (isSearchExpanded) {
-                    BackHandler { isSearchExpanded = false }
-                    // ── Fullscreen Search Mode ──
-                    Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                ) {
+                    // ── Header ──────────────────────────────────────────────
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 18.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Amaya",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        IconButton(
+                            onClick = { scope.launch { drawerState.close() } },
+                            modifier = Modifier.size(36.dp)
                         ) {
-                            var searchQuery by remember { mutableStateOf("") }
-                            OutlinedTextField(
-                                value = searchQuery,
-                                onValueChange = { searchQuery = it },
-                                modifier = Modifier.weight(1f),
-                                placeholder = { Text("Search history...") },
-                                leadingIcon = { Icon(Icons.Default.Search, null) },
-                                trailingIcon = {
-                                    if (searchQuery.isNotEmpty()) {
-                                        IconButton({ searchQuery = "" }) { Icon(Icons.Default.Clear, null) }
-                                    }
-                                },
-                                shape = CircleShape,
-                                singleLine = true,
-                                colors = TextFieldDefaults.colors(
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                )
-                            )
-                            TextButton(onClick = { isSearchExpanded = false }, modifier = Modifier.padding(start = 8.dp)) {
-                                Text("Cancel")
-                            }
-                        }
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(
-                                "Your chat history search will appear here",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
-                } else {
-                    // ── Normal Sidebar Mode ──
-                    Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-                        Spacer(Modifier.height(16.dp))
 
-                        // Search bar trigger + quick actions
-                        Column(modifier = Modifier.padding(horizontal = 12.dp)) {
-                            Surface(
-                                onClick = { isSearchExpanded = true },
-                                color = Color.Transparent,
-                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                    // ── Action buttons ──────────────────────────────────────
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // New Chat
+                        Surface(
+                            onClick = {
+                                viewModel.clearConversation()
+                                scope.launch { drawerState.close() }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            tonalElevation = 0.dp
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.Search, null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Spacer(Modifier.width(12.dp))
-                                    Text("Search", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                                }
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "New chat",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             }
-                            NavigationDrawerItem(
-                                icon = { Icon(Icons.Default.Edit, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurface) },
-                                label = { Text("New chat", style = MaterialTheme.typography.bodyLarge) },
-                                selected = false,
-                                onClick = { viewModel.clearConversation(); scope.launch { drawerState.close() } },
-                                colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
-                                modifier = Modifier.height(48.dp)
-                            )
-                            NavigationDrawerItem(
-                                icon = { Icon(Icons.Default.Folder, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurface) },
-                                label = { Text("New project", style = MaterialTheme.typography.bodyLarge) },
-                                selected = false,
-                                onClick = { onNavigateToWorkspace(); scope.launch { drawerState.close() } },
-                                colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent),
-                                modifier = Modifier.height(48.dp)
-                            )
                         }
 
-                        Spacer(Modifier.height(16.dp))
+                        // New Project
+                        Surface(
+                            onClick = {
+                                onNavigateToWorkspace()
+                                scope.launch { drawerState.close() }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            tonalElevation = 0.dp
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.FolderOpen,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "Project",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
 
-                        // Recent conversations
-                        LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                            if (conversations.isEmpty()) {
-                                item {
-                                    Text(
-                                        "No conversations yet",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                                    )
-                                }
-                            } else {
-                                items(conversations.size) { index ->
-                                    val conv = conversations[index]
-                                    NavigationDrawerItem(
-                                        label = {
-                                            Text(
-                                                conv.title.ifEmpty { "New Chat" },
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                        },
-                                        selected = false,
-                                        onClick = { viewModel.loadConversation(conv.id); scope.launch { drawerState.close() } },
-                                        shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.height(48.dp),
-                                        colors = NavigationDrawerItemDefaults.colors(
-                                            unselectedContainerColor = Color.Transparent,
-                                            unselectedTextColor = MaterialTheme.colorScheme.onSurface
+                    Spacer(Modifier.height(16.dp))
+
+                    // ── Search bar ──────────────────────────────────────────
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurface
+                                ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                decorationBox = { inner ->
+                                    if (searchQuery.isEmpty()) {
+                                        Text(
+                                            "Search conversations…",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+                                    }
+                                    inner()
+                                }
+                            )
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { searchQuery = "" },
+                                    modifier = Modifier.size(18.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Clear,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
                         }
+                    }
 
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.surfaceVariant)
+                    Spacer(Modifier.height(16.dp))
 
-                        // Settings footer
-                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).navigationBarsPadding()) {
-                            NavigationDrawerItem(
-                                icon = { Icon(Icons.Default.Settings, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurface) },
-                                label = { Text("Settings", style = MaterialTheme.typography.bodyLarge) },
-                                selected = false,
-                                onClick = { onNavigateToSettings(); scope.launch { drawerState.close() } },
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.height(48.dp),
-                                colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent)
+                    // ── Section label ───────────────────────────────────────
+                    if (conversations.isNotEmpty()) {
+                        Text(
+                            "Recent",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    // ── Conversation list ────────────────────────────────────
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        contentPadding = PaddingValues(bottom = 8.dp)
+                    ) {
+                        if (conversations.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            Icons.Default.ChatBubbleOutline,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(36.dp),
+                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                                        )
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(
+                                            "No conversations yet",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                        )
+                                    }
+                                }
+                            }
+                        } else if (filteredConversations.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "No results for \"$searchQuery\"",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                    )
+                                }
+                            }
+                        } else {
+                            items(filteredConversations.size) { index ->
+                                val conv = filteredConversations[index]
+                                Surface(
+                                    onClick = {
+                                        viewModel.loadConversation(conv.id)
+                                        scope.launch { drawerState.close() }
+                                    },
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color.Transparent,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Default.ChatBubbleOutline,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                        )
+                                        Spacer(Modifier.width(10.dp))
+                                        Text(
+                                            conv.title.ifEmpty { "New Chat" },
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Divider ─────────────────────────────────────────────
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    // ── Footer: Settings ────────────────────────────────────
+                    Surface(
+                        onClick = {
+                            onNavigateToSettings()
+                            scope.launch { drawerState.close() }
+                        },
+                        color = Color.Transparent,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Default.Settings,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                "Settings",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                             )
                         }
                     }

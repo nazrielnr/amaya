@@ -52,6 +52,9 @@ class SettingsActivity : ComponentActivity() {
                     },
                     onNavigateToReminders = {
                         startActivity(android.content.Intent(this@SettingsActivity, CronJobActivity::class.java))
+                    },
+                    onNavigateToMcp = {
+                        McpActivity.start(this@SettingsActivity)
                     }
                 )
             }

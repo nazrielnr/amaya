@@ -93,6 +93,13 @@ class MainActivity : ComponentActivity() {
                 else    -> isSystemInDarkTheme()
             }
 
+            LaunchedEffect(Unit) {
+                val fixedJson = aiSettingsManager.loadMcpConfigFromFixedPath()
+                if (!fixedJson.isNullOrBlank() && fixedJson != settings.mcpConfigJson) {
+                    aiSettingsManager.setMcpConfigJson(fixedJson)
+                }
+            }
+
             AmayaTheme(darkTheme = isDark, accentColor = settings.accentColor) {
                 AppContent(
                     hasStoragePermission = hasStoragePermission,

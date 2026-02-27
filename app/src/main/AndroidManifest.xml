@@ -80,6 +80,12 @@
             android:theme="@style/Theme.Amaya" />
         
         <activity
+            android:name=".ui.settings.McpActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Amaya" />
+
+        <activity
             android:name=".ui.workspace.WorkspaceActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize"

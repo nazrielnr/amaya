@@ -32,7 +32,8 @@ fun SettingsScreen(
     aiSettingsManager: AiSettingsManager,
     onNavigateToPersona: () -> Unit,
     onNavigateToAgents: () -> Unit,
-    onNavigateToReminders: () -> Unit = {}
+    onNavigateToReminders: () -> Unit = {},
+    onNavigateToMcp: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -170,6 +171,26 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+
+            // MCP
+            SettingsSection("MCP Servers") {
+                val mcpConfig = remember(settings.mcpConfigJson) {
+                    com.amaya.intelligence.data.remote.api.McpConfig.fromJson(settings.mcpConfigJson)
+                }
+                val activeCount = mcpConfig.servers.count { it.enabled }
+                val totalCount = mcpConfig.servers.size
+                val subtitle = when {
+                    totalCount == 0 -> "No servers configured"
+                    activeCount == 0 -> "$totalCount server${if (totalCount > 1) "s" else ""}, none active"
+                    else -> "$activeCount of $totalCount active"
+                }
+                SettingsCard(
+                    icon = Icons.Default.Extension,
+                    title = "MCP Servers",
+                    subtitle = subtitle,
+                    onClick = onNavigateToMcp
+                )
             }
 
             // About

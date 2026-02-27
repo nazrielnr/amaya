@@ -1,0 +1,83 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.9/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:clean
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResValues
+> Task :app:mapDebugSourceSetPaths
+> Task :app:checkDebugAarMetadata
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:mergeDebugResources
+> Task :app:parseDebugLocalResources
+
+> Task :app:processDebugMainManifest
+C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:43:9-41 Warning:
+	android:extractNativeLibs should not be specified in this source AndroidManifest.xml file. See https://d.android.com/guide/topics/manifest/application-element#extractNativeLibs for more information.
+The AGP Upgrade Assistant can remove the attribute from the AndroidManifest.xml file and update the build file accordingly. See https://d.android.com/studio/build/agp-upgrade-assistant for more information.
+
+> Task :app:processDebugManifest
+> Task :app:mergeDebugShaders
+> Task :app:javaPreCompileDebug
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :app:desugarDebugFileDependencies
+> Task :app:mergeDebugJniLibFolders
+> Task :app:mergeDebugNativeLibs
+> Task :app:checkDebugDuplicateClasses
+> Task :app:validateSigningDebug
+> Task :app:mergeLibDexDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:processDebugManifestForPackage
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so.
+
+> Task :app:processDebugResources
+> Task :app:mergeExtDexDebug
+> Task :app:kspDebugKotlin
+
+> Task :app:compileDebugKotlin
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/data/remote/api/AiSettings.kt:9:7 'class MasterKeys : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/data/remote/api/AiSettings.kt:64:29 'class MasterKeys : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/data/remote/api/AiSettings.kt:64:52 'class MasterKeys : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/data/remote/api/AiSettings.kt:65:35 'static fun create(p0: String, p1: String, p2: Context, p3: EncryptedSharedPreferences.PrefKeyEncryptionScheme, p4: EncryptedSharedPreferences.PrefValueEncryptionScheme): SharedPreferences' is deprecated. Deprecated in Java.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/browser/ProjectBrowserScreen.kt:377:26 'val Icons.Filled.InsertDriveFile: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.InsertDriveFile.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/chat/ChatViewModel.kt:189:52 'fun resume(value: Boolean, onCancellation: ((@ParameterName(...) Throwable) -> Unit)?): Unit' is deprecated. Use the overload that also accepts the `value` and the coroutine context in lambda.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/chat/ChatViewModel.kt:427:69 Java type mismatch: inferred type is 'kotlin.String?', but 'kotlin.String' was expected.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/chat/ChatViewModel.kt:438:67 Java type mismatch: inferred type is 'kotlin.String?', but 'kotlin.String' was expected.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/chat/MarkdownText.kt:248:4 'fun ClickableText(text: AnnotatedString, modifier: Modifier = ..., style: TextStyle = ..., softWrap: Boolean = ..., overflow: TextOverflow = ..., maxLines: Int = ..., onTextLayout: (TextLayoutResult) -> Unit = ..., onClick: (Int) -> Unit): Unit' is deprecated. Use Text or BasicText and pass an AnnotatedString that contains a LinkAnnotation.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/settings/AgentsScreen.kt:368:48 'val Icons.Filled.Label: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Label.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/settings/AgentsScreen.kt:384:37 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/settings/CronJobScreen.kt:350:51 'val Icons.Filled.Label: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Label.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/settings/McpScreen.kt:414:52 'val Icons.Filled.Label: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Label.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/theme/Theme.kt:244:19 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:hiltAggregateDepsDebug
+
+> Task :app:hiltJavaCompileDebug
+
+> Task :app:processDebugJavaRes
+> Task :app:transformDebugClassesWithAsm
+> Task :app:mergeDebugJavaResource
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:mergeProjectDexDebug
+
+> Task :app:packageDebug
+PackagingOptions.jniLibs.useLegacyPackaging should be set to true because android:extractNativeLibs is set to "true" in AndroidManifest.xml.
+
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+
+BUILD SUCCESSFUL in 50s
+42 actionable tasks: 42 executed

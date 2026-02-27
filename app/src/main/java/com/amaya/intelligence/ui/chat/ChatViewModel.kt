@@ -414,6 +414,22 @@ class ChatViewModel @Inject constructor(
                             val argsObj = e.getJSONObject("arguments")
                             argsObj.keys().forEach { k -> argsMap[k] = argsObj.get(k) }
                         }
+                        // Restore subagent children
+                        val children = mutableListOf<SubagentExecution>()
+                        if (e.has("children")) {
+                            val childArr = e.getJSONArray("children")
+                            for (k in 0 until childArr.length()) {
+                                val c = childArr.getJSONObject(k)
+                                children.add(SubagentExecution(
+                                    index    = c.getInt("index"),
+                                    taskName = c.getString("taskName"),
+                                    prompt   = c.getString("prompt"),
+                                    result   = c.optString("result", null as String?),
+                                    status   = try { ToolStatus.valueOf(c.getString("status")) }
+                                               catch (_: Exception) { ToolStatus.SUCCESS }
+                                ))
+                            }
+                        }
                         toolExecutions.add(
                             ToolExecution(
                                 toolCallId = e.getString("toolCallId"),
@@ -421,12 +437,19 @@ class ChatViewModel @Inject constructor(
                                 arguments  = argsMap,
                                 result     = e.optString("result", null as String?),
                                 status     = try { ToolStatus.valueOf(e.getString("status")) }
-                                             catch (_: Exception) { ToolStatus.SUCCESS }
+                                             catch (_: Exception) { ToolStatus.SUCCESS },
+                                children   = children
                             )
                         )
                     }
                 }
-                messages.add(UiMessage(role = role, content = content, toolExecutions = toolExecutions))
+                messages.add(UiMessage(
+                    id             = obj.optString("id", java.util.UUID.randomUUID().toString()),
+                    role           = role,
+                    content        = content,
+                    timestamp      = obj.optLong("timestamp", System.currentTimeMillis()),
+                    toolExecutions = toolExecutions
+                ))
             }
             messages
         } catch (e: Exception) {
@@ -474,8 +497,10 @@ class ChatViewModel @Inject constructor(
         val jsonArray = org.json.JSONArray()
         messages.forEach { msg ->
             val obj = org.json.JSONObject()
+            obj.put("id", msg.id)
             obj.put("role", msg.role.name)
             obj.put("content", msg.content)
+            obj.put("timestamp", msg.timestamp)
             if (msg.toolExecutions.isNotEmpty()) {
                 val execArr = org.json.JSONArray()
                 msg.toolExecutions.forEach { exec ->
@@ -487,6 +512,20 @@ class ChatViewModel @Inject constructor(
                     val argsObj = org.json.JSONObject()
                     exec.arguments.forEach { (k, v) -> argsObj.put(k, v ?: org.json.JSONObject.NULL) }
                     e.put("arguments", argsObj)
+                    // Serialize subagent children
+                    if (exec.children.isNotEmpty()) {
+                        val childArr = org.json.JSONArray()
+                        exec.children.forEach { child ->
+                            val c = org.json.JSONObject()
+                            c.put("index", child.index)
+                            c.put("taskName", child.taskName)
+                            c.put("prompt", child.prompt)
+                            child.result?.let { c.put("result", it) }
+                            c.put("status", child.status.name)
+                            childArr.put(c)
+                        }
+                        e.put("children", childArr)
+                    }
                     execArr.put(e)
                 }
                 obj.put("toolExecutions", execArr)

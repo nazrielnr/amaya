@@ -138,7 +138,7 @@ private fun SimplePersonaEditor(
                 pills = listOf("Friendly", "Concise", "Professional", "Academic", "Humorous")
             )
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             PersonaTextField(
                 label = "Characteristic",
@@ -148,7 +148,7 @@ private fun SimplePersonaEditor(
                 pills = listOf("Analytical", "Patient", "Creative", "Thorough", "Direct", "Helpful")
             )
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             PersonaTextField(
                 label = "Custom Instruction",
@@ -158,7 +158,7 @@ private fun SimplePersonaEditor(
                 maxLines = 4
             )
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             PersonaTextField(
                 label = "Your Nickname",
@@ -168,7 +168,7 @@ private fun SimplePersonaEditor(
                 pills = listOf("Boss", "Friend", "User")
             )
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             PersonaTextField(
                 label = "More About You",

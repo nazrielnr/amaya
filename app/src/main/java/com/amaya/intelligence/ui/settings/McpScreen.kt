@@ -293,7 +293,7 @@ private fun McpServerCard(
                     Spacer(Modifier.height(4.dp))
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.secondaryContainer
                     ) {
                         Text(
                             "${server.headers.size} header${if (server.headers.size > 1) "s" else ""}",

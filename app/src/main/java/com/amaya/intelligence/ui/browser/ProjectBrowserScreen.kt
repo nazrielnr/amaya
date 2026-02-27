@@ -17,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -118,8 +117,8 @@ fun ProjectBrowserScreen(
                         shape = CircleShape,
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                            focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
@@ -277,7 +276,7 @@ private fun BreadcrumbBar(
             
             Surface(
                 shape = CircleShape,
-                color = if (isLast) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                color = if (isLast) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
                 modifier = Modifier
                     .clip(CircleShape)
                     .clickable {

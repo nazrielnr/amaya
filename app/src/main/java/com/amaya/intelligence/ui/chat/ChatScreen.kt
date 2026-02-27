@@ -1,4 +1,4 @@
-package com.amaya.intelligence.ui.chat
+ï»¿package com.amaya.intelligence.ui.chat
 
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -247,7 +248,7 @@ fun ChatScreen(
                                 decorationBox = { inner ->
                                     if (searchQuery.isEmpty()) {
                                         Text(
-                                            "Search conversations…",
+                                            "Search conversationsï¿½",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -339,7 +340,7 @@ fun ChatScreen(
                                         scope.launch { drawerState.close() }
                                     },
                                     shape = RoundedCornerShape(10.dp),
-                                    color = Color.Transparent,
+                                    color = androidx.compose.ui.graphics.Color.Transparent,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
@@ -371,7 +372,7 @@ fun ChatScreen(
                     // -- Divider ---------------------------------------------
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
 
                     // -- Footer: Settings ------------------------------------
@@ -380,7 +381,7 @@ fun ChatScreen(
                             onNavigateToSettings()
                             scope.launch { drawerState.close() }
                         },
-                        color = Color.Transparent,
+                        color = androidx.compose.ui.graphics.Color.Transparent,
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
@@ -423,148 +424,178 @@ fun ChatScreen(
             }
         }
     ) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            topBar = {
-                Column {
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 1.dp,
-                    shadowElevation = 0.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    TopAppBar(
-                        title = {
-                            Box {
-                                Surface(
-                                    onClick = { showModelSelector = true },
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            (activeAgent?.name ?: selectedModel).ifBlank { "Select Agent" }
-                                                .let { if (it.length > 20) it.take(18) + "…" else it },
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(Modifier.width(6.dp))
-                                        Icon(
-                                            Icons.Default.KeyboardArrowDown,
-                                            contentDescription = "Select Model",
-                                            modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                    }
-                                }
+        // Full-screen Box overlay â€” extends edge-to-edge behind status bar
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Estimated heights for content padding so messages don't hide behind overlays
+            val topPad = 64.dp
+            val botPad = 80.dp
 
-                            // -- Model / Agent Selector Dropdown --------------------------
-                                DropdownMenu(
-                                    expanded = showModelSelector,
-                                    onDismissRequest = { showModelSelector = false },
-                                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
+            // Content layer
+            if (uiState.messages.isEmpty()) {
+                WelcomeScreen(
+                    onPromptClick = { viewModel.sendMessage(it) },
+                    currentWorkspace = uiState.workspacePath,
+                    onNewProjectClick = onNavigateToWorkspace,
+                    topPadding = 64.dp
+                )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp, end = 16.dp,
+                        top = topPad + 8.dp,
+                        bottom = botPad + 16.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(displayMessages) { message ->
+                        MessageBubble(message = message)
+                    }
+                    val lastIsUser = displayMessages.lastOrNull()?.role == MessageRole.USER
+                    val lastIsEmptyAi = displayMessages.lastOrNull()?.let {
+                        it.role == MessageRole.ASSISTANT && it.content.isBlank() && it.toolExecutions.isEmpty()
+                    } ?: false
+                    if (uiState.isLoading && (lastIsUser || lastIsEmptyAi)) {
+                        item { LoadingIndicator() }
+                    }
+                }
+            }
+
+            // Floating header overlay â€” gradient from transparent (top) to semi-opaque (bottom)
+            // No border/divider â€” pure gradient fade like iOS
+            val bgColor = MaterialTheme.colorScheme.background
+
+            // Gradient scrim Box â€” drawn edge-to-edge including behind status bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .align(Alignment.TopStart)
+                    .drawBehind {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.0f  to bgColor.copy(alpha = 0.98f),
+                                    0.55f to bgColor.copy(alpha = 0.85f),
+                                    1.0f  to bgColor.copy(alpha = 0.0f)
+                                )
+                            )
+                        )
+                    }
+            )
+
+            // App bar Column uses system windowInsets (TopAppBar shifts below status bar)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopStart)
+            ) {
+                TopAppBar(
+                    title = {
+                        Box {
+                            Surface(
+                                onClick = { showModelSelector = true },
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    if (agentConfigs.isEmpty()) {
-                                        // No enabled agents — show hint
+                                    Text(
+                                        (activeAgent?.name ?: selectedModel).ifBlank { "Select Agent" }
+                                            .let { if (it.length > 20) it.take(18) + "..." else it },
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Icon(
+                                        Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "Select Model",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = showModelSelector,
+                                onDismissRequest = { showModelSelector = false },
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
+                            ) {
+                                if (agentConfigs.isEmpty()) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text("No active agents", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                                                Text("Enable agents in Settings - AI Agents", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                            }
+                                        },
+                                        onClick = { showModelSelector = false },
+                                        enabled = false
+                                    )
+                                } else {
+                                    DropdownMenuItem(
+                                        text = { Text("Select Agent", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                        onClick = {}, enabled = false
+                                    )
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                                    agentConfigs.forEach { agent ->
+                                        val isSelected = agent.id == activeAgentId ||
+                                            (activeAgentId.isBlank() && agent == agentConfigs.firstOrNull())
                                         DropdownMenuItem(
                                             text = {
                                                 Column {
                                                     Text(
-                                                        "No active agents",
+                                                        agent.name.ifBlank { "Unnamed Agent" },
                                                         style = MaterialTheme.typography.bodyMedium,
-                                                        color = MaterialTheme.colorScheme.onSurface
+                                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                                     )
-                                                    Text(
-                                                        "Enable agents in Settings ? AI Agents",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                                    )
+                                                    if (agent.modelId.isNotBlank()) {
+                                                        Text(agent.modelId, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                                    }
                                                 }
                                             },
-                                            onClick = { showModelSelector = false },
-                                            enabled = false
-                                        )
-                                    } else {
-                                        // Header label
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    "Select Agent",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            leadingIcon = {
+                                                Icon(
+                                                    if (isSelected) Icons.Default.CheckCircle else Icons.Default.SmartToy,
+                                                    null, modifier = Modifier.size(16.dp),
+                                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                                                 )
                                             },
-                                            onClick = {},
-                                            enabled = false
+                                            onClick = { viewModel.setSelectedAgent(agent); showModelSelector = false }
                                         )
-                                        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
-                                        agentConfigs.forEach { agent ->
-                                            val isSelected = agent.id == activeAgentId ||
-                                                (activeAgentId.isBlank() && agent == agentConfigs.firstOrNull())
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Column {
-                                                        Text(
-                                                            agent.name.ifBlank { "Unnamed Agent" },
-                                                            style = MaterialTheme.typography.bodyMedium,
-                                                            fontWeight = if (isSelected) FontWeight.SemiBold
-                                                                         else FontWeight.Normal,
-                                                            color = if (isSelected) MaterialTheme.colorScheme.primary
-                                                                    else MaterialTheme.colorScheme.onSurface
-                                                        )
-                                                        if (agent.modelId.isNotBlank()) {
-                                                            Text(
-                                                                agent.modelId,
-                                                                style = MaterialTheme.typography.labelSmall,
-                                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                                            )
-                                                        }
-                                                    }
-                                                },
-                                                leadingIcon = {
-                                                    Icon(
-                                                        if (isSelected) Icons.Default.CheckCircle
-                                                        else Icons.Default.SmartToy,
-                                                        null,
-                                                        modifier = Modifier.size(16.dp),
-                                                        tint = if (isSelected) MaterialTheme.colorScheme.primary
-                                                               else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                                                    )
-                                                },
-                                                onClick = {
-                                                    viewModel.setSelectedAgent(agent)
-                                                    showModelSelector = false
-                                                }
-                                            )
-                                        }
                                     }
                                 }
                             }
-                        },
-                        navigationIcon = {
-                            IconButton({ scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, "Menu", tint = MaterialTheme.colorScheme.onSurface)
-                            }
-                        },
-                        actions = {
-                            SessionInfoButton(
-                                totalTokens = uiState.totalInputTokens + uiState.totalOutputTokens,
-                                activeModel = selectedModel,
-                                activeReminderCount = activeReminderCount,
-                                hasTodayMemory = hasTodayMemory,
-                                onClick = { showSessionInfo = true }
-                            )
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton({ scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, "Menu", tint = MaterialTheme.colorScheme.onSurface)
+                        }
+                    },
+                    actions = {
+                        SessionInfoButton(
+                            totalTokens = uiState.totalInputTokens + uiState.totalOutputTokens,
+                            activeModel = selectedModel,
+                            activeReminderCount = activeReminderCount,
+                            hasTodayMemory = hasTodayMemory,
+                            onClick = { showSessionInfo = true }
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        scrolledContainerColor = Color.Transparent,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
                     )
-                }
-                // TodoBar sits right below the TopAppBar header
+                )
                 AnimatedVisibility(
                     visible = todoItems.isNotEmpty(),
                     enter = expandVertically(animationSpec = tween(250)) + fadeIn(tween(250)),
@@ -572,75 +603,54 @@ fun ChatScreen(
                 ) {
                     TodoBar(items = todoItems)
                 }
-                }
-            },
-            bottomBar = {
-                Column(modifier = Modifier.background(color = MaterialTheme.colorScheme.background)) {
-                    AnimatedVisibility(visible = uiState.error != null) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                            shape = MaterialTheme.shapes.medium
-                        ) {
-                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Error, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.error)
-                                Spacer(Modifier.width(12.dp))
-                                Text(uiState.error ?: "", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                                IconButton(onClick = { viewModel.clearError() }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onErrorContainer)
-                                }
+            }
+
+            // Floating bottom input overlay â€” transparent-top to solid-bottom gradient
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomStart)
+                    .imePadding()
+                    .drawBehind {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.0f  to bgColor.copy(alpha = 0.0f),
+                                    0.40f to bgColor.copy(alpha = 0.85f),
+                                    1.0f  to bgColor.copy(alpha = 0.98f)
+                                )
+                            )
+                        )
+                    }
+            ) {
+                AnimatedVisibility(visible = uiState.error != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Error, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.error)
+                            Spacer(Modifier.width(12.dp))
+                            Text(uiState.error ?: "", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                            IconButton(onClick = { viewModel.clearError() }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onErrorContainer)
                             }
                         }
                     }
-
-                    // Scrollable pills — only on welcome screen
-                    if (uiState.messages.isEmpty()) {
-                        ScrollablePills(
-                            onPromptClick = { viewModel.sendMessage(it) }
-                        )
-                    }
-
-                    ChatInput(
-                        onSend = { viewModel.sendMessage(it) },
-                        onStop = { viewModel.stopGeneration() },
-                        isLoading = uiState.isLoading,
-                        workspacePath = uiState.workspacePath
-                    )
                 }
-            }
-        ) { padding ->
-            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
                 if (uiState.messages.isEmpty()) {
-                    WelcomeScreen(
-                        onPromptClick = { viewModel.sendMessage(it) },
-                        currentWorkspace = uiState.workspacePath,
-                        onNewProjectClick = onNavigateToWorkspace
-                    )
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(displayMessages) { message ->
-                            MessageBubble(message = message)
-                        }
-
-                        val lastIsUser = displayMessages.lastOrNull()?.role == MessageRole.USER
-                        val lastIsEmptyAi = displayMessages.lastOrNull()?.let {
-                            it.role == MessageRole.ASSISTANT && it.content.isBlank() && it.toolExecutions.isEmpty()
-                        } ?: false
-
-                        if (uiState.isLoading && (lastIsUser || lastIsEmptyAi)) {
-                            item { LoadingIndicator() }
-                        }
-                    }
+                    ScrollablePills(onPromptClick = { viewModel.sendMessage(it) })
                 }
+                ChatInput(
+                    onSend = { viewModel.sendMessage(it) },
+                    onStop = { viewModel.stopGeneration() },
+                    isLoading = uiState.isLoading,
+                    workspacePath = uiState.workspacePath
+                )
             }
         }
     }
-
     // --- Session Info bottom sheet ---
     if (showSessionInfo) {
         SessionInfoSheet(
@@ -670,7 +680,7 @@ private fun estimateContextWindow(modelName: String): String = when {
     modelName.contains("mistral", ignoreCase = true)    -> "32K"
     modelName.contains("deepseek", ignoreCase = true)   -> "64K"
     modelName.contains("llama", ignoreCase = true)      -> "128K"
-    else                                                -> "—"
+    else                                                -> "ï¿½"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -724,7 +734,7 @@ fun SessionInfoSheet(
     hasTodayMemory: Boolean,
     onDismiss: () -> Unit
 ) {
-    // FIX #24: Use shared estimateContextWindow() — removed duplicate block
+    // FIX #24: Use shared estimateContextWindow() ï¿½ removed duplicate block
     val contextWindow = estimateContextWindow(activeModel)
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -818,7 +828,7 @@ private fun formatTokenCount(count: Int): String = when {
 }
 
 // -----------------------------------------------------------------------------
-//  TodoBar — collapsible task list shown below TopAppBar
+//  TodoBar ï¿½ collapsible task list shown below TopAppBar
 // -----------------------------------------------------------------------------
 
 @Composable
@@ -840,13 +850,13 @@ fun TodoBar(items: List<TodoItem>) {
         ?: items.lastOrNull()?.id
         ?: 1
 
-    // -- Shimmer — identical technique to LoadingIndicator / Thinking.. ----
+    // -- Shimmer ï¿½ identical technique to LoadingIndicator / Thinking.. ----
     // Key: teks HARUS warna solid (onSurface), shimmer di-overlay via SrcAtop.
     // baseShimmer = warna redup (teks saat tidak kena sorot)
     // peakShimmer = warna terang bergerak
     val isDark = isSystemInDarkTheme()
-    val baseShimmer = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
-    val peakShimmer = if (isDark) Color.White       else Color.Black
+    val baseShimmer = MaterialTheme.colorScheme.onSurfaceVariant
+    val peakShimmer = if (isDark) Color.White else Color.Black
 
     val transition = rememberInfiniteTransition(label = "todo_shimmer")
     val shimmerOffset by transition.animateFloat(
@@ -865,7 +875,7 @@ fun TodoBar(items: List<TodoItem>) {
         end    = Offset(shimmerOffset + 300f, 0f)
     )
 
-    // Surface background — sedikit berbeda dari surface biasa agar terlihat sebagai banner
+    // Surface background ï¿½ sedikit berbeda dari surface biasa agar terlihat sebagai banner
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier.fillMaxWidth()
@@ -902,7 +912,7 @@ fun TodoBar(items: List<TodoItem>) {
 
                 Spacer(Modifier.width(10.dp))
 
-                // -- Label — shimmer if running, muted if not -----------------
+                // -- Label ï¿½ shimmer if running, muted if not -----------------
                 if (isRunning) {
                     // Shimmer text: warna solid onSurface, lalu SrcAtop overlay shimmerBrush
                     Text(
@@ -1014,7 +1024,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
 
         // -- Label -----------------------------------------------------------
         if (isActive) {
-            // Shimmer: solid onSurface + SrcAtop shimmerBrush — persis teknik Thinking..
+            // Shimmer: solid onSurface + SrcAtop shimmerBrush ï¿½ persis teknik Thinking..
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
@@ -1044,7 +1054,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
             )
         }
 
-        // -- Step number — right aligned ------------------------------------
+        // -- Step number ï¿½ right aligned ------------------------------------
         Text(
             text = "${item.id}",
             style = MaterialTheme.typography.labelSmall,
@@ -1065,7 +1075,7 @@ fun MessageBubble(message: UiMessage) {
         val hPad = 14.dp
         val vPad = 10.dp
 
-        // Actual rendered content width — measured via onTextLayout
+        // Actual rendered content width ï¿½ measured via onTextLayout
         var measuredWidth by remember(message.content) { mutableStateOf<Int?>(null) }
 
         Column(
@@ -1216,7 +1226,7 @@ fun ToolCallCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column {
-            // -- Header row — tap to expand/collapse -----------------------
+            // -- Header row ï¿½ tap to expand/collapse -----------------------
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1245,7 +1255,7 @@ fun ToolCallCard(
                     }
                 }
 
-                // -- Tool name — shimmer when RUNNING ---------------------
+                // -- Tool name ï¿½ shimmer when RUNNING ---------------------
                 val toolLabel = formatToolName(execution.name, execution.arguments)
                 if (execution.status == ToolStatus.RUNNING) {
                     Text(
@@ -1283,7 +1293,7 @@ fun ToolCallCard(
                     tint = statusColor
                 )
 
-                // -- Expand chevron — only when done & has content ---------
+                // -- Expand chevron ï¿½ only when done & has content ---------
                 val canExpand = (execution.status == ToolStatus.SUCCESS || execution.status == ToolStatus.ERROR)
                     && (execution.result != null || execution.children.isNotEmpty())
                 if (canExpand) {
@@ -1426,7 +1436,7 @@ private fun SubagentChildCard(
                         fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        text = child.prompt.take(180).let { if (child.prompt.length > 180) "$it…" else it },
+                        text = child.prompt.take(180).let { if (child.prompt.length > 180) "$itï¿½" else it },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         fontStyle = FontStyle.Italic)
@@ -1437,7 +1447,7 @@ private fun SubagentChildCard(
                     Spacer(Modifier.height(3.dp))
                     Text(
                         text = child.result?.take(400)?.let {
-                            if ((child.result?.length ?: 0) > 400) "$it…" else it
+                            if ((child.result?.length ?: 0) > 400) "$itï¿½" else it
                         } ?: "",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
@@ -1690,7 +1700,7 @@ private fun ToolResultPreview(
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(title, style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                Text("$datetime  ·  $repeat", style = MaterialTheme.typography.labelSmall, color = metaColor)
+                Text("$datetime  ï¿½  $repeat", style = MaterialTheme.typography.labelSmall, color = metaColor)
             }
         }
 
@@ -1731,7 +1741,7 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
     // Helper: extract just the filename from a full path
     fun fileName(key: String) = args?.get(key)?.toString()?.substringAfterLast("/")?.take(30) ?: ""
     fun filePath(key: String) = args?.get(key)?.toString()?.let {
-        if (it.length > 28) "…" + it.takeLast(26) else it
+        if (it.length > 28) "ï¿½" + it.takeLast(26) else it
     } ?: ""
 
     @Suppress("UNCHECKED_CAST")
@@ -1787,11 +1797,11 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
             @Suppress("UNCHECKED_CAST")
             val subagents = args?.get("subagents") as? List<Map<String, Any?>>
             if (subagents.isNullOrEmpty()) {
-                "Agents  ×0"
+                "Agents  ï¿½0"
             } else {
-                // Show first 2 task names + overflow count, e.g. "Audit UI · Backend +2"
+                // Show first 2 task names + overflow count, e.g. "Audit UI ï¿½ Backend +2"
                 val names = subagents.mapNotNull { it["task_name"]?.toString()?.take(14) }
-                val shown = names.take(2).joinToString(" · ")
+                val shown = names.take(2).joinToString(" ï¿½ ")
                 val overflow = names.size - 2
                 if (overflow > 0) "$shown  +$overflow" else shown
             }
@@ -1826,18 +1836,19 @@ fun ChatInput(
         "Ask anything..."
     }
 
+    // WhatsApp-style floating input â€” melayang di atas chat
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .imePadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = CircleShape,
+            shape = RoundedCornerShape(28.dp),
             modifier = Modifier.fillMaxWidth(),
-            tonalElevation = 2.dp
+            shadowElevation = 4.dp,
+            tonalElevation = 0.dp
         ) {
             Row(
                 modifier = Modifier.padding(start = 24.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
@@ -1893,7 +1904,8 @@ fun ChatInput(
 fun WelcomeScreen(
     onPromptClick: (String) -> Unit,
     currentWorkspace: String?,
-    onNewProjectClick: () -> Unit
+    onNewProjectClick: () -> Unit,
+    topPadding: androidx.compose.ui.unit.Dp = 64.dp
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -1910,8 +1922,18 @@ fun WelcomeScreen(
     val now = remember { LocalDateTime.now() }
     val greeting = greetings[(now.dayOfYear + now.hour) % greetings.size]
 
+    // Center content in the space between header and input bar
+    // padding top = header height, padding bottom = input bar height
+    // so Alignment.Center lands in the true visual middle
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = topPadding, bottom = 96.dp) // 96dp â‰ˆ input bar height
+            .imePadding(),
+        contentAlignment = Alignment.Center
+    ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+        modifier = Modifier.padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -1929,7 +1951,7 @@ fun WelcomeScreen(
             Surface(
                 onClick = { expanded = true },
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -1975,7 +1997,8 @@ fun WelcomeScreen(
                 )
             }
         }
-    }
+    } // end Column
+    } // end Box
 }
 
 @Composable
@@ -2013,7 +2036,7 @@ fun ScrollablePills(
                 Surface(
                     onClick = { onPromptClick(pill.prompt) },
                     shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.surfaceVariant
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),

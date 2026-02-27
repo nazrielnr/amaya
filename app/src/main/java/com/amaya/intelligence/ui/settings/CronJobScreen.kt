@@ -218,7 +218,7 @@ private fun CronJobCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.secondaryContainer
                     ) {
                         Text(
                             job.recurringType.name.lowercase().replaceFirstChar { it.uppercase() },

@@ -1,0 +1,72 @@
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs UP-TO-DATE
+> Task :app:stripDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :app:kspDebugKotlin
+
+> Task :app:compileDebugKotlin
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/data/remote/api/AiSettings.kt:9:7 'class MasterKeys : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/data/remote/api/AiSettings.kt:64:29 'class MasterKeys : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/data/remote/api/AiSettings.kt:64:52 'class MasterKeys : Any' is deprecated. Deprecated in Java.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/data/remote/api/AiSettings.kt:65:35 'static fun create(p0: String, p1: String, p2: Context, p3: EncryptedSharedPreferences.PrefKeyEncryptionScheme, p4: EncryptedSharedPreferences.PrefValueEncryptionScheme): SharedPreferences' is deprecated. Deprecated in Java.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/browser/ProjectBrowserScreen.kt:377:26 'val Icons.Filled.InsertDriveFile: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.InsertDriveFile.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/chat/ChatScreen.kt:1185:80 'val Icons.Filled.Undo: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Undo.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/chat/ChatViewModel.kt:189:52 'fun resume(value: Boolean, onCancellation: ((@ParameterName(...) Throwable) -> Unit)?): Unit' is deprecated. Use the overload that also accepts the `value` and the coroutine context in lambda.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/chat/ChatViewModel.kt:422:67 Java type mismatch: inferred type is 'kotlin.String?', but 'kotlin.String' was expected.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/chat/MarkdownText.kt:248:4 'fun ClickableText(text: AnnotatedString, modifier: Modifier = ..., style: TextStyle = ..., softWrap: Boolean = ..., overflow: TextOverflow = ..., maxLines: Int = ..., onTextLayout: (TextLayoutResult) -> Unit = ..., onClick: (Int) -> Unit): Unit' is deprecated. Use Text or BasicText and pass an AnnotatedString that contains a LinkAnnotation.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/settings/AgentsScreen.kt:368:48 'val Icons.Filled.Label: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Label.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/settings/AgentsScreen.kt:384:37 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/settings/CronJobScreen.kt:350:51 'val Icons.Filled.Label: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Label.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/settings/McpScreen.kt:414:52 'val Icons.Filled.Label: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Label.
+w: file:///C:/Users/BiuBiu/Documents/my%20app/opencode%20mobile/app/src/main/java/com/amaya/intelligence/ui/theme/Theme.kt:244:19 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:hiltAggregateDepsDebug UP-TO-DATE
+
+> Task :app:hiltJavaCompileDebug
+
+> Task :app:processDebugJavaRes
+> Task :app:transformDebugClassesWithAsm
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugJavaResource
+
+> Task :app:packageDebug
+PackagingOptions.jniLibs.useLegacyPackaging should be set to true because android:extractNativeLibs is set to "true" in AndroidManifest.xml.
+
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug
+
+BUILD SUCCESSFUL in 26s
+41 actionable tasks: 10 executed, 31 up-to-date

@@ -19,63 +19,83 @@ import androidx.core.view.WindowCompat
 // --- Monochrome Neutral Palette ---
 // Light mode: near-black primary, grey surfaces. Dark mode: near-white primary, dark surfaces.
 
-// Dark Mode
-private val DarkPrimary             = Color(0xFFE6E0E9) // near-white — buttons, switches, FAB
-private val DarkOnPrimary           = Color(0xFF181818) // dark text on primary
-private val DarkPrimaryContainer    = Color(0xFF3A3A3A) // elevated container
-private val DarkOnPrimaryContainer  = Color(0xFFE6E0E9)
+// ─── Dark Mode Palette ────────────────────────────────────────────────────────
+private val DarkPrimary              = Color(0xFFE0E0E0) // near-white — buttons, switches, FAB
+private val DarkOnPrimary            = Color(0xFF181818) // dark text on primary
+private val DarkPrimaryContainer     = Color(0xFF3A3A3A) // neutral dark container
+private val DarkOnPrimaryContainer   = Color(0xFFE0E0E0)
 
-private val DarkSecondary           = Color(0xFFBBBBBB)
-private val DarkOnSecondary         = Color(0xFF181818)
-private val DarkSecondaryContainer  = Color(0xFF2E2E2E)
-private val DarkOnSecondaryContainer= Color(0xFFBBBBBB)
+private val DarkSecondary            = Color(0xFFBBBBBB)
+private val DarkOnSecondary          = Color(0xFF181818)
+private val DarkSecondaryContainer   = Color(0xFF2E2E2E)
+private val DarkOnSecondaryContainer = Color(0xFFBBBBBB)
 
-private val DarkTertiary            = Color(0xFF9E9E9E)
-private val DarkOnTertiary          = Color(0xFF181818)
-private val DarkTertiaryContainer   = Color(0xFF2A2A2A)
-private val DarkOnTertiaryContainer = Color(0xFF9E9E9E)
+private val DarkTertiary             = Color(0xFF9E9E9E)
+private val DarkOnTertiary           = Color(0xFF181818)
+private val DarkTertiaryContainer    = Color(0xFF2A2A2A)
+private val DarkOnTertiaryContainer  = Color(0xFF9E9E9E)
 
-private val DarkError               = Color(0xFFF2B8B5)
-private val DarkOnError             = Color(0xFF601410)
-private val DarkErrorContainer      = Color(0xFF8C1D18)
-private val DarkOnErrorContainer    = Color(0xFFF9DEDC)
+private val DarkError                = Color(0xFFF2B8B5)
+private val DarkOnError              = Color(0xFF601410)
+private val DarkErrorContainer       = Color(0xFF8C1D18)
+private val DarkOnErrorContainer     = Color(0xFFF9DEDC)
 
-private val DarkBackground          = Color(0xFF1E1E1E) // #1E1E1E — VS Code dark background
-private val DarkOnBackground        = Color(0xFFE6E0E9)
-private val DarkSurface             = Color(0xFF252526) // #252526 — VS Code dark surface (panels)
-private val DarkOnSurface           = Color(0xFFE6E0E9)
-private val DarkSurfaceVariant      = Color(0xFF2D2D2D) // slightly lighter than surface
-private val DarkOnSurfaceVariant    = Color(0xFFCAC4D0)
-private val DarkOutline             = Color(0xFF6E6E6E)
+private val DarkBackground           = Color(0xFF1E1E1E) // VS Code dark bg
+private val DarkOnBackground         = Color(0xFFE0E0E0)
+private val DarkSurface              = Color(0xFF252526) // VS Code dark surface
+private val DarkOnSurface            = Color(0xFFE0E0E0)
+private val DarkSurfaceVariant       = Color(0xFF2D2D2D) // slightly lighter than surface
+private val DarkOnSurfaceVariant     = Color(0xFFAAAAAA)
+private val DarkOutline                  = Color(0xFF6E6E6E)
+private val DarkOutlineVariant           = Color(0xFF484848)
+// surfaceContainer hierarchy — all neutral dark, no purple
+private val DarkSurfaceContainerLowest   = Color(0xFF1A1A1A)
+private val DarkSurfaceContainerLow      = Color(0xFF202020)
+private val DarkSurfaceContainer         = Color(0xFF2A2A2A)
+private val DarkSurfaceContainerHigh     = Color(0xFF303030)
+private val DarkSurfaceContainerHighest  = Color(0xFF383838)
 
-// Light Mode
-private val LightPrimary            = Color(0xFF1C1B1F) // near-black — buttons, switches, FAB
-private val LightOnPrimary          = Color(0xFFFFFFFF)
-private val LightPrimaryContainer   = Color(0xFFE0E0E0) // neutral grey container
-private val LightOnPrimaryContainer = Color(0xFF1C1B1F)
+// ─── Light Mode Palette ───────────────────────────────────────────────────────
+// primary  #1C1B1F (near-black) — button, switch, FAB
+// background & surface  #EEEEEE
+// surfaceVariant (card/pill)  #F9F9F9
+// onSurfaceVariant (icon)  #5F5F5F
+// All containers  neutral grey
 
-private val LightSecondary          = Color(0xFF5F5F5F)
-private val LightOnSecondary        = Color(0xFFFFFFFF)
-private val LightSecondaryContainer = Color(0xFFEEEEEE)
+private val LightPrimary             = Color(0xFF1C1B1F) // near-black — buttons, switches, FAB
+private val LightOnPrimary           = Color(0xFFFFFFFF)
+private val LightPrimaryContainer    = Color(0xFFDEDEDE) // neutral grey container
+private val LightOnPrimaryContainer  = Color(0xFF1C1B1F)
+
+private val LightSecondary           = Color(0xFF5F5F5F) // medium grey
+private val LightOnSecondary         = Color(0xFFFFFFFF)
+private val LightSecondaryContainer  = Color(0xFFE5E5E5) // neutral grey container
 private val LightOnSecondaryContainer = Color(0xFF1C1B1F)
 
-private val LightTertiary           = Color(0xFF757575)
-private val LightOnTertiary         = Color(0xFFFFFFFF)
-private val LightTertiaryContainer  = Color(0xFFE8E8E8)
-private val LightOnTertiaryContainer= Color(0xFF1C1B1F)
+private val LightTertiary            = Color(0xFF757575) // soft grey
+private val LightOnTertiary          = Color(0xFFFFFFFF)
+private val LightTertiaryContainer   = Color(0xFFE0E0E0) // neutral grey container
+private val LightOnTertiaryContainer = Color(0xFF1C1B1F)
 
-private val LightError              = Color(0xFFB3261E)
-private val LightOnError            = Color(0xFFFFFFFF)
-private val LightErrorContainer     = Color(0xFFF9DEDC)
-private val LightOnErrorContainer   = Color(0xFF410E0B)
+private val LightError               = Color(0xFFB3261E)
+private val LightOnError             = Color(0xFFFFFFFF)
+private val LightErrorContainer      = Color(0xFFF9DEDC)
+private val LightOnErrorContainer    = Color(0xFF410E0B)
 
-private val LightBackground         = Color(0xFFFFFFFF) // #FFFFFF — pure white canvas
-private val LightOnBackground       = Color(0xFF1C1B1F)
-private val LightSurface            = Color(0xFFF3F3F3) // #F3F3F3 — cards, sheets, drawers
-private val LightOnSurface          = Color(0xFF1C1B1F)
-private val LightSurfaceVariant     = Color(0xFFEEEEEE) // #EEEEEE — pills, secondary containers
-private val LightOnSurfaceVariant   = Color(0xFF5F5F5F) // #5F5F5F — leading icons
-private val LightOutline            = Color(0xFFBDBDBD)
+private val LightBackground          = Color(0xFFEEEEEE) // #EEEEEE — main background
+private val LightOnBackground        = Color(0xFF1C1B1F)
+private val LightSurface             = Color(0xFFEEEEEE) // #EEEEEE — same as background
+private val LightOnSurface           = Color(0xFF1C1B1F)
+private val LightSurfaceVariant      = Color(0xFFF9F9F9) // #F9F9F9 — card / pill surface
+private val LightOnSurfaceVariant    = Color(0xFF5F5F5F) // #5F5F5F — icons, secondary text
+private val LightOutline                  = Color(0xFFBDBDBD)
+private val LightOutlineVariant           = Color(0xFFD8D8D8)
+// surfaceContainer hierarchy — all neutral grey, no purple
+private val LightSurfaceContainerLowest   = Color(0xFFEEEEEE) // same as background
+private val LightSurfaceContainerLow      = Color(0xFFEBEBEB) // slightly darker than bg
+private val LightSurfaceContainer         = Color(0xFFE8E8E8) // default container
+private val LightSurfaceContainerHigh     = Color(0xFFE4E4E4) // slightly elevated
+private val LightSurfaceContainerHighest  = Color(0xFFE0E0E0) // most elevated
 
 private val LightColorScheme: ColorScheme = lightColorScheme(
     primary = LightPrimary,
@@ -100,7 +120,13 @@ private val LightColorScheme: ColorScheme = lightColorScheme(
     onSurface = LightOnSurface,
     surfaceVariant = LightSurfaceVariant,
     onSurfaceVariant = LightOnSurfaceVariant,
-    outline = LightOutline
+    outline = LightOutline,
+    outlineVariant = LightOutlineVariant,
+    surfaceContainerLowest = LightSurfaceContainerLowest,
+    surfaceContainerLow = LightSurfaceContainerLow,
+    surfaceContainer = LightSurfaceContainer,
+    surfaceContainerHigh = LightSurfaceContainerHigh,
+    surfaceContainerHighest = LightSurfaceContainerHighest
 )
 
 private val DarkColorScheme: ColorScheme = darkColorScheme(
@@ -126,7 +152,13 @@ private val DarkColorScheme: ColorScheme = darkColorScheme(
     onSurface = DarkOnSurface,
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = DarkOnSurfaceVariant,
-    outline = DarkOutline
+    outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant,
+    surfaceContainerLowest = DarkSurfaceContainerLowest,
+    surfaceContainerLow = DarkSurfaceContainerLow,
+    surfaceContainer = DarkSurfaceContainer,
+    surfaceContainerHigh = DarkSurfaceContainerHigh,
+    surfaceContainerHighest = DarkSurfaceContainerHighest
 )
 
 // --- Premium Android 16 Shapes ---

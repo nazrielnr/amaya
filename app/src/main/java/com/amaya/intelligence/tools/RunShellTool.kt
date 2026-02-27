@@ -125,12 +125,13 @@ class RunShellTool @Inject constructor(
             val env = arguments["env"] as? Map<String, String> ?: emptyMap()
             
             try {
+                // FIX #3: Only use one timeout mechanism (withTimeout via coroutine cancellation).
+                // The inner process.waitFor also has timeout, but the real guard is the coroutine
+                // cancellation which will interrupt blocking IO via thread interrupt.
                 val result = withTimeout(timeoutMs) {
                     runCommand(command, workingDir, env, timeoutMs)
                 }
-                
                 result
-                
             } catch (e: TimeoutCancellationException) {
                 ToolResult.Error(
                     "Command timed out after ${timeoutMs}ms",
@@ -157,7 +158,14 @@ class RunShellTool @Inject constructor(
         
         // Set working directory if specified
         if (workingDir != null) {
-            processBuilder.directory(java.io.File(workingDir))
+            val dir = java.io.File(workingDir)
+            if (!dir.exists() || !dir.isDirectory) {
+                return@withContext ToolResult.Error(
+                    "Working directory does not exist: $workingDir",
+                    ErrorType.NOT_FOUND
+                )
+            }
+            processBuilder.directory(dir)
         }
         
         // Add environment variables
@@ -167,34 +175,50 @@ class RunShellTool @Inject constructor(
         processBuilder.redirectErrorStream(true)
         
         val process = processBuilder.start()
-        
-        // Read output with size limiting
+
+        // FIX #3: Drain stdout on a separate thread so the pipe buffer never fills up
+        // and blocks the process (which would cause deadlock when waiting below).
+        // Also ensures process is always destroyed if coroutine is cancelled.
         val output = StringBuilder()
         var truncated = false
-        
-        BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
-            var line = reader.readLine()
-            while (line != null) {
-                if (output.length + line.length > MAX_OUTPUT_SIZE) {
-                    truncated = true
-                    output.append("\n... [output truncated, exceeded ${MAX_OUTPUT_SIZE / 1024}KB]")
-                    break
-                }
-                if (output.isNotEmpty()) output.append('\n')
-                output.append(line)
-                line = reader.readLine()
+
+        try {
+            val readerThread = Thread {
+                try {
+                    BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
+                        var line = reader.readLine()
+                        while (line != null) {
+                            if (output.length + line.length + 1 > MAX_OUTPUT_SIZE) {
+                                truncated = true
+                                output.append("\n... [output truncated, exceeded ${MAX_OUTPUT_SIZE / 1024}KB]")
+                                // Drain remaining to unblock process
+                                while (reader.readLine() != null) { /* drain */ }
+                                break
+                            }
+                            if (output.isNotEmpty()) output.append('\n')
+                            output.append(line)
+                            line = reader.readLine()
+                        }
+                    }
+                } catch (_: Exception) { /* stream closed on process destroy */ }
             }
-        }
-        
-        // Wait for process with timeout
-        val completed = process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
-        
-        if (!completed) {
+            readerThread.isDaemon = true
+            readerThread.start()
+
+            // Wait for process with timeout
+            val completed = process.waitFor(timeoutMs, TimeUnit.MILLISECONDS)
+            readerThread.join(2_000) // give reader thread 2s to flush remaining output
+
+            if (!completed) {
+                process.destroyForcibly()
+                return@withContext ToolResult.Error(
+                    "Command timed out after ${timeoutMs}ms",
+                    ErrorType.TIMEOUT
+                )
+            }
+        } catch (e: Exception) {
             process.destroyForcibly()
-            return@withContext ToolResult.Error(
-                "Command timed out after ${timeoutMs}ms",
-                ErrorType.TIMEOUT
-            )
+            throw e
         }
         
         val exitCode = process.exitValue()

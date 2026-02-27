@@ -658,6 +658,21 @@ fun ChatScreen(
 //  Session Info Button (replaces WorkspaceTokenChip)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// FIX #24: Extract duplicated context window calculation to top-level function
+private fun estimateContextWindow(modelName: String): String = when {
+    modelName.contains("gpt-4o", ignoreCase = true)     -> "128K"
+    modelName.contains("gpt-4", ignoreCase = true)      -> "128K"
+    modelName.contains("gpt-3.5", ignoreCase = true)    -> "16K"
+    modelName.contains("claude-3-5", ignoreCase = true) -> "200K"
+    modelName.contains("claude", ignoreCase = true)     -> "200K"
+    modelName.contains("gemini-1.5", ignoreCase = true) -> "1M"
+    modelName.contains("gemini", ignoreCase = true)     -> "128K"
+    modelName.contains("mistral", ignoreCase = true)    -> "32K"
+    modelName.contains("deepseek", ignoreCase = true)   -> "64K"
+    modelName.contains("llama", ignoreCase = true)      -> "128K"
+    else                                                -> "—"
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionInfoButton(
@@ -674,20 +689,7 @@ fun SessionInfoButton(
         else                  -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-    // Estimated context window based on model name
-    val contextWindow = when {
-        activeModel.contains("gpt-4o", ignoreCase = true)        -> "128K"
-        activeModel.contains("gpt-4", ignoreCase = true)         -> "128K"
-        activeModel.contains("gpt-3.5", ignoreCase = true)       -> "16K"
-        activeModel.contains("claude-3-5", ignoreCase = true)    -> "200K"
-        activeModel.contains("claude", ignoreCase = true)        -> "200K"
-        activeModel.contains("gemini-1.5", ignoreCase = true)    -> "1M"
-        activeModel.contains("gemini", ignoreCase = true)        -> "128K"
-        activeModel.contains("mistral", ignoreCase = true)       -> "32K"
-        activeModel.contains("deepseek", ignoreCase = true)      -> "64K"
-        activeModel.contains("llama", ignoreCase = true)         -> "128K"
-        else                                                     -> "—"
-    }
+    val contextWindow = estimateContextWindow(activeModel)
 
     Box(modifier = Modifier.padding(end = 8.dp)) {
         IconButton(onClick = onClick) {
@@ -699,8 +701,8 @@ fun SessionInfoButton(
             )
         }
         // Badge for active reminders
+        // FIX #22: Removed stray `androidx.compose.ui.platform.LocalDensity` no-op call
         if (hasAlert) {
-            androidx.compose.ui.platform.LocalDensity
             Surface(
                 shape = androidx.compose.foundation.shape.CircleShape,
                 color = MaterialTheme.colorScheme.error,
@@ -722,20 +724,8 @@ fun SessionInfoSheet(
     hasTodayMemory: Boolean,
     onDismiss: () -> Unit
 ) {
-    // Estimated context window
-    val contextWindow = when {
-        activeModel.contains("gpt-4o", ignoreCase = true)        -> "128K"
-        activeModel.contains("gpt-4", ignoreCase = true)         -> "128K"
-        activeModel.contains("gpt-3.5", ignoreCase = true)       -> "16K"
-        activeModel.contains("claude-3-5", ignoreCase = true)    -> "200K"
-        activeModel.contains("claude", ignoreCase = true)        -> "200K"
-        activeModel.contains("gemini-1.5", ignoreCase = true)    -> "1M"
-        activeModel.contains("gemini", ignoreCase = true)        -> "128K"
-        activeModel.contains("mistral", ignoreCase = true)       -> "32K"
-        activeModel.contains("deepseek", ignoreCase = true)      -> "64K"
-        activeModel.contains("llama", ignoreCase = true)         -> "128K"
-        else                                                     -> "—"
-    }
+    // FIX #24: Use shared estimateContextWindow() — removed duplicate block
+    val contextWindow = estimateContextWindow(activeModel)
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(

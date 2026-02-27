@@ -206,6 +206,20 @@ class ReadFileTool @Inject constructor(
                 paths.forEachIndexed { idx, path ->
                     val file = java.io.File(path)
                     appendLine("=== ${file.name} ===")
+                    // FIX #6/#15: Validate every path in batch mode through security layer
+                    when (val v = commandValidator.validatePath(path, isWrite = false)) {
+                        is ValidationResult.Denied -> {
+                            appendLine("BLOCKED: ${v.reason}")
+                            appendLine()
+                            return@forEachIndexed
+                        }
+                        is ValidationResult.RequiresConfirmation -> {
+                            appendLine("SKIPPED: Requires confirmation — ${v.reason}")
+                            appendLine()
+                            return@forEachIndexed
+                        }
+                        is ValidationResult.Allowed -> { /* proceed */ }
+                    }
                     if (!file.exists()) { appendLine("ERROR: File not found"); appendLine(); return@forEachIndexed }
                     if (!file.isFile)   { appendLine("ERROR: Not a file");      appendLine(); return@forEachIndexed }
                     try {

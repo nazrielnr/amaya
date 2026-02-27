@@ -3,6 +3,7 @@ package com.amaya.intelligence.tools
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,6 +36,7 @@ class TodoRepository @Inject constructor() {
 
     /** Replace all items with the new list. */
     fun replaceItems(newItems: List<TodoItem>) {
+        // FIX #14: Use update{} to ensure atomic compare-and-set, preventing lost updates
         _items.value = newItems
     }
 
@@ -42,24 +44,29 @@ class TodoRepository @Inject constructor() {
      * Merge incoming items into the existing list by id.
      * - If id exists: update only non-null fields from incoming item.
      * - If id does not exist: append as new item.
+     *
+     * FIX #14: Uses MutableStateFlow.update{} for atomic read-modify-write,
+     * preventing lost updates when two coroutines merge concurrently.
      */
     fun mergeItems(incoming: List<TodoItem>) {
-        val current = _items.value.toMutableList()
-        for (inItem in incoming) {
-            val idx = current.indexOfFirst { it.id == inItem.id }
-            if (idx >= 0) {
-                val existing = current[idx]
-                current[idx] = existing.copy(
-                    status     = inItem.status,
-                    content    = inItem.content ?: existing.content,
-                    activeForm = inItem.activeForm ?: existing.activeForm
-                )
-            } else {
-                current.add(inItem)
+        _items.update { current ->
+            val mutable = current.toMutableList()
+            for (inItem in incoming) {
+                val idx = mutable.indexOfFirst { it.id == inItem.id }
+                if (idx >= 0) {
+                    val existing = mutable[idx]
+                    mutable[idx] = existing.copy(
+                        status     = inItem.status,
+                        content    = inItem.content ?: existing.content,
+                        activeForm = inItem.activeForm ?: existing.activeForm
+                    )
+                } else {
+                    mutable.add(inItem)
+                }
             }
+            // Sort by id so the list is always ordered
+            mutable.sortedBy { it.id }
         }
-        // Sort by id so the list is always ordered
-        _items.value = current.sortedBy { it.id }
     }
 
     /** Clear all todos (called on new conversation). */

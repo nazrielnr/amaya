@@ -19,6 +19,7 @@ import com.amaya.intelligence.tools.TodoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 
 @HiltViewModel
@@ -56,14 +57,16 @@ class ChatViewModel @Inject constructor(
     private val _confirmationRequest = MutableStateFlow<ConfirmationRequest?>(null)
     val confirmationRequest: StateFlow<ConfirmationRequest?> = _confirmationRequest.asStateFlow()
     
-    private var confirmationContinuation: ((Boolean) -> Unit)? = null
+    // FIX #5: AtomicReference prevents race condition when stopGeneration() or a second sendMessage()
+    // races with an in-flight confirmation dialog. getAndSet(null) ensures exactly one caller
+    // ever invokes the continuation — no double-resume, no orphan coroutines.
+    private val confirmationContinuation = AtomicReference<((Boolean) -> Unit)?>(null)
     private var currentChatJob: kotlinx.coroutines.Job? = null
 
     override fun onCleared() {
         super.onCleared()
-        // Release confirmation continuation to avoid memory leak
-        confirmationContinuation?.invoke(false)
-        confirmationContinuation = null
+        // Atomically drain and cancel any pending confirmation to avoid coroutine leak
+        confirmationContinuation.getAndSet(null)?.invoke(false)
     }
     
     init {
@@ -115,9 +118,51 @@ class ChatViewModel @Inject constructor(
                 )
             }
             
-            val chatHistory = _uiState.value.messages
-                .filter { it.role == MessageRole.USER || it.role == MessageRole.ASSISTANT }
-                .map { msg -> ChatMessage(role = msg.role, content = msg.content) }
+            // FIX #20: Include TOOL messages in history so Anthropic gets the required
+            // assistant(tool_use) → tool(tool_result) sequence. Without TOOL messages,
+            // multi-turn conversations with tool calls break on reload and cause Anthropic 400 errors.
+            // We reconstruct ChatMessage with toolCalls/toolResult from stored ToolExecution data.
+            val chatHistory = buildList {
+                for (msg in _uiState.value.messages) {
+                    when (msg.role) {
+                        MessageRole.USER -> add(ChatMessage(role = MessageRole.USER, content = msg.content))
+                        MessageRole.ASSISTANT -> {
+                            // If message has tool executions, emit as assistant with toolCalls
+                            if (msg.toolExecutions.isNotEmpty()) {
+                                add(ChatMessage(
+                                    role = MessageRole.ASSISTANT,
+                                    content = msg.content.takeIf { it.isNotBlank() },
+                                    toolCalls = msg.toolExecutions.map { exec ->
+                                        com.amaya.intelligence.data.remote.api.ToolCallMessage(
+                                            id = exec.toolCallId,
+                                            name = exec.name,
+                                            arguments = exec.arguments,
+                                            metadata = emptyMap()
+                                        )
+                                    }
+                                ))
+                                // Emit corresponding tool result messages
+                                for (exec in msg.toolExecutions) {
+                                    if (exec.result != null) {
+                                        add(ChatMessage(
+                                            role = MessageRole.TOOL,
+                                            toolResult = com.amaya.intelligence.data.remote.api.ToolResultMessage(
+                                                toolCallId = exec.toolCallId,
+                                                content = exec.result,
+                                                isError = exec.status == ToolStatus.ERROR,
+                                                metadata = emptyMap()
+                                            )
+                                        ))
+                                    }
+                                }
+                            } else {
+                                add(ChatMessage(role = MessageRole.ASSISTANT, content = msg.content))
+                            }
+                        }
+                        else -> { /* SYSTEM messages not included */ }
+                    }
+                }
+            }
             
             val assistantMessage = UiMessage(
                 role = MessageRole.ASSISTANT,
@@ -139,7 +184,14 @@ class ChatViewModel @Inject constructor(
                 onConfirmation = { request ->
                     _confirmationRequest.value = request
                     kotlinx.coroutines.suspendCancellableCoroutine { cont ->
-                        confirmationContinuation = { confirmed -> cont.resume(confirmed) { } }
+                        // FIX #5: Set atomically; cancel old continuation if any (shouldn't happen, but safe)
+                        confirmationContinuation.getAndSet { confirmed ->
+                            if (cont.isActive) cont.resume(confirmed) {}
+                        }?.invoke(false) // cancel any previously orphaned continuation
+                        cont.invokeOnCancellation {
+                            // If coroutine is cancelled (e.g. stopGeneration), clean up
+                            confirmationContinuation.getAndSet(null)
+                        }
                     }
                 }
             ).collect { event ->
@@ -277,12 +329,16 @@ class ChatViewModel @Inject constructor(
     }
     
     fun respondToConfirmation(confirmed: Boolean) {
-        confirmationContinuation?.invoke(confirmed)
-        confirmationContinuation = null
+        // FIX #5: getAndSet(null) — atomic swap so only one caller ever invokes the continuation
+        confirmationContinuation.getAndSet(null)?.invoke(confirmed)
         _confirmationRequest.value = null
     }
     
     fun stopGeneration() {
+        // FIX #5: Cancel pending confirmation before cancelling the job, so the suspended
+        // coroutine inside suspendCancellableCoroutine gets resumed with false (not left orphaned).
+        confirmationContinuation.getAndSet(null)?.invoke(false)
+        _confirmationRequest.value = null
         currentChatJob?.cancel()
         currentChatJob = null
         _uiState.update { it.copy(isLoading = false) }
@@ -452,34 +508,19 @@ class ChatViewModel @Inject constructor(
 
     fun setSelectedAgent(agent: com.amaya.intelligence.data.remote.api.AgentConfig) {
         _uiState.update { it.copy(selectedModel = agent.modelId, activeAgentId = agent.id) }
+        // FIX #13: Only persist the active agent selection — do NOT override provider-specific
+        // settings (e.g. setOpenAiSettings) for non-OpenAI agents. Each provider reads its own
+        // key/baseUrl from the agent config directly via AiRepository. Calling setOpenAiSettings
+        // for an Anthropic agent would corrupt the OpenAI provider's baseUrl.
         viewModelScope.launch {
-            val apiKey = aiSettingsManager.getAgentApiKey(agent.id)
             aiSettingsManager.setActiveAgent(agent.id, agent.modelId)
-            aiSettingsManager.setOpenAiSettings(apiKey, agent.baseUrl)
         }
     }
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
-
-    /**
-     * Remove a single tool execution card from a specific message.
-     * Used by the delete button on ToolCallCard.
-     */
-    fun removeToolExecution(messageId: String, toolCallId: String) {
-        _uiState.update { state ->
-            val messages = state.messages.toMutableList()
-            val msgIndex = messages.indexOfFirst { it.id == messageId }
-            if (msgIndex >= 0) {
-                val msg = messages[msgIndex]
-                messages[msgIndex] = msg.copy(
-                    toolExecutions = msg.toolExecutions.filter { it.toolCallId != toolCallId }
-                )
-            }
-            state.copy(messages = messages)
-        }
-    }
+    // FIX #21: removeToolExecution() removed — dead code, no UI calls it (no delete button on ToolCallCard).
 }
 
 @Immutable

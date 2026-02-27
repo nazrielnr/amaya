@@ -38,8 +38,12 @@ class CommandValidator @Inject constructor(
             "ls", "find", "which", "whereis", "file",
             "pwd", "basename", "dirname", "realpath",
             "date", "cal", "uptime",
+            // Build tools — FIX #16: gradle/gradlew were documented as whitelisted but missing
+            "gradle", "gradlew", "./gradlew",
             // Node.js/npm commands - handled by RunShellTool with NodeRunner
             "npm", "node", "npx",
+            // Android tools
+            "adb", "aapt", "apksigner",
             // Background task management commands
             "task_status", "task_stop"
         )
@@ -48,11 +52,12 @@ class CommandValidator @Inject constructor(
          * Commands allowed but may require confirmation for certain args.
          */
         private val CONDITIONALLY_ALLOWED = setOf(
-            "git", "adb", "logcat", "am", "pm",
+            "git", "logcat", "am", "pm",
             "mkdir", "touch", "cp", "mv",
             "chmod", "chown",
             "curl", "wget",
             "tar", "zip", "unzip", "gzip", "gunzip"
+            // Note: adb, gradle, gradlew moved to ALWAYS_ALLOWED (FIX #16)
         )
         
         // ====================================================================

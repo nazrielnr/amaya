@@ -69,14 +69,21 @@ class DeleteFileTool @Inject constructor(
             )
         }
         
-        // Permanent delete requires extra confirmation
+        // FIX #8: Permanent delete — execute directly (ToolExecutor already got confirmation
+        // from user before re-calling execute). Returning RequiresConfirmation again would
+        // cause an infinite confirmation loop since ToolExecutor retries with same args.
         if (permanent) {
-            return@withContext ToolResult.RequiresConfirmation(
-                "PERMANENT deletion requested - this cannot be undone!",
-                "File: $pathStr"
-            )
+            return@withContext try {
+                if (file.isDirectory) file.deleteRecursively() else file.delete()
+                ToolResult.Success(
+                    output = "Permanently deleted: $pathStr",
+                    metadata = mapOf("path" to pathStr, "permanent" to true)
+                )
+            } catch (e: Exception) {
+                ToolResult.Error("Permanent delete failed: ${e.message}", ErrorType.EXECUTION_ERROR)
+            }
         }
-        
+
         try {
             // Move to trash instead of deleting
             val trashFile = moveToTrash(file)

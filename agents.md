@@ -1645,6 +1645,54 @@ FAILURE: Build failed with an exception.
 **Cause:** MCP server tool descriptions can be very long (no size limit on their end).
 **Solution:** Already fixed — MCP tools also go through `.truncate(1024)` in `buildToolDefinitions()`.
 
+### Subagent Uses Wrong Provider / API Key
+
+**Cause:** `SubagentRunner` was reading `settings.activeProvider` / `settings.activeModel` from raw DataStore which could be stale or mismatch the agent selected in UI.
+**Solution:** Already fixed — `SubagentRunner.runInternal()` now resolves provider and model from the active `AgentConfig` (by `activeAgentId`), falling back to DataStore only if no enabled agent found.
+
+### Confirmation Dialog Hangs / App Freezes After Stop
+
+**Cause:** `confirmationContinuation` was a plain `var`, causing race condition when `stopGeneration()` was called while a confirmation was pending — the suspended coroutine was never resumed.
+**Solution:** Already fixed — `confirmationContinuation` is now `AtomicReference`. `stopGeneration()` atomically drains and cancels the continuation before cancelling the job.
+
+### `edit_file` With Diff Corrupts File / Removes Wrong Lines
+
+**Cause:** `applyUnifiedDiff` used full-file string search (`indexOfFirst { it == rem }`) to find lines to remove, causing wrong lines to be deleted when the file had duplicate content.
+**Solution:** Already fixed — now uses position-based cursor tracking anchored to the `@@` hunk header line number.
+
+### `write_file` / `edit_file` Rejects Valid Kotlin/Python Code
+
+**Cause:** `validateBracketMatching` used a simple `inString` boolean flag that failed to handle triple-quoted strings (`"""`), comments (`//`, `/* */`), causing false-positive "Unclosed brackets" errors.
+**Solution:** Already fixed — full state-machine parser with `ParseState` enum handles all Kotlin/Python/JS syntax correctly.
+
+### `read_file` Batch Mode Reads Protected Files Without Confirmation
+
+**Cause:** `executeBatch(paths=[...])` did not call `commandValidator.validatePath()` on each path — AI could request `/proc/1/mem` or other protected paths via the `paths` array.
+**Solution:** Already fixed — each path in batch mode is validated through `commandValidator` before reading.
+
+### `delete_file permanent=true` Shows Confirmation Dialog Repeatedly
+
+**Cause:** `DeleteFileTool` returned `RequiresConfirmation` for `permanent=true`, but ToolExecutor re-calls `execute()` with the same args after user confirms — triggering the dialog again infinitely.
+**Solution:** Already fixed — after confirmation is shown once, re-execution detects `permanent=true` and deletes directly.
+
+### Multi-turn Conversations with Tool Calls Fail on Reload (Anthropic 400)
+
+**Cause:** `chatHistory` in `sendMessage()` filtered out `TOOL` role messages, breaking the required Anthropic `assistant(tool_use) → tool(tool_result)` sequence on conversation reload.
+**Solution:** Already fixed — `chatHistory` now reconstructs full `ChatMessage` sequence including tool calls and tool results from stored `ToolExecution` data.
+
+### `invoke_subagents` Causes Force Close (Fatal Exception)
+
+**Cause:** `AiRepository.chat()` used `flow { }` builder. When `invoke_subagents` runs parallel subagents via `async { }`, each subagent calls `onEvent { emitter.emit(...) }` from a different coroutine concurrently. `flow { }` is **not thread-safe** for concurrent emission — throws:
+```
+java.lang.IllegalStateException: Flow invariant is violated:
+Emission from another coroutine is detected.
+FlowCollector is not thread-safe and concurrent emissions are prohibited.
+Use 'channelFlow' builder instead of 'flow'
+```
+This causes `FATAL EXCEPTION: main` → app force close every time `invoke_subagents` is used.
+
+**Solution:** Already fixed — `AiRepository.chat()` now uses `channelFlow { }` instead of `flow { }`. All internal `emit()` calls replaced with `send()` (`ProducerScope` API). The `onEvent` lambda uses `channel.send(event)` which is thread-safe for concurrent coroutines.
+
 ---
 
 ## 🗺️ Roadmap
@@ -1674,7 +1722,7 @@ FAILURE: Build failed with an exception.
 - [x] Model selection fix — `selectedModel` from UI state always takes priority over DataStore
 - [x] Security hardening — path traversal fix, encoded path detection, `create_directory` isWrite fix
 - [x] Debug log cleanup — removed all sensitive data logs from OpenAiProvider & GeminiProvider
-- [x] Memory leak fixes — `confirmationContinuation` cleared in `onCleared()`, `repoScope` cancellable
+- [x] Memory leak fixes — `confirmationContinuation` uses `AtomicReference` + cleared atomically in `onCleared()` and `stopGeneration()`, `repoScope` cancellable
 - [x] DAO `@Singleton` — all 5 DAO providers now singleton in `DatabaseModule`
 - [x] Dead code removal — `selectProvider()`, `providers`/`selectedProvider` from `ChatUiState`
 - [x] UUID tool call IDs — GeminiProvider now uses `UUID.randomUUID()` instead of timestamp
@@ -1684,6 +1732,26 @@ FAILURE: Build failed with an exception.
 - [x] `update_todo` ToolResultPreview — shows real task list with status icons + progress bar (not just numbers)
 - [x] `formatToolName` for `invoke_subagents` — shows task name list (e.g. `Audit UI · Backend  +2`)
 - [x] `SubagentChildCard` — each subagent has its own shimmer card in expanded `ToolCallCard`
+- [x] **Comprehensive code audit & hardening (v1.1.1)**:
+  - [x] `confirmationContinuation` race condition — `AtomicReference` + atomic resume/cancel in `stopGeneration()` and `onCleared()`
+  - [x] `InvokeSubagentsTool` task validation — pre-validate all tasks before `mapIndexed` to ensure proper early return
+  - [x] `RunShellTool` deadlock fix — stdout drained on daemon thread to prevent pipe buffer deadlock; `destroyForcibly()` on exception
+  - [x] `ReadFileTool` batch security — all paths in `paths[]` batch mode now validated via `commandValidator.validatePath()`
+  - [x] `EditFileTool` atomic write — `applyUnifiedDiff` and find/replace both use temp-file + `renameTo` + fallback `copyTo`
+  - [x] `DeleteFileTool` infinite confirmation loop — `permanent=true` now executes directly after ToolExecutor confirms
+  - [x] `AiRepository` safe cast — `event as AgentEvent` replaced with `if (event is AgentEvent)` to prevent `ClassCastException`
+  - [x] `FindFilesTool` path security — content search mode now validates path via `commandValidator` before `walkTopDown()`
+  - [x] `McpClientManager` thread safety — `toolCache` and `toolDefinitionsCache` marked `@Volatile`
+  - [x] `ChatViewModel.setSelectedAgent()` — removed erroneous `setOpenAiSettings()` call for non-OpenAI agents
+  - [x] `TodoRepository.mergeItems()` — atomic `_items.update {}` prevents lost updates from concurrent coroutines
+  - [x] `CommandValidator` whitelist sync — `gradle`, `gradlew`, `./gradlew`, `adb`, `aapt`, `apksigner` moved to `ALWAYS_ALLOWED`
+  - [x] `SubagentRunner` provider fix — resolves provider/model from active `AgentConfig` (not stale DataStore fields)
+  - [x] `chatHistory` tool messages — `TOOL` role messages included in history for correct Anthropic tool_use→tool_result sequence
+  - [x] `applyUnifiedDiff` correctness — position-based hunk application (cursor tracking) instead of fragile full-file string search
+  - [x] `validateBracketMatching` false positives — full state-machine parser handles `"""`, `'''`, `//`, `/* */`, escape sequences
+  - [x] `ChatScreen` dead code — stray `LocalDensity` no-op call removed; duplicate `contextWindow` extracted to `estimateContextWindow()`
+  - [x] `removeToolExecution()` dead code removed from `ChatViewModel`
+  - [x] `AiRepository.chat()` — `flow {}` → `channelFlow {}` to fix concurrent emission crash from parallel subagents (`invoke_subagents` force close)
 - [ ] Project browser
 - [ ] Syntax highlighting for code blocks
 

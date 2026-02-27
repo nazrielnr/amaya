@@ -35,6 +35,12 @@ class FindFilesTool @Inject constructor(
         if (contentQuery != null) {
             val searchPath = arguments["path"] as? String ?: return@withContext ToolResult.Error(
                 "Missing required argument: path", ErrorType.VALIDATION_ERROR)
+            // FIX #12: Validate path before content search to prevent scanning protected dirs
+            when (val v = commandValidator.validatePath(searchPath, isWrite = false)) {
+                is ValidationResult.Denied -> return@withContext ToolResult.Error(v.reason, ErrorType.SECURITY_VIOLATION)
+                is ValidationResult.RequiresConfirmation -> return@withContext ToolResult.RequiresConfirmation(v.reason, searchPath)
+                is ValidationResult.Allowed -> { /* proceed */ }
+            }
             val caseSensitive = arguments["case_sensitive"] as? Boolean ?: false
             val maxResults = (arguments["max_results"] as? Number)?.toInt() ?: 50
             val dir = java.io.File(searchPath)

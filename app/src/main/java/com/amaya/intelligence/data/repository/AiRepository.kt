@@ -9,6 +9,7 @@ import com.amaya.intelligence.util.debugLog
 import com.amaya.intelligence.util.errorLog
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.CoroutineScope
@@ -121,6 +122,12 @@ class AiRepository @Inject constructor(
      * @param onConfirmation Callback for tool confirmation
      * @return Flow of agent events (text, tool calls, results)
      */
+    // FIX: Use channelFlow instead of flow to support concurrent emissions from subagent
+    // async{} coroutines. flow{} is NOT thread-safe — concurrent emit() from different
+    // coroutines (e.g. SubagentUpdate events from parallel async{}) causes:
+    // "Flow invariant is violated: Emission from another coroutine is detected"
+    // → IllegalStateException → FATAL EXCEPTION → app force close.
+    // channelFlow uses a Channel internally which IS thread-safe for concurrent senders.
     fun chat(
         message: String,
         conversationHistory: List<ChatMessage> = emptyList(),
@@ -130,7 +137,7 @@ class AiRepository @Inject constructor(
         activeAgentId: String? = null,
         selectedModel: String? = null,
         onConfirmation: suspend (ConfirmationRequest) -> Boolean = { false }
-    ): Flow<AgentEvent> = flow {
+    ): Flow<AgentEvent> = channelFlow {
         
         val settings = settingsManager.getSettings()
 
@@ -170,7 +177,7 @@ class AiRepository @Inject constructor(
             
             // Emit NewIteration for subsequent iterations (after tool results)
             if (iterations > 1) {
-                emit(AgentEvent.NewIteration)
+                send(AgentEvent.NewIteration)
             }
             
             val request = ChatRequest(
@@ -189,12 +196,12 @@ class AiRepository @Inject constructor(
                 when (response) {
                     is ChatResponse.TextDelta -> {
                         textBuffer.append(response.text)
-                        emit(AgentEvent.TextDelta(response.text))
+                        send(AgentEvent.TextDelta(response.text))
                     }
                     
                     is ChatResponse.ToolCall -> {
                         hasToolCalls = true
-                        emit(AgentEvent.ToolCallStart(response.id, response.name, response.arguments))
+                        send(AgentEvent.ToolCallStart(response.id, response.name, response.arguments))
                         
                         toolCalls.add(ToolCallMessage(
                             id = response.id,
@@ -206,12 +213,12 @@ class AiRepository @Inject constructor(
                     
                     is ChatResponse.Done -> {
                         response.usage?.let { usage ->
-                            emit(AgentEvent.Usage(usage.inputTokens, usage.outputTokens))
+                            send(AgentEvent.Usage(usage.inputTokens, usage.outputTokens))
                         }
                     }
                     
                     is ChatResponse.Error -> {
-                        emit(AgentEvent.Error(response.message, response.retryable))
+                        send(AgentEvent.Error(response.message, response.retryable))
                         continueLoop = false
                     }
                 }
@@ -230,13 +237,15 @@ class AiRepository @Inject constructor(
                 
                 // Execute each tool call
                 for (toolCall in toolCalls) {
-                    val emitter = this
+                    val channel = this
                     val result = mcpToolExecutor.execute(
                         toolName = toolCall.name,
                         arguments = toolCall.arguments,
                         workspacePath = workspacePath,
                         toolCallId = toolCall.id,
-                        onEvent = { event -> emitter.emit(event as AgentEvent) },
+                        // FIX: Use channel.send() — channelFlow's ProducerScope is thread-safe,
+                        // unlike flow{}'s emit() which panics on concurrent coroutine access.
+                        onEvent = { event -> if (event is AgentEvent) channel.send(event) },
                         onConfirmationRequired = onConfirmation
                     )
                     
@@ -246,7 +255,7 @@ class AiRepository @Inject constructor(
                         is ToolResult.RequiresConfirmation -> "Confirmation required: ${result.reason}"
                     }
                     
-                    emit(AgentEvent.ToolCallResult(
+                    send(AgentEvent.ToolCallResult(
                         toolCallId = toolCall.id,
                         toolName = toolCall.name,
                         result = resultContent,
@@ -272,10 +281,10 @@ class AiRepository @Inject constructor(
         }
         
         if (iterations >= maxIterations) {
-            emit(AgentEvent.Error("Maximum iterations reached", retryable = false))
+            send(AgentEvent.Error("Maximum iterations reached", retryable = false))
         }
         
-        emit(AgentEvent.Done)
+        send(AgentEvent.Done)
     }
     
     /**

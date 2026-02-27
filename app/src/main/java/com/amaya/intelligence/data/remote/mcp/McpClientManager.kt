@@ -32,8 +32,11 @@ class McpClientManager @Inject constructor(
         private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
     }
 
-    private var toolCache: Map<String, McpToolHandle> = emptyMap()
-    private var toolDefinitionsCache: List<AiToolDefinition> = emptyList()
+    // FIX #10: Use @Volatile for visibility across threads. refreshTools() runs on IO dispatcher,
+    // getCachedToolDefinitions() may be called from main thread. Both vars are written atomically
+    // (full replacement, not mutation), so @Volatile is sufficient here.
+    @Volatile private var toolCache: Map<String, McpToolHandle> = emptyMap()
+    @Volatile private var toolDefinitionsCache: List<AiToolDefinition> = emptyList()
 
     suspend fun refreshTools(): List<AiToolDefinition> {
         val settings = settingsManager.getSettings()

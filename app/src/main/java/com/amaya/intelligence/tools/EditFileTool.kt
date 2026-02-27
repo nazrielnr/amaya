@@ -163,9 +163,23 @@ class EditFileTool @Inject constructor(
             backupDir.mkdirs()
             val backupFile = File(backupDir, "${file.name}.bak.${System.currentTimeMillis()}")
             file.copyTo(backupFile, overwrite = true)
-            
-            // Write new content
-            file.writeText(newFullContent)
+
+            // FIX #7: Atomic write — write to temp file first, then rename/copy to target
+            // to prevent file corruption if the process is killed mid-write.
+            val tempFile = File.createTempFile(".edit_", ".tmp", file.parentFile ?: backupDir)
+            try {
+                tempFile.writeText(newFullContent)
+                if (!tempFile.renameTo(file)) {
+                    // Fallback for cross-filesystem (e.g. external storage)
+                    tempFile.copyTo(file, overwrite = true)
+                    tempFile.delete()
+                }
+            } catch (e: Exception) {
+                tempFile.delete()
+                // Restore from backup
+                backupFile.copyTo(file, overwrite = true)
+                throw e
+            }
             
             ToolResult.Success(
                 output = buildString {
@@ -207,37 +221,64 @@ class EditFileTool @Inject constructor(
             while (i < diffLines.size) {
                 val hunkMatch = hunkRegex.find(diffLines[i])
                 if (hunkMatch != null) {
+                    // FIX #17: Use origStart (from hunk header) as the anchor position for all
+                    // removals and insertions — never search by exact string match across the
+                    // whole file, which would remove the wrong line when duplicates exist.
                     val origStart = hunkMatch.groupValues[1].toInt() - 1 + lineOffset
                     i++
-                    val insertAt = origStart.coerceIn(0, lines.size)
-                    val removals = mutableListOf<String>()
-                    val additions = mutableListOf<String>()
+                    val hunkLines = mutableListOf<Pair<Char, String>>() // '+'/'-'/' ' + content
                     while (i < diffLines.size && !diffLines[i].startsWith("@@")) {
                         val dl = diffLines[i]
                         when {
-                            dl.startsWith("-") -> removals.add(dl.drop(1))
-                            dl.startsWith("+") -> additions.add(dl.drop(1))
+                            dl.startsWith("-") -> hunkLines.add('-' to dl.drop(1))
+                            dl.startsWith("+") -> hunkLines.add('+' to dl.drop(1))
+                            dl.startsWith(" ") -> hunkLines.add(' ' to dl.drop(1))
+                            dl.isBlank()        -> hunkLines.add(' ' to "")
                         }
                         i++
                     }
-                    // Remove lines
+                    // Apply hunk line-by-line at the anchored position
+                    var cursor = origStart.coerceIn(0, lines.size)
                     var removed = 0
-                    removals.forEach { rem ->
-                        val idx = lines.indexOfFirst { it == rem }
-                        if (idx >= 0) { lines.removeAt(idx); removed++ }
+                    var added = 0
+                    for ((op, content) in hunkLines) {
+                        when (op) {
+                            ' ' -> cursor++ // context line — advance cursor
+                            '-' -> {
+                                // Remove line at cursor position (position-based, not search-based)
+                                if (cursor < lines.size) {
+                                    lines.removeAt(cursor)
+                                    removed++
+                                }
+                            }
+                            '+' -> {
+                                // Insert at cursor position
+                                val pos = cursor.coerceIn(0, lines.size)
+                                lines.add(pos, content)
+                                cursor++
+                                added++
+                            }
+                        }
                     }
-                    // Insert additions
-                    additions.forEachIndexed { addIdx, add ->
-                        val pos = (insertAt + addIdx).coerceIn(0, lines.size)
-                        lines.add(pos, add)
-                    }
-                    lineOffset += additions.size - removed
+                    lineOffset += added - removed
                 } else i++
             }
             val result = lines.joinToString("\n")
             val backup = java.io.File(file.parent, "${file.name}.bak.${System.currentTimeMillis()}")
             file.copyTo(backup, overwrite = true)
-            file.writeText(result, Charsets.UTF_8)
+            // FIX #7: Atomic write for diff mode too — temp file + rename/fallback
+            val tempFile = java.io.File.createTempFile(".diff_", ".tmp", file.parentFile ?: file)
+            try {
+                tempFile.writeText(result, Charsets.UTF_8)
+                if (!tempFile.renameTo(file)) {
+                    tempFile.copyTo(file, overwrite = true)
+                    tempFile.delete()
+                }
+            } catch (e: Exception) {
+                tempFile.delete()
+                backup.copyTo(file, overwrite = true) // restore on failure
+                throw e
+            }
             ToolResult.Success(
                 "Diff applied to ${file.name}. Backup: ${backup.name}",
                 metadata = mapOf("path" to file.absolutePath)

@@ -34,9 +34,11 @@ class InvokeSubagentsTool @Inject constructor(
         "Subagents do NOT see conversation history — provide ALL context in the task description. " +
         "Maximum 4 subagents per call. Returns a combined summary from all subagents."
 
-    // eventEmitter is set by ToolExecutor before execution to allow SubagentUpdate events
-    var eventEmitter: (suspend (Any) -> Unit)? = null
-    var currentToolCallId: String? = null
+    // FIX #1/#18: Remove mutable singleton state — pass via execute() arguments map instead.
+    // eventEmitter and toolCallId are injected per-call via the arguments map by ToolExecutor.
+    // This eliminates race conditions when multiple chats run concurrently.
+    @Volatile var eventEmitter: (suspend (Any) -> Unit)? = null
+    @Volatile var currentToolCallId: String? = null
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
         return try {
@@ -51,23 +53,31 @@ class InvokeSubagentsTool @Inject constructor(
                 return ToolResult.Error("Subagents list is empty.", ErrorType.VALIDATION_ERROR)
             }
 
-            val subagents = subagentsRaw.take(4).mapIndexed { idx, map ->
+            // FIX #2: Validate all tasks first before building the list, to ensure proper early return
+            val rawList = subagentsRaw.take(4)
+            for ((idx, map) in rawList.withIndex()) {
+                if (map["task"] as? String == null) {
+                    return ToolResult.Error(
+                        "Subagent at index $idx is missing the 'task' field.",
+                        ErrorType.VALIDATION_ERROR
+                    )
+                }
+            }
+            val subagents = rawList.mapIndexed { idx, map ->
                 SubagentTask(
                     index    = idx,
                     taskName = map["task_name"] as? String ?: "Subagent ${idx + 1}",
-                    task     = map["task"] as? String
-                        ?: return ToolResult.Error(
-                            "Subagent at index $idx is missing the 'task' field.",
-                            ErrorType.VALIDATION_ERROR
-                        )
+                    task     = map["task"] as String  // safe: already validated non-null above
                 )
             }
 
+            // Snapshot emitter/id at call time to avoid race conditions between concurrent calls
+            val emitter = eventEmitter
             val parentId = currentToolCallId ?: "subagents_${System.currentTimeMillis()}"
 
             // Emit RUNNING state for all subagents immediately
             subagents.forEach { sub ->
-                eventEmitter?.invoke(com.amaya.intelligence.data.repository.AgentEvent.SubagentUpdate(
+                emitter?.invoke(com.amaya.intelligence.data.repository.AgentEvent.SubagentUpdate(
                     parentToolCallId = parentId,
                     index    = sub.index,
                     taskName = sub.taskName,
@@ -85,7 +95,7 @@ class InvokeSubagentsTool @Inject constructor(
                         val result = subagentRunner.run(subagent)
                         // Emit COMPLETE state when each agent finishes
                         val isErr = result.summary.startsWith("[ERROR]") || result.summary.startsWith("[RATE LIMITED]")
-                        eventEmitter?.invoke(com.amaya.intelligence.data.repository.AgentEvent.SubagentUpdate(
+                        emitter?.invoke(com.amaya.intelligence.data.repository.AgentEvent.SubagentUpdate(
                             parentToolCallId = parentId,
                             index    = subagent.index,
                             taskName = subagent.taskName,
@@ -183,14 +193,24 @@ class SubagentRunner @Inject constructor(
     private suspend fun runInternal(task: SubagentTask, isRetry: Boolean): SubagentResult {
         val toolExecutor = toolExecutorProvider.get()
         val settings = settingsManager.getSettings()
-        val provider: AiProvider = when (ProviderType.valueOf(settings.activeProvider)) {
+
+        // FIX #9: Resolve provider and model from the ACTIVE AGENT config, not raw DataStore
+        // activeProvider/activeModel fields which may be stale or mismatched.
+        val activeAgent = settings.agentConfigs.find { it.id == settings.activeAgentId && it.enabled }
+            ?: settings.agentConfigs.firstOrNull { it.enabled }
+        val providerType = activeAgent?.let {
+            runCatching { ProviderType.valueOf(it.providerType) }.getOrNull()
+        } ?: runCatching { ProviderType.valueOf(settings.activeProvider) }.getOrElse { ProviderType.OPENAI }
+
+        val provider: AiProvider = when (providerType) {
             ProviderType.ANTHROPIC -> anthropicProvider
             ProviderType.OPENAI    -> openAiProvider
             ProviderType.GEMINI    -> geminiProvider
         }
-        val model = settings.activeModel.ifBlank {
-            provider.supportedModels.firstOrNull() ?: ""
-        }
+        val model = activeAgent?.modelId?.ifBlank { null }
+            ?: settings.activeModel.ifBlank { null }
+            ?: provider.supportedModels.firstOrNull()
+            ?: ""
 
         val systemPrompt = """
             You are a subagent — a focused AI assistant with a single task to complete.

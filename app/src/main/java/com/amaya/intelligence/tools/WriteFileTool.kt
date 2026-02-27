@@ -20,6 +20,11 @@ class WriteFileTool @Inject constructor(
     @ApplicationContext private val context: Context
 ) : Tool {
     
+    // FIX #19: State machine enum for bracket-matching parser — must be at class level (not inside function)
+    private enum class ParseState {
+        NORMAL, STRING_SINGLE, STRING_DOUBLE, MULTILINE_DOUBLE, MULTILINE_SINGLE, LINE_COMMENT, BLOCK_COMMENT
+    }
+
     companion object {
         const val MAX_BACKUPS = 5
         
@@ -214,54 +219,80 @@ class WriteFileTool @Inject constructor(
     }
     
     private fun validateBracketMatching(content: String): String? {
+        // FIX #19: Rewritten to handle multiline strings (""" / '''), single-line comments (//),
+        // block comments (/* */), and escape sequences — eliminating false positives on valid code.
         val stack = ArrayDeque<Char>()
         val pairs = mapOf(')' to '(', ']' to '[', '}' to '{')
-        var inString = false
-        var stringChar: Char? = null
-        var prevChar: Char? = null
+        var i = 0
         var lineNumber = 1
-        
-        for ((index, char) in content.withIndex()) {
+
+        var state = ParseState.NORMAL
+
+        while (i < content.length) {
+            val char = content[i]
+            val remaining = content.substring(i)
+
             if (char == '\n') lineNumber++
-            
-            if ((char == '"' || char == '\'') && prevChar != '\\') {
-                if (!inString) {
-                    inString = true
-                    stringChar = char
-                } else if (char == stringChar) {
-                    inString = false
-                    stringChar = null
-                }
-            }
-            
-            if (!inString) {
-                when (char) {
-                    '(', '[', '{' -> stack.addLast(char)
-                    ')', ']', '}' -> {
-                        val expected = pairs[char]
-                        if (stack.isEmpty()) {
-                            return "Unexpected '$char' at line $lineNumber (no matching open bracket)"
+
+            when (state) {
+                ParseState.NORMAL -> {
+                    when {
+                        // Triple-quote multiline strings (Kotlin/Python)
+                        remaining.startsWith("\"\"\"") -> { state = ParseState.MULTILINE_DOUBLE; i += 3; continue }
+                        remaining.startsWith("'''")    -> { state = ParseState.MULTILINE_SINGLE; i += 3; continue }
+                        // Line comment
+                        remaining.startsWith("//")     -> { state = ParseState.LINE_COMMENT; i += 2; continue }
+                        // Block comment
+                        remaining.startsWith("/*")     -> { state = ParseState.BLOCK_COMMENT; i += 2; continue }
+                        // Single-line strings — only track for bracket skipping, not strict close
+                        char == '"'  -> { state = ParseState.STRING_DOUBLE; i++; continue }
+                        char == '\'' -> { state = ParseState.STRING_SINGLE; i++; continue }
+                        // Brackets
+                        char == '(' || char == '[' || char == '{' -> stack.addLast(char)
+                        char == ')' || char == ']' || char == '}' -> {
+                            val expected = pairs[char]
+                            if (stack.isEmpty()) {
+                                return "Unexpected '$char' at line $lineNumber (no matching open bracket)"
+                            }
+                            if (stack.last() != expected) {
+                                return "Mismatched bracket '$char' at line $lineNumber"
+                            }
+                            stack.removeLast()
                         }
-                        if (stack.last() != expected) {
-                            return "Mismatched bracket '$char' at line $lineNumber (expected '${stack.last()}' to close first)"
-                        }
-                        stack.removeLast()
                     }
                 }
+                ParseState.STRING_DOUBLE -> when {
+                    remaining.startsWith("\\") -> i++ // skip escaped char
+                    char == '"'  -> state = ParseState.NORMAL
+                    char == '\n' -> state = ParseState.NORMAL // unterminated single-line string, be lenient
+                }
+                ParseState.STRING_SINGLE -> when {
+                    remaining.startsWith("\\") -> i++ // skip escaped char
+                    char == '\'' -> state = ParseState.NORMAL
+                    char == '\n' -> state = ParseState.NORMAL
+                }
+                ParseState.MULTILINE_DOUBLE -> {
+                    if (remaining.startsWith("\"\"\"")) { state = ParseState.NORMAL; i += 3; continue }
+                }
+                ParseState.MULTILINE_SINGLE -> {
+                    if (remaining.startsWith("'''")) { state = ParseState.NORMAL; i += 3; continue }
+                }
+                ParseState.LINE_COMMENT -> {
+                    if (char == '\n') state = ParseState.NORMAL
+                }
+                ParseState.BLOCK_COMMENT -> {
+                    if (remaining.startsWith("*/")) { state = ParseState.NORMAL; i += 2; continue }
+                }
             }
-            
-            prevChar = char
+            i++
         }
-        
-        if (inString) {
-            return "Unclosed string (started with $stringChar)"
-        }
-        
+
+        // Lenient: unclosed string at EOF is not an error (template literals etc.)
         if (stack.isNotEmpty()) {
             val unclosed = stack.joinToString(", ") { "'$it'" }
             return "Unclosed brackets: $unclosed"
         }
-        
+
         return null
     }
     

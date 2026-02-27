@@ -279,9 +279,14 @@ class CommandValidator @Inject constructor(
                 } else result
             }
             
-            "list_files", "create_directory" -> {
+            "list_files" -> {
                 val path = arguments["path"] as? String ?: ""
                 validatePath(path, isWrite = false)
+            }
+
+            "create_directory" -> {
+                val path = arguments["path"] as? String ?: ""
+                validatePath(path, isWrite = true)
             }
             
             else -> ValidationResult.Allowed
@@ -351,27 +356,25 @@ class CommandValidator @Inject constructor(
     }
     
     private fun normalizePath(path: String): String {
-        // Resolve relative paths and remove double slashes
-        return path
-            .replace(Regex("""//+"""), "/")
-            .removeSuffix("/")
-    }
-    
-    private fun containsPathTraversal(path: String): Boolean {
-        val segments = path.split("/")
-        var depth = 0
-        
-        for (segment in segments) {
-            when (segment) {
-                ".." -> {
-                    depth--
-                    if (depth < 0) return true
-                }
-                ".", "" -> { /* ignore */ }
-                else -> depth++
+        // Resolve all . and .. segments, remove double slashes
+        val parts = path.replace(Regex("""//+"""), "/").split("/")
+        val resolved = ArrayDeque<String>()
+        for (part in parts) {
+            when (part) {
+                "", "." -> { /* skip */ }
+                ".." -> if (resolved.isNotEmpty()) resolved.removeLast()
+                else -> resolved.addLast(part)
             }
         }
-        
-        return false
+        val normalized = "/" + resolved.joinToString("/")
+        return normalized
+    }
+
+    private fun containsPathTraversal(path: String): Boolean {
+        // After normalization, path should never contain ".." anymore.
+        // But also guard against encoded variants.
+        return path.contains("..") ||
+            path.contains("%2e%2e", ignoreCase = true) ||
+            path.contains("%252e", ignoreCase = true)
     }
 }

@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.amaya.intelligence.data.remote.api.MessageRole
 import com.amaya.intelligence.tools.ConfirmationRequest
+import com.amaya.intelligence.tools.TodoItem
+import com.amaya.intelligence.tools.TodoStatus
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 
@@ -57,6 +59,7 @@ fun ChatScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val confirmationRequest by viewModel.confirmationRequest.collectAsState()
+    val todoItems by viewModel.todoItems.collectAsState()
     // Use global count from AppViewModel (passed in) if available; else fall back to local
     val localReminderCount by viewModel.activeReminderCount.collectAsState()
     val effectiveReminderCount = if (activeReminderCount >= 0) activeReminderCount else localReminderCount
@@ -67,11 +70,11 @@ fun ChatScreen(
     var showModelSelector by remember { mutableStateOf(false) }
     var showSessionInfo by remember { mutableStateOf(false) }
 
-    // Active agent derived from settings
-    val agentConfigs  = uiState.agentConfigs
-    val activeAgentId = uiState.activeAgentId
-    val activeAgent   = agentConfigs.find { it.id == activeAgentId } ?: agentConfigs.firstOrNull()
-    val selectedModel = uiState.selectedModel.ifBlank { activeAgent?.modelId ?: "" }
+    // Only show enabled agents in dropdown
+    val agentConfigs   = uiState.agentConfigs.filter { it.enabled }
+    val activeAgentId  = uiState.activeAgentId
+    val activeAgent    = agentConfigs.find { it.id == activeAgentId } ?: agentConfigs.firstOrNull()
+    val selectedModel  = uiState.selectedModel.ifBlank { activeAgent?.modelId ?: "" }
 
     val displayMessages = remember(uiState.messages) {
         uiState.messages.filter { it.content.isNotBlank() || it.toolExecutions.isNotEmpty() }
@@ -422,6 +425,7 @@ fun ChatScreen(
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
+                Column {
                 Surface(
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                     tonalElevation = 1.dp,
@@ -463,44 +467,74 @@ fun ChatScreen(
                                 DropdownMenu(
                                     expanded = showModelSelector,
                                     onDismissRequest = { showModelSelector = false },
-                                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
                                 ) {
                                     if (agentConfigs.isEmpty()) {
+                                        // No enabled agents — show hint
+                                        DropdownMenuItem(
+                                            text = {
+                                                Column {
+                                                    Text(
+                                                        "No active agents",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Text(
+                                                        "Enable agents in Settings → AI Agents",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                                    )
+                                                }
+                                            },
+                                            onClick = { showModelSelector = false },
+                                            enabled = false
+                                        )
+                                    } else {
+                                        // Header label
                                         DropdownMenuItem(
                                             text = {
                                                 Text(
-                                                    "No agents configured",
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                                    "Select Agent",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             },
-                                            onClick = { showModelSelector = false }
+                                            onClick = {},
+                                            enabled = false
                                         )
-                                    } else {
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
                                         agentConfigs.forEach { agent ->
+                                            val isSelected = agent.id == activeAgentId ||
+                                                (activeAgentId.isBlank() && agent == agentConfigs.firstOrNull())
                                             DropdownMenuItem(
                                                 text = {
                                                     Column {
                                                         Text(
                                                             agent.name.ifBlank { "Unnamed Agent" },
-                                                            style = MaterialTheme.typography.bodyMedium
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            fontWeight = if (isSelected) FontWeight.SemiBold
+                                                                         else FontWeight.Normal,
+                                                            color = if (isSelected) MaterialTheme.colorScheme.primary
+                                                                    else MaterialTheme.colorScheme.onSurface
                                                         )
-                                                        Text(
-                                                            agent.modelId,
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                                        )
+                                                        if (agent.modelId.isNotBlank()) {
+                                                            Text(
+                                                                agent.modelId,
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                                            )
+                                                        }
                                                     }
                                                 },
                                                 leadingIcon = {
-                                                    if (agent.id == activeAgentId) {
-                                                        Icon(
-                                                            androidx.compose.material.icons.Icons.Default.CheckCircle,
-                                                            null,
-                                                            modifier = Modifier.size(16.dp),
-                                                            tint = MaterialTheme.colorScheme.primary
-                                                        )
-                                                    }
+                                                    Icon(
+                                                        if (isSelected) Icons.Default.CheckCircle
+                                                        else Icons.Default.SmartToy,
+                                                        null,
+                                                        modifier = Modifier.size(16.dp),
+                                                        tint = if (isSelected) MaterialTheme.colorScheme.primary
+                                                               else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                                    )
                                                 },
                                                 onClick = {
                                                     viewModel.setSelectedAgent(agent)
@@ -528,6 +562,15 @@ fun ChatScreen(
                         },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                     )
+                }
+                // TodoBar sits right below the TopAppBar header
+                AnimatedVisibility(
+                    visible = todoItems.isNotEmpty(),
+                    enter = expandVertically(animationSpec = tween(250)) + fadeIn(tween(250)),
+                    exit  = shrinkVertically(animationSpec = tween(200)) + fadeOut(tween(200))
+                ) {
+                    TodoBar(items = todoItems)
+                }
                 }
             },
             bottomBar = {
@@ -779,6 +822,243 @@ private fun formatTokenCount(count: Int): String = when {
     count >= 1_000_000 -> String.format("%.1fM", count / 1_000_000.0)
     count >= 1_000     -> String.format("%.1fK", count / 1_000.0)
     else               -> count.toString()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  TodoBar — collapsible task list shown below TopAppBar
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun TodoBar(items: List<TodoItem>) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val completed  = items.count { it.status == TodoStatus.COMPLETED }
+    val total      = items.size
+    val current    = items.firstOrNull { it.status == TodoStatus.IN_PROGRESS }
+    val isRunning  = current != null
+
+    val collapsedLabel = current?.activeForm
+        ?: current?.content
+        ?: items.firstOrNull { it.status == TodoStatus.PENDING }?.content
+        ?: "Tasks"
+
+    val pillNumber = current?.id
+        ?: items.firstOrNull { it.status == TodoStatus.PENDING }?.id
+        ?: items.lastOrNull()?.id
+        ?: 1
+
+    // ── Shimmer — identical technique to LoadingIndicator / Thinking.. ────
+    // Key: teks HARUS warna solid (onSurface), shimmer di-overlay via SrcAtop.
+    // baseShimmer = warna redup (teks saat tidak kena sorot)
+    // peakShimmer = warna terang bergerak
+    val isDark = isSystemInDarkTheme()
+    val baseShimmer = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
+    val peakShimmer = if (isDark) Color.White       else Color.Black
+
+    val transition = rememberInfiniteTransition(label = "todo_shimmer")
+    val shimmerOffset by transition.animateFloat(
+        initialValue = -400f,
+        targetValue  = 400f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "todo_shimmer_x"
+    )
+
+    val shimmerBrush = Brush.linearGradient(
+        colors = listOf(baseShimmer, peakShimmer, peakShimmer, baseShimmer),
+        start  = Offset(shimmerOffset, 0f),
+        end    = Offset(shimmerOffset + 300f, 0f)
+    )
+
+    // Surface background — sedikit berbeda dari surface biasa agar terlihat sebagai banner
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            // ── Collapsed row ────────────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(horizontal = 16.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // ── Step number pill ─────────────────────────────────────────
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isRunning) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                        )
+                ) {
+                    Text(
+                        text = "$pillNumber",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        color = if (isRunning) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(Modifier.width(10.dp))
+
+                // ── Label — shimmer if running, muted if not ─────────────────
+                if (isRunning) {
+                    // Shimmer text: warna solid onSurface, lalu SrcAtop overlay shimmerBrush
+                    Text(
+                        text = collapsedLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface, // solid base agar SrcAtop bisa baca alpha
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .weight(1f)
+                            .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop)
+                            }
+                    )
+                } else {
+                    Text(
+                        text = collapsedLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(Modifier.width(10.dp))
+
+                // ── Progress fraction ─────────────────────────────────────────
+                Text(
+                    text = "$completed/$total",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Medium
+                )
+
+                Spacer(Modifier.width(6.dp))
+
+                // ── Chevron ───────────────────────────────────────────────────
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+
+            // ── Expanded list ─────────────────────────────────────────────────
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(animationSpec = tween(220, easing = FastOutSlowInEasing)) + fadeIn(tween(180)),
+                exit  = shrinkVertically(animationSpec = tween(180, easing = FastOutSlowInEasing)) + fadeOut(tween(140))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    items.forEach { item ->
+                        TodoItemRow(item = item, shimmerBrush = shimmerBrush)
+                    }
+                    Spacer(Modifier.height(2.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
+    val isActive    = item.status == TodoStatus.IN_PROGRESS
+    val isCompleted = item.status == TodoStatus.COMPLETED
+
+    val label = if (isActive) item.activeForm ?: item.content ?: "Task ${item.id}"
+                else item.content ?: "Task ${item.id}"
+
+    val iconTint = when (item.status) {
+        TodoStatus.COMPLETED   -> Color(0xFF4CAF50)
+        TodoStatus.IN_PROGRESS -> MaterialTheme.colorScheme.primary
+        TodoStatus.PENDING     -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp)
+    ) {
+        // ── Status icon ────────────────────────────────────────────────────
+        Icon(
+            imageVector = when (item.status) {
+                TodoStatus.COMPLETED   -> Icons.Default.CheckCircle
+                TodoStatus.IN_PROGRESS -> Icons.Default.RadioButtonChecked
+                TodoStatus.PENDING     -> Icons.Default.RadioButtonUnchecked
+            },
+            contentDescription = null,
+            modifier = Modifier.size(15.dp),
+            tint = iconTint
+        )
+
+        Spacer(Modifier.width(10.dp))
+
+        // ── Label ───────────────────────────────────────────────────────────
+        if (isActive) {
+            // Shimmer: solid onSurface + SrcAtop shimmerBrush — persis teknik Thinking..
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(1f)
+                    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop)
+                    }
+            )
+        } else {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isCompleted)
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        // ── Step number — right aligned ────────────────────────────────────
+        Text(
+            text = "${item.id}",
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+        )
+    }
 }
 
 @Composable

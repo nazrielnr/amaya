@@ -7,6 +7,7 @@ import com.amaya.intelligence.tools.ToolExecutor
 import com.amaya.intelligence.tools.ToolResult
 import com.amaya.intelligence.util.debugLog
 import com.amaya.intelligence.util.errorLog
+
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -43,7 +44,11 @@ class AiRepository @Inject constructor(
     private val personaRepository: PersonaRepository,
     private val mcpClientManager: McpClientManager
 ) {
-    private val repoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val repoJob  = SupervisorJob()
+    private val repoScope = CoroutineScope(repoJob + Dispatchers.IO)
+
+    /** Call this on app shutdown to cancel background coroutines. */
+    fun close() { repoJob.cancel() }
 
     init {
         // Watch for MCP config changes and refresh tools automatically
@@ -122,14 +127,27 @@ class AiRepository @Inject constructor(
         projectId: Long? = null,
         workspacePath: String? = null,
         conversationId: Long? = null,
+        activeAgentId: String? = null,
+        selectedModel: String? = null,
         onConfirmation: suspend (ConfirmationRequest) -> Boolean = { false }
     ): Flow<AgentEvent> = flow {
         
         val settings = settingsManager.getSettings()
+
+        // Resolve agent config — use activeAgentId from UI (most up-to-date)
+        val agentId = activeAgentId ?: settings.activeAgentId
+        val agentConfig = settings.agentConfigs.find { it.id == agentId }
+
         val provider = getActiveProvider()
-        val model = settings.activeModel.ifBlank { 
-            provider.supportedModels.firstOrNull() ?: ""
+        // Priority: selectedModel from UI (always up-to-date) > agentConfig.modelId > activeModel in DataStore
+        // Never fall through to agentConfig if selectedModel is explicitly set from UI
+        val model = when {
+            !selectedModel.isNullOrBlank()        -> selectedModel
+            !agentConfig?.modelId.isNullOrBlank() -> agentConfig!!.modelId
+            settings.activeModel.isNotBlank()     -> settings.activeModel
+            else                                  -> provider.supportedModels.firstOrNull() ?: ""
         }
+        debugLog("AiRepository") { "chat() resolved model=$model (from UI: $selectedModel, agent: ${agentConfig?.modelId}, datastore: ${settings.activeModel})" }
         
         // Build system prompt with project context
         val systemPrompt = buildSystemPrompt(projectId, workspacePath, conversationId)
@@ -299,6 +317,21 @@ class AiRepository @Inject constructor(
             - Use update_memory(content, target="long") to persist user preferences/facts permanently
             - Use create_reminder(title, message, datetime, conversation_id=$conversationId) when user asks to be reminded — ALWAYS pass conversation_id so replies come back to this chat
             
+            TOOLS — TASK PROGRESS (update_todo):
+            - For any multi-step task, call update_todo at the START with merge=false to set your full plan.
+            - Each item needs: id (int, 1-based), status ("pending"/"in_progress"/"completed"), content (imperative label), active_form (present-continuous label shown when collapsed, optional).
+            - As you work, call update_todo with merge=true to update individual item statuses by id.
+            - This shows the user a live progress bar above the chat input — keep it up to date.
+            
+            TOOLS — SUBAGENTS (invoke_subagents):
+            - Use invoke_subagents when a task has INDEPENDENT sub-tasks that can run IN PARALLEL.
+            - Perfect for: reading multiple folders at once, auditing different layers, generating multiple independent files.
+            - Each subagent gets its own task description — include ALL context (file paths, project info, what to look for).
+            - Subagents do NOT see conversation history — be explicit and self-contained in each task.
+            - Max 4 subagents per call. Results returned as a combined summary.
+            - Example: scan 4 different folders simultaneously, each subagent reads its folder and reports findings.
+            - DO NOT use for tasks that depend on each other (A must finish before B starts).
+            
             FALLBACK STRATEGY:
             If a native tool call fails, try using the run_shell tool as an alternative.
             $personaFragment
@@ -331,6 +364,21 @@ class AiRepository @Inject constructor(
             - Use update_memory(content, target="long") to persist user preferences/facts permanently
             - Use create_reminder(title, message, datetime, conversation_id=$conversationId) when user asks to be reminded — ALWAYS pass conversation_id so replies come back to this chat
             
+            TOOLS — TASK PROGRESS (update_todo):
+            - For any multi-step task, call update_todo at the START with merge=false to set your full plan.
+            - Each item needs: id (int, 1-based), status ("pending"/"in_progress"/"completed"), content (imperative label), active_form (present-continuous label shown when collapsed, optional).
+            - As you work, call update_todo with merge=true to update individual item statuses by id.
+            - This shows the user a live progress bar above the chat input — keep it up to date.
+            
+            TOOLS — SUBAGENTS (invoke_subagents):
+            - Use invoke_subagents when a task has INDEPENDENT sub-tasks that can run IN PARALLEL.
+            - Perfect for: reading multiple folders at once, auditing different layers, generating multiple independent files.
+            - Each subagent gets its own task description — include ALL context (file paths, project info, what to look for).
+            - Subagents do NOT see conversation history — be explicit and self-contained in each task.
+            - Max 4 subagents per call. Results returned as a combined summary.
+            - Example: scan 4 different folders simultaneously, each subagent reads its folder and reports findings.
+            - DO NOT use for tasks that depend on each other (A must finish before B starts).
+            
             FALLBACK STRATEGY:
             If a native tool call fails, try using the run_shell tool as an alternative.
             Always find a way to complete the task. Never give up on the first failure.
@@ -350,13 +398,13 @@ class AiRepository @Inject constructor(
         val localTools = toolExecutor.getToolDefinitions().map { def ->
             AiToolDefinition(
                 name = def.name,
-                description = def.description,
+                description = def.description.truncate(1024),
                 parameters = AiToolParameters(
                     type = "object",
                     properties = def.parameters.associate { param ->
                         param.name to AiToolProperty(
                             type = param.type,
-                            description = param.description,
+                            description = param.description.truncate(1024),
                             enum = param.enum,
                             items = if (param.items != null) AiToolPropertyItems(param.items) else null
                         )
@@ -365,10 +413,24 @@ class AiRepository @Inject constructor(
                 )
             )
         }
-        val mcpTools = mcpClientManager.getCachedToolDefinitions()
+        // MCP tools come from external servers — truncate their descriptions too
+        val mcpTools = mcpClientManager.getCachedToolDefinitions().map { tool ->
+            tool.copy(
+                description = tool.description.truncate(1024),
+                parameters = tool.parameters.copy(
+                    properties = tool.parameters.properties.mapValues { (_, prop) ->
+                        prop.copy(description = prop.description.truncate(1024))
+                    }
+                )
+            )
+        }
         debugLog("AiRepository") { "Building tool defs: local=${localTools.size}, mcp=${mcpTools.size}" }
         return localTools + mcpTools
     }
+
+    /** Truncate string to [maxLen] characters. */
+    private fun String.truncate(maxLen: Int): String =
+        if (length <= maxLen) this else substring(0, maxLen - 1) + "…"
 }
 
 /**

@@ -13,8 +13,9 @@ import com.amaya.intelligence.data.repository.AgentEvent
 import com.amaya.intelligence.data.repository.AiRepository
 import com.amaya.intelligence.data.repository.CronJobRepository
 import com.amaya.intelligence.data.repository.PersonaRepository
-import com.amaya.intelligence.data.repository.ProviderInfo
 import com.amaya.intelligence.tools.ConfirmationRequest
+import com.amaya.intelligence.tools.TodoItem
+import com.amaya.intelligence.tools.TodoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -26,12 +27,17 @@ class ChatViewModel @Inject constructor(
     private val conversationDao: ConversationDao,
     private val aiSettingsManager: AiSettingsManager,
     private val cronJobRepository: CronJobRepository,
-    private val personaRepository: PersonaRepository
+    private val personaRepository: PersonaRepository,
+    private val todoRepository: TodoRepository
 ) : ViewModel() {
 
     /** Number of currently active reminders — shown as badge on session info button. */
     val activeReminderCount: StateFlow<Int> = cronJobRepository.activeJobCount
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
+    /** Live todo items emitted by the AI via update_todo tool. */
+    val todoItems: StateFlow<List<TodoItem>> = todoRepository.items
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** Whether there is a memory log entry for today. */
     val hasTodayMemory: StateFlow<Boolean> = flow {
@@ -52,19 +58,40 @@ class ChatViewModel @Inject constructor(
     
     private var confirmationContinuation: ((Boolean) -> Unit)? = null
     private var currentChatJob: kotlinx.coroutines.Job? = null
+
+    override fun onCleared() {
+        super.onCleared()
+        // Release confirmation continuation to avoid memory leak
+        confirmationContinuation?.invoke(false)
+        confirmationContinuation = null
+    }
     
     init {
-        // Observe settings reactively so agent list + active model are always up-to-date
+        // Observe settings reactively — sync agent list and resolve active agent from enabled agents only.
         viewModelScope.launch {
             aiSettingsManager.settingsFlow.collect { settings ->
-                val activeAgent = settings.agentConfigs.find { it.id == settings.activeAgentId }
-                _uiState.update {
-                    it.copy(
-                        agentConfigs  = settings.agentConfigs,
-                        activeAgentId = settings.activeAgentId,
-                        selectedModel = settings.activeModel.ifBlank {
-                            activeAgent?.modelId ?: settings.agentConfigs.firstOrNull()?.modelId ?: ""
-                        }
+                val enabledAgents = settings.agentConfigs.filter { it.enabled }
+                // Resolve active agent: prefer current selection if still enabled, else first enabled
+                val resolvedAgent = enabledAgents.find { it.id == settings.activeAgentId }
+                    ?: enabledAgents.firstOrNull()
+
+                _uiState.update { current ->
+                    // If current selected agent is still enabled, keep it
+                    val currentAgentStillEnabled = enabledAgents.any { it.id == current.activeAgentId }
+                    val newActiveAgentId = when {
+                        current.activeAgentId.isNotBlank() && currentAgentStillEnabled -> current.activeAgentId
+                        else -> resolvedAgent?.id ?: ""
+                    }
+                    val newSelectedModel = when {
+                        // Keep current model if agent is still enabled and model matches
+                        current.selectedModel.isNotBlank() && currentAgentStillEnabled -> current.selectedModel
+                        // Use resolved agent's model
+                        else -> resolvedAgent?.modelId ?: ""
+                    }
+                    current.copy(
+                        agentConfigs  = settings.agentConfigs, // keep all for settings screen
+                        activeAgentId = newActiveAgentId,
+                        selectedModel = newSelectedModel
                     )
                 }
             }
@@ -107,6 +134,8 @@ class ChatViewModel @Inject constructor(
                 projectId = _uiState.value.activeProjectId,
                 workspacePath = _uiState.value.workspacePath,
                 conversationId = currentConversationId,
+                activeAgentId = _uiState.value.activeAgentId,
+                selectedModel = _uiState.value.selectedModel.ifBlank { null },
                 onConfirmation = { request ->
                     _confirmationRequest.value = request
                     kotlinx.coroutines.suspendCancellableCoroutine { cont ->
@@ -223,19 +252,16 @@ class ChatViewModel @Inject constructor(
         saveCurrentConversation()
     }
     
-    fun selectProvider(provider: ProviderInfo) {
-        _uiState.update {
-            it.copy(selectedProvider = provider, selectedModel = provider.models.firstOrNull() ?: "")
-        }
-    }
-    
     fun selectModel(model: String) {
         _uiState.update { it.copy(selectedModel = model) }
+        // Persist to DataStore so AiRepository always gets the latest model
+        viewModelScope.launch { aiSettingsManager.setActiveModel(model) }
     }
     
     fun clearConversation() {
         saveCurrentConversation()
         currentConversationId = null
+        todoRepository.clear()
         _uiState.update {
             it.copy(
                 messages = emptyList(),
@@ -385,12 +411,7 @@ class ChatViewModel @Inject constructor(
         _uiState.update { it.copy(workspacePath = path) }
     }
 
-    fun setSelectedModel(model: String) {
-        _uiState.update { it.copy(selectedModel = model) }
-        viewModelScope.launch {
-            aiSettingsManager.setActiveModel(model)
-        }
-    }
+    fun setSelectedModel(model: String) = selectModel(model)
 
     fun setSelectedAgent(agent: com.amaya.intelligence.data.remote.api.AgentConfig) {
         _uiState.update { it.copy(selectedModel = agent.modelId, activeAgentId = agent.id) }
@@ -408,19 +429,17 @@ class ChatViewModel @Inject constructor(
 
 @Immutable
 data class ChatUiState(
-    val messages:      List<UiMessage>    = emptyList(),
-    val isLoading:     Boolean            = false,
-    val error:         String?            = null,
-    val providers:     List<ProviderInfo> = emptyList(),
-    val selectedProvider: ProviderInfo?  = null,
-    val selectedModel: String            = "",
-    val activeProjectId: Long?           = null,
-    val workspacePath: String?           = null,
-    val totalInputTokens:  Int           = 0,
-    val totalOutputTokens: Int           = 0,
+    val messages:         List<UiMessage> = emptyList(),
+    val isLoading:        Boolean         = false,
+    val error:            String?         = null,
+    val selectedModel:    String          = "",
+    val activeProjectId:  Long?           = null,
+    val workspacePath:    String?         = null,
+    val totalInputTokens:  Int            = 0,
+    val totalOutputTokens: Int            = 0,
     // ── Agent configs ──────────────────────────────────────────────
-    val agentConfigs:  List<AgentConfig> = emptyList(),
-    val activeAgentId: String            = ""
+    val agentConfigs:  List<AgentConfig>  = emptyList(),
+    val activeAgentId: String             = ""
 )
 
 @Immutable

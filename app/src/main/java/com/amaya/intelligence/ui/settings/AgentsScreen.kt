@@ -104,24 +104,22 @@ fun AgentsScreen(
                 }
             }
 
-            // Active agents section
-            val activeAgents = settings.agentConfigs.filter { it.enabled }
+            // Enabled agents section
+            val enabledAgents  = settings.agentConfigs.filter { it.enabled }
             val disabledAgents = settings.agentConfigs.filter { !it.enabled }
 
-            if (activeAgents.isNotEmpty()) {
+            if (enabledAgents.isNotEmpty()) {
                 item {
                     Text(
-                        "Active",
+                        "Enabled",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
                     )
                 }
-                items(activeAgents, key = { "active_${it.id}" }) { config ->
-                    val isActive = config.id == settings.activeAgentId
+                items(enabledAgents, key = { "enabled_${it.id}" }) { config ->
                     AgentCard(
                         config = config,
-                        isActive = isActive,
                         onClick = { editingConfig = config; editingIsNew = false },
                         onToggleEnabled = { enabled ->
                             scope.launch {
@@ -129,16 +127,6 @@ fun AgentsScreen(
                                     config.copy(enabled = enabled),
                                     aiSettingsManager.getAgentApiKey(config.id)
                                 )
-                            }
-                        },
-                        onSetActive = {
-                            scope.launch {
-                                aiSettingsManager.setActiveAgent(config.id, config.modelId)
-                                aiSettingsManager.setOpenAiSettings(
-                                    aiSettingsManager.getAgentApiKey(config.id),
-                                    config.baseUrl
-                                )
-                                snackbarHostState.showSnackbar("Active: ${config.name}")
                             }
                         }
                     )
@@ -158,7 +146,6 @@ fun AgentsScreen(
                 items(disabledAgents, key = { "disabled_${it.id}" }) { config ->
                     AgentCard(
                         config = config,
-                        isActive = false,
                         onClick = { editingConfig = config; editingIsNew = false },
                         onToggleEnabled = { enabled ->
                             scope.launch {
@@ -167,8 +154,7 @@ fun AgentsScreen(
                                     aiSettingsManager.getAgentApiKey(config.id)
                                 )
                             }
-                        },
-                        onSetActive = null
+                        }
                     )
                 }
             }
@@ -184,7 +170,6 @@ fun AgentsScreen(
             skipPartiallyExpanded = true,
             confirmValueChange = { false }
         )
-        // Predictive back: animate sheet down, then dismiss
         BackHandler {
             sheetScope.launch {
                 sheetState.hide()
@@ -194,7 +179,6 @@ fun AgentsScreen(
         val currentApiKey = remember(currentConfig.id) {
             if (editingIsNew) "" else aiSettingsManager.getAgentApiKey(currentConfig.id)
         }
-        val isActive = currentConfig.id == settings.activeAgentId
 
         ModalBottomSheet(
             onDismissRequest = { editingConfig = null },
@@ -214,7 +198,6 @@ fun AgentsScreen(
                     config = currentConfig,
                     apiKey = currentApiKey,
                     isNew = editingIsNew,
-                    isActive = isActive,
                     onDismiss = { editingConfig = null },
                     onSave = { updatedConfig, key ->
                         editingConfig = null
@@ -231,19 +214,6 @@ fun AgentsScreen(
                                 snackbarHostState.showSnackbar("Agent deleted")
                             }
                         }
-                    },
-                    onSetActive = if (editingIsNew || isActive) null else {
-                        {
-                            editingConfig = null
-                            scope.launch {
-                                aiSettingsManager.setActiveAgent(currentConfig.id, currentConfig.modelId)
-                                aiSettingsManager.setOpenAiSettings(
-                                    aiSettingsManager.getAgentApiKey(currentConfig.id),
-                                    currentConfig.baseUrl
-                                )
-                                snackbarHostState.showSnackbar("Active: ${currentConfig.name}")
-                            }
-                        }
                     }
                 )
             }
@@ -256,20 +226,15 @@ fun AgentsScreen(
 @Composable
 private fun AgentCard(
     config: AgentConfig,
-    isActive: Boolean,
     onClick: () -> Unit,
-    onToggleEnabled: (Boolean) -> Unit,
-    onSetActive: (() -> Unit)?
+    onToggleEnabled: (Boolean) -> Unit
 ) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
-        color = when {
-            isActive -> MaterialTheme.colorScheme.primaryContainer
-            !config.enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            else -> MaterialTheme.colorScheme.surface
-        },
-        tonalElevation = if (config.enabled && !isActive) 1.dp else 0.dp,
+        color = if (config.enabled) MaterialTheme.colorScheme.surface
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        tonalElevation = if (config.enabled) 1.dp else 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -279,22 +244,16 @@ private fun AgentCard(
             // Avatar badge
             Surface(
                 shape = CircleShape,
-                color = when {
-                    isActive -> MaterialTheme.colorScheme.primary
-                    config.enabled -> MaterialTheme.colorScheme.secondaryContainer
-                    else -> MaterialTheme.colorScheme.surfaceVariant
-                },
+                color = if (config.enabled) MaterialTheme.colorScheme.secondaryContainer
+                        else MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        if (isActive) Icons.Default.CheckCircle else Icons.Default.SmartToy,
+                        Icons.Default.SmartToy,
                         contentDescription = null,
-                        tint = when {
-                            isActive -> MaterialTheme.colorScheme.onPrimary
-                            config.enabled -> MaterialTheme.colorScheme.onSecondaryContainer
-                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-                        },
+                        tint = if (config.enabled) MaterialTheme.colorScheme.onSecondaryContainer
+                               else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -303,43 +262,23 @@ private fun AgentCard(
             Spacer(Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        config.name.ifBlank { "Unnamed Agent" },
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = when {
-                            isActive -> MaterialTheme.colorScheme.onPrimaryContainer
-                            config.enabled -> MaterialTheme.colorScheme.onSurface
-                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-                        }
-                    )
-                    if (isActive) {
-                        Spacer(Modifier.width(6.dp))
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary
-                        ) {
-                            Text(
-                                "ACTIVE",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
+                Text(
+                    config.name.ifBlank { "Unnamed Agent" },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (config.enabled) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     buildString {
                         if (config.modelId.isNotBlank()) append(config.modelId)
-                        else append("No model")
+                        else append("No model set")
                         append(" · ")
                         append(config.providerType.lowercase().replaceFirstChar { it.uppercaseChar() })
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = (if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
-                    else MaterialTheme.colorScheme.onSurface).copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
 
@@ -348,21 +287,11 @@ private fun AgentCard(
                 Switch(
                     checked = config.enabled,
                     onCheckedChange = onToggleEnabled,
-                    modifier = Modifier.padding(start = 4.dp)
+                    modifier = Modifier.padding(start = 8.dp)
                 )
             }
 
-            // Set active button (only for enabled, non-active agents)
-            if (config.enabled && !isActive && onSetActive != null) {
-                IconButton(onClick = onSetActive) {
-                    Icon(
-                        Icons.Default.PlayArrow,
-                        contentDescription = "Use this agent",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
+            Spacer(Modifier.width(4.dp))
 
             Icon(
                 Icons.Default.ChevronRight,
@@ -382,11 +311,9 @@ private fun AgentEditSheet(
     config: AgentConfig,
     apiKey: String,
     isNew: Boolean,
-    isActive: Boolean,
     onDismiss: () -> Unit,
     onSave: (AgentConfig, String) -> Unit,
-    onDelete: (() -> Unit)?,
-    onSetActive: (() -> Unit)?
+    onDelete: (() -> Unit)?
 ) {
     var name         by remember(config.id) { mutableStateOf(config.name) }
     var providerType by remember(config.id) { mutableStateOf(config.providerType) }
@@ -543,18 +470,6 @@ private fun AgentEditSheet(
         }
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-        // Set as active
-        if (!isNew && !isActive && onSetActive != null) {
-            OutlinedButton(
-                onClick = onSetActive,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Use This Agent")
-            }
-        }
 
         // Save + Delete row
         Row(

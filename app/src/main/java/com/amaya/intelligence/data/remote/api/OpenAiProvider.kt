@@ -57,7 +57,6 @@ class OpenAiProvider @Inject constructor(
         // Build request body
         val openaiRequest = buildOpenAiRequest(request)
         val jsonBody = moshi.adapter(OpenAiRequest::class.java).toJson(openaiRequest)
-        android.util.Log.d("OpenAiProvider", "Request JSON: ${jsonBody.take(2000)}")
         
         val httpRequestBuilder = Request.Builder()
             .url("$baseUrl/chat/completions")
@@ -250,10 +249,6 @@ class OpenAiProvider @Inject constructor(
         }
         
         // Add conversation messages
-        android.util.Log.d("OpenAiProvider", "Building request with ${request.messages.size} messages")
-        request.messages.forEachIndexed { index, msg ->
-            android.util.Log.d("OpenAiProvider", "Message $index: role=${msg.role}, hasToolCalls=${msg.toolCalls?.isNotEmpty()}, hasToolResult=${msg.toolResult != null}")
-        }
         request.messages.forEach { msg ->
             when (msg.role) {
                 MessageRole.USER -> {
@@ -281,7 +276,6 @@ class OpenAiProvider @Inject constructor(
                 }
                 MessageRole.TOOL -> {
                     msg.toolResult?.let { result ->
-                        android.util.Log.d("OpenAiProvider", "TOOL message: toolCallId=${result.toolCallId}, content=${result.content.take(50)}")
                         messages.add(OpenAiMessage(
                             role = "tool",
                             content = result.content,

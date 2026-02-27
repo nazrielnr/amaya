@@ -158,7 +158,7 @@ class GeminiProvider @Inject constructor(
                     
                     part.functionCall?.let { functionCall ->
                         trySend(ChatResponse.ToolCall(
-                            id = "call_${System.currentTimeMillis()}",
+                            id = "call_${java.util.UUID.randomUUID()}",
                             name = functionCall.name,
                             arguments = functionCall.args ?: emptyMap()
                         ))
@@ -181,29 +181,24 @@ class GeminiProvider @Inject constructor(
     
     private fun processGeminiChunk(json: String): ChatResponse? {
         return try {
-            android.util.Log.d("GeminiProvider", "Processing chunk: ${json.take(200)}")
             val chunk = moshi.adapter(GeminiResponse::class.java).fromJson(json)
-            android.util.Log.d("GeminiProvider", "Parsed chunk - candidates: ${chunk?.candidates?.size}")
-            
+
             // Collect thoughtSignature from parts (it comes separately from text and functionCall)
             var thoughtSignature: String? = null
             chunk?.candidates?.firstOrNull()?.content?.parts?.forEach { part ->
                 if (part.thoughtSignature != null) {
                     thoughtSignature = part.thoughtSignature
-                    android.util.Log.d("GeminiProvider", "Found thoughtSignature: ${part.thoughtSignature.take(50)}")
                 }
             }
-            
+
             chunk?.candidates?.firstOrNull()?.content?.parts?.forEach { part ->
-                android.util.Log.d("GeminiProvider", "Part text: ${part.text?.take(100)}")
-                
                 // Skip empty text parts that only contain thoughtSignature
                 part.text?.let { text ->
                     if (text.isNotEmpty()) {
                         return ChatResponse.TextDelta(text)
                     }
                 }
-                
+
                 part.functionCall?.let { functionCall ->
                     val metadata = if (thoughtSignature != null) {
                         mapOf("thoughtSignature" to thoughtSignature!!)
@@ -211,17 +206,16 @@ class GeminiProvider @Inject constructor(
                         emptyMap()
                     }
                     return ChatResponse.ToolCall(
-                        id = "call_${System.currentTimeMillis()}",
+                        id = "call_${java.util.UUID.randomUUID()}",
                         name = functionCall.name,
                         arguments = functionCall.args ?: emptyMap(),
                         metadata = metadata
                     )
                 }
             }
-            
+
             null
         } catch (e: Exception) {
-            android.util.Log.e("GeminiProvider", "Parse error: ${e.message}")
             null
         }
     }

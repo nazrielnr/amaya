@@ -30,26 +30,31 @@ object DatabaseModule {
     }
     
     @Provides
+    @Singleton
     fun provideProjectDao(database: AppDatabase): ProjectDao {
         return database.projectDao()
     }
-    
+
     @Provides
+    @Singleton
     fun provideFileDao(database: AppDatabase): FileDao {
         return database.fileDao()
     }
-    
+
     @Provides
+    @Singleton
     fun provideFileMetadataDao(database: AppDatabase): FileMetadataDao {
         return database.fileMetadataDao()
     }
-    
+
     @Provides
+    @Singleton
     fun provideConversationDao(database: AppDatabase): ConversationDao {
         return database.conversationDao()
     }
 
     @Provides
+    @Singleton
     fun provideCronJobDao(database: AppDatabase): CronJobDao {
         return database.cronJobDao()
     }

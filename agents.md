@@ -66,6 +66,8 @@ Unlike simple code completion tools, Amaya Intelligence operates as a **full age
 - **Project Indexing** - Fast file search with FTS4
 - **Security Confirmation** - Explicit approval for sensitive operations
 - **MCP Servers** - HTTP-based Model Context Protocol support with editable JSON config and auto-refresh
+- **Live TodoBar** - AI communicates plan and progress via a collapsible shimmer bar above chat input
+- **Parallel Subagents** - AI can spawn up to 4 independent subagents in parallel via `invoke_subagents` tool
 
 ### 🔮 Planned Features
 - Project browser for folder selection
@@ -389,6 +391,152 @@ mkfs, dd if=
 
 ---
 
+### 7. update_todo
+
+Update the live task list shown above the chat input. AI uses this to communicate plan and progress.
+
+```json
+{
+  "name": "update_todo",
+  "description": "Update the task list shown to the user above the chat input",
+  "parameters": {
+    "merge": {
+      "type": "boolean",
+      "description": "If true, merge by id into existing list. If false, replace all items.",
+      "required": true
+    },
+    "todos": {
+      "type": "array",
+      "description": "List of todo items: [{id, status, content, active_form}]",
+      "required": true
+    }
+  }
+}
+```
+
+**Todo Item Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | int | 1-based unique identifier |
+| `status` | string | `"pending"` / `"in_progress"` / `"completed"` |
+| `content` | string | Imperative label (e.g. "Read files") |
+| `active_form` | string | Present-continuous label shown collapsed (e.g. "Reading files") |
+
+**Usage Pattern:**
+```json
+// At task start — replace all with full plan:
+{"merge": false, "todos": [
+  {"id": 1, "status": "in_progress", "content": "Read files", "active_form": "Reading files"},
+  {"id": 2, "status": "pending", "content": "Write fix"},
+  {"id": 3, "status": "pending", "content": "Verify build"}
+]}
+
+// As you progress — update specific items by id:
+{"merge": true, "todos": [
+  {"id": 1, "status": "completed"},
+  {"id": 2, "status": "in_progress", "active_form": "Writing fix"}
+]}
+```
+
+**UI Behavior:**
+- **Position**: Sits directly below `TopAppBar` (in `topBar` Column of `Scaffold`), NOT in `bottomBar`
+- **Collapsed** (default): Shows step number pill + current `active_form`/`content` with shimmer + `2/5` progress fraction
+- **Expanded** (tap to open): Full list with icons — ✅ completed (green), ● in_progress (shimmer), ○ pending (dimmed)
+- **Shimmer technique**: Text must have **solid `color = onSurface`** first, then `BlendMode.SrcAtop` overlay via `drawWithContent`. Requires `CompositingStrategy.Offscreen` on the modifier. Same as `Thinking..` indicator.
+- **Shimmer colors**: `baseShimmer = Color(0xFF9E9E9E)` dark / `Color(0xFF757575)` light; `peakShimmer = Color.White` dark / `Color.Black` light
+- **Only active items shimmer**: `in_progress` items get shimmer in both collapsed row and expanded list. `pending`/`completed` use plain muted color.
+- Cleared automatically on new conversation (`todoRepository.clear()` called in `clearConversation()`)
+
+```kotlin
+// Correct shimmer pattern (identical to Thinking.. indicator):
+Text(
+    text = label,
+    color = MaterialTheme.colorScheme.onSurface,  // MUST be solid, not alpha
+    modifier = Modifier
+        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop)
+        }
+)
+```
+
+---
+
+### 8. invoke_subagents
+
+Spawn multiple independent AI subagents that run in parallel. Each subagent is a full AI chat call with its own tools.
+
+```json
+{
+  "name": "invoke_subagents",
+  "description": "Spawn multiple independent AI subagents that run IN PARALLEL",
+  "parameters": {
+    "subagents": {
+      "type": "array",
+      "description": "List of subagent tasks: [{task_name, task}]",
+      "required": true
+    }
+  }
+}
+```
+
+**Subagent Task Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `task_name` | string | Short label ≤5 words (e.g. "Audit UI Layer") |
+| `task` | string | Full self-contained prompt — include ALL context (file paths, project info, what to look for) |
+
+**When to use:**
+
+| Use ✅ | Don't use ❌ |
+|--------|-------------|
+| Reading multiple folders simultaneously | Tasks that depend on each other |
+| Auditing different layers of codebase | Sequential operations (A must finish before B) |
+| Generating multiple independent files | Simple 1-2 file tasks |
+| Scanning for patterns across the codebase | Anything requiring shared state |
+
+**Rate Limit Strategy (Stagger + 1x Retry):**
+- Agent N starts after `(N-1) × 2s` delay → spread API calls, avoid burst
+- Agent 1: 0s delay, Agent 2: 2s, Agent 3: 4s, Agent 4: 6s
+- On 429 rate-limit error: parse `Retry-After` header (max 30s wait), retry once
+- If retry fails: that subagent returns `[RATE LIMITED]` error, others unaffected
+
+**Architecture:**
+```
+Main AI calls invoke_subagents([task1, task2, task3])
+        │
+        ├── coroutineScope { async { SubagentRunner.run(task1) } }   ← 0s delay
+        ├── coroutineScope { async { SubagentRunner.run(task2) } }   ← 2s delay
+        └── coroutineScope { async { SubagentRunner.run(task3) } }   ← 4s delay
+                ↓ all awaitAll() — parallel
+        Combined summary returned to main AI
+```
+
+**Circular Dependency Fix:**
+`SubagentRunner` uses `Provider<ToolExecutor>` (lazy Hilt injection) to break the cycle:
+`ToolExecutor → InvokeSubagentsTool → SubagentRunner → ToolExecutor`
+
+**Key Classes:**
+
+| Class | File | Responsibility |
+|-------|------|----------------|
+| `InvokeSubagentsTool` | `InvokeSubagentsTool.kt` | Tool entrypoint, parses args, runs coroutines |
+| `SubagentRunner` | `InvokeSubagentsTool.kt` | Full AI agentic loop for one subagent + rate limit handling |
+| `SubagentTask` | `InvokeSubagentsTool.kt` | Data: index, taskName, task prompt |
+| `SubagentResult` | `InvokeSubagentsTool.kt` | Data: taskName, summary string |
+| `RateLimitException` | `InvokeSubagentsTool.kt` | Thrown on 429, carries `retryAfterMs` |
+
+**Constraints:**
+- Max 4 subagents per call
+- Subagents do NOT see main conversation history
+- Subagents cannot call `invoke_subagents` (no nesting)
+- Max 8 agentic loop iterations per subagent
+
+---
+
 ## 🔒 Security Architecture
 
 ### Multi-Layer Security Model
@@ -442,6 +590,43 @@ These paths are **read-only** or **blocked**:
 | `~/.gnupg` | Confirmation required |
 | `/sdcard/Android/data` | Confirmation required |
 
+### Path Normalization (Fixed)
+
+`CommandValidator.normalizePath()` uses a **stack-based resolver** that correctly handles `..` sequences:
+
+```kotlin
+// Before (broken — did not resolve ".." at all):
+return path.replace(Regex("//+"), "/").removeSuffix("/")
+
+// After (correct — resolves all segments including ".."):
+val parts = path.replace(Regex("//+"), "/").split("/")
+val resolved = ArrayDeque<String>()
+for (part in parts) {
+    when (part) {
+        "", "." -> { /* skip */ }
+        ".." -> if (resolved.isNotEmpty()) resolved.removeLast()
+        else -> resolved.addLast(part)
+    }
+}
+return "/" + resolved.joinToString("/")
+```
+
+`containsPathTraversal()` also guards against **URL-encoded variants**:
+```kotlin
+return path.contains("..") ||
+    path.contains("%2e%2e", ignoreCase = true) ||
+    path.contains("%252e", ignoreCase = true)
+```
+
+### Tool Description Truncation
+
+All tool descriptions (local + MCP) are truncated to **1024 characters max** in `AiRepository.buildToolDefinitions()` before being sent to AI providers. This prevents `400 Bad Request` errors from OpenAI-compatible APIs (e.g. OpenRouter) that enforce this limit.
+
+```kotlin
+private fun String.truncate(maxLen: Int): String =
+    if (length <= maxLen) this else substring(0, maxLen - 1) + "…"
+```
+
 ### Validation Results
 
 ```kotlin
@@ -462,7 +647,7 @@ sealed class ValidationResult {
 
 ## 📝 System Prompt
 
-The AI agent uses this system prompt:
+The AI agent uses this system prompt (dynamically built in `AiRepository.buildSystemPrompt()`):
 
 ```
 You are an expert AI coding assistant running on an Android device.
@@ -481,6 +666,24 @@ GUIDELINES:
 4. Ask for confirmation before destructive operations
 5. Keep responses concise but informative
 6. When writing code, follow the project's existing style
+
+TOOLS — MEMORY & REMINDERS:
+- Use update_memory(content, target="daily") to log important events from this session
+- Use update_memory(content, target="long") to persist user preferences/facts permanently
+- Use create_reminder(...) when user asks to be reminded
+
+TOOLS — TASK PROGRESS (update_todo):
+- For any multi-step task, call update_todo at the START with merge=false to set your full plan.
+- Each item needs: id (int, 1-based), status, content, active_form (optional).
+- As you work, call update_todo with merge=true to update individual item statuses by id.
+- This shows the user a live progress bar above the chat input — keep it up to date.
+
+TOOLS — SUBAGENTS (invoke_subagents):
+- Use invoke_subagents when a task has INDEPENDENT sub-tasks that can run IN PARALLEL.
+- Perfect for: reading multiple folders at once, auditing different layers simultaneously.
+- Each subagent gets its own task description — include ALL context (file paths, project info).
+- Subagents do NOT see conversation history — be explicit and self-contained in each task.
+- Max 4 subagents per call. DO NOT use for tasks that depend on each other.
 
 PROJECT STRUCTURE:
 [Dynamically injected based on indexed files]
@@ -590,7 +793,10 @@ app/src/main/java/com/amaya/intelligence/
 │   ├── ListFilesTool.kt               # list_files
 │   ├── CreateDirectoryTool.kt         # create_directory
 │   ├── DeleteFileTool.kt              # delete_file
-│   └── RunShellTool.kt                # run_shell
+│   ├── RunShellTool.kt                # run_shell
+│   ├── TodoRepository.kt              # TodoItem state (StateFlow), merge/replace/clear
+│   ├── UpdateTodoTool.kt              # update_todo — AI updates live task list
+│   └── InvokeSubagentsTool.kt         # invoke_subagents — parallel AI sub-calls + SubagentRunner
 │
 ├── 📂 ui/
 │   ├── 📂 chat/
@@ -974,6 +1180,27 @@ The chat interface intentionally deviates from standard SMS-style apps to feel l
 2. **Persona Simple Mode**: Configuration fields must be neatly separated (e.g., using `HorizontalDivider`) and include quick-select `AssistChip` rows (Suggestion Pills) for rapid styling (e.g., "Friendly", "Analytical").
 3. **Persona Pro Mode**: File editors for `.md` guidelines (like `AGENTS.md`) must use a sleek `ScrollableTabRow` interface resembling a professional IDE, avoiding massive vertical scrolling text fields.
 
+### Agent Management Rules (STRICT)
+
+The AI Agents system follows a **simple enable/disable** model. There is NO concept of "active agent" in the settings screen:
+
+1. **Toggle only**: Agents are activated/deactivated via a single `Switch`. No "Use This Agent" / Play button.
+2. **Edit only in sheet**: Tapping an agent card opens `AgentEditSheet` for editing name, model ID, base URL, API key.
+3. **Section labels**: "Enabled" (primary color) / "Disabled" (muted). NOT "Active"/"Inactive".
+4. **Dropdown in chat**: Only **enabled** agents appear in the model selector dropdown in `ChatScreen` TopAppBar.
+5. **Auto-fallback**: If the currently selected agent is disabled, `ChatViewModel` automatically falls back to the first enabled agent.
+6. **Model priority**: `selectedModel` from `uiState` (set by dropdown) always takes priority over DataStore — prevents stale model bugs.
+
+```kotlin
+// Model resolution priority in AiRepository.chat():
+val model = when {
+    !selectedModel.isNullOrBlank()        -> selectedModel       // UI selection (always wins)
+    !agentConfig?.modelId.isNullOrBlank() -> agentConfig!!.modelId  // agent config
+    settings.activeModel.isNotBlank()     -> settings.activeModel   // DataStore fallback
+    else                                  -> provider.supportedModels.firstOrNull() ?: ""
+}
+```
+
 ### BottomSheet Drawer Rules (STRICT)
 
 All add/edit forms in Settings screens (MCP, Agents, Reminders, etc.) use `ModalBottomSheet` as a full-screen drawer. The following rules are **mandatory**:
@@ -1265,6 +1492,26 @@ FAILURE: Build failed with an exception.
 **Cause:** Missing compileSdk 35
 **Solution:** Update Android SDK via SDK Manager
 
+### "Invalid Tool Definition" / 400 Error from OpenAI-compat API
+
+**Cause:** Tool description exceeds 1024 characters. Common with MCP tools from external servers.
+**Solution:** Already fixed — `AiRepository.buildToolDefinitions()` truncates all descriptions to 1024 chars via `.truncate(1024)` extension function.
+
+### Wrong Model Used Despite Dropdown Selection
+
+**Cause:** `settingsFlow.collect` in `ChatViewModel.init` was overriding `selectedModel` from UI on every DataStore update.
+**Solution:** Already fixed — `settingsFlow.collect` only sets `selectedModel` from DataStore if current agent is no longer enabled. UI selection (`setSelectedAgent()`) always takes priority.
+
+### Subagent Rate Limit (429) from AI Provider
+
+**Cause:** All subagents hitting API simultaneously.
+**Solution:** Already fixed — subagents use staggered starts: Agent N starts after `(N-1) × 2s` delay. On 429: waits `Retry-After` (max 30s) then retries once.
+
+### MCP Tools Cause 400 on Non-Anthropic Providers
+
+**Cause:** MCP server tool descriptions can be very long (no size limit on their end).
+**Solution:** Already fixed — MCP tools also go through `.truncate(1024)` in `buildToolDefinitions()`.
+
 ---
 
 ## 🗺️ Roadmap
@@ -1284,9 +1531,20 @@ FAILURE: Build failed with an exception.
 - [x] Package Rename & Refactor (`com.amaya.intelligence`)
 - [x] MCP HTTP client (JSON-RPC 2.0, SSE + plain JSON, tool cache, auto-refresh)
 - [x] MCP Settings UI (list, add/edit BottomSheet, file picker import, fixed path sync)
-- [x] AI Agents redesign (list sections Active/Disabled, enable toggle, BottomSheet drawer)
+- [x] AI Agents redesign — enable/disable toggle only, no Play button, no "active agent" concept
+- [x] Agent dropdown — only shows enabled agents; fallback to first enabled on disable
 - [x] Sidebar redesign (search inline, action buttons, modern conversation list, settings footer)
 - [x] BottomSheet UX (no swipe dismiss, square top fills statusbar, predictive back slides down)
+- [x] Live TodoBar — collapsible shimmer progress bar below TopAppBar (`update_todo` tool)
+- [x] Parallel Subagents — `invoke_subagents` tool with stagger + rate limit retry (`SubagentRunner`)
+- [x] Tool description truncation — all tool descriptions (local + MCP) capped at 1024 chars for OpenAI-compat APIs
+- [x] Model selection fix — `selectedModel` from UI state always takes priority over DataStore
+- [x] Security hardening — path traversal fix, encoded path detection, `create_directory` isWrite fix
+- [x] Debug log cleanup — removed all sensitive data logs from OpenAiProvider & GeminiProvider
+- [x] Memory leak fixes — `confirmationContinuation` cleared in `onCleared()`, `repoScope` cancellable
+- [x] DAO `@Singleton` — all 5 DAO providers now singleton in `DatabaseModule`
+- [x] Dead code removal — `selectProvider()`, `providers`/`selectedProvider` from `ChatUiState`
+- [x] UUID tool call IDs — GeminiProvider now uses `UUID.randomUUID()` instead of timestamp
 - [ ] Project browser
 - [ ] Syntax highlighting for code blocks
 

@@ -35,6 +35,10 @@ class ToolExecutor @Inject constructor(
     // Memory & reminder tools
     private val createReminderTool: CreateReminderTool,
     private val updateMemoryTool: UpdateMemoryTool,
+    // Todo tool
+    private val updateTodoTool: UpdateTodoTool,
+    // Subagent tool
+    private val invokeSubagentsTool: InvokeSubagentsTool,
     // npm/node/npx commands now handled by RunShellTool directly
     private val commandValidator: CommandValidator
 ) {
@@ -57,7 +61,9 @@ class ToolExecutor @Inject constructor(
             batchReadTool.name to batchReadTool,
             applyDiffTool.name to applyDiffTool,
             createReminderTool.name to createReminderTool,
-            updateMemoryTool.name to updateMemoryTool
+            updateMemoryTool.name to updateMemoryTool,
+            updateTodoTool.name to updateTodoTool,
+            invokeSubagentsTool.name to invokeSubagentsTool
         )
     }
     
@@ -308,32 +314,61 @@ class ToolExecutor @Inject constructor(
                     ToolParameter("dry_run", "boolean", "Preview changes without saving (default: false)", required = false)
                 )
             ),
+            // ── Subagent tool ──────────────────────────────────────────────────────
+            ToolDefinition(
+                name = "invoke_subagents",
+                description = "Spawn up to 4 independent AI subagents running IN PARALLEL. " +
+                    "Each subagent has its own task and access to all file tools. " +
+                    "Use for independent sub-tasks (reading multiple folders, auditing different layers). " +
+                    "Subagents do NOT see conversation history — include ALL context in task. " +
+                    "Returns combined summary from all subagents.",
+                parameters = listOf(
+                    ToolParameter(
+                        name = "subagents",
+                        type = "array",
+                        description = "List of subagent tasks. Each: {task_name: string (≤5 words), task: string (full self-contained prompt)}",
+                        required = true,
+                        items = "object"
+                    )
+                )
+            ),
+            // ── Todo / Task list tool ──────────────────────────────────────────────
+            ToolDefinition(
+                name = "update_todo",
+                description = "Update the live task list shown above the chat input. " +
+                    "Call at START of multi-step task with merge=false to set full plan, then merge=true to update progress. " +
+                    "Status: 'pending', 'in_progress', 'completed'.",
+                parameters = listOf(
+                    ToolParameter("merge", "boolean",
+                        "true=merge by id into existing list, false=replace all items.", required = true),
+                    ToolParameter("todos", "array",
+                        "Todo items. Each: {id: int, status: string, content: string, active_form: string (optional)}",
+                        required = true, items = "object")
+                )
+            ),
             // ── Memory & Reminder tools ────────────────────────────────────────────
             ToolDefinition(
                 name = "create_reminder",
-                description = "Schedule a reminder that notifies the user at a specific time via Android notification. " +
-                    "Use when the user asks to be reminded about something (e.g., 'remind me to buy milk at 5pm tomorrow').",
+                description = "Schedule a reminder via Android notification at a specific time. " +
+                    "Use when user asks to be reminded about something.",
                 parameters = listOf(
-                    ToolParameter("title", "string", "Short title for the reminder (e.g., 'Buy milk')", required = true),
-                    ToolParameter("message", "string", "Full reminder message shown in the notification", required = true),
-                    ToolParameter("datetime", "string", "Date and time in ISO format YYYY-MM-DDTHH:MM (e.g., 2026-02-27T17:00)", required = true),
+                    ToolParameter("title", "string", "Short reminder title", required = true),
+                    ToolParameter("message", "string", "Full reminder message for the notification", required = true),
+                    ToolParameter("datetime", "string", "ISO format YYYY-MM-DDTHH:MM (e.g. 2026-02-27T17:00)", required = true),
                     ToolParameter("repeat", "string", "Recurrence: 'once' (default), 'daily', or 'weekly'", required = false,
                         enum = listOf("once", "daily", "weekly")),
                     ToolParameter("conversation_id", "integer",
-                        "ID of the current conversation so Amaya can reply here when the reminder fires. " +
-                        "Always include this so the reply appears in this chat.", required = false)
+                        "Current conversation ID so reply appears in this chat when reminder fires.", required = false)
                 )
             ),
             ToolDefinition(
                 name = "update_memory",
-                description = "Persist important information for future sessions. Call this proactively when the user " +
-                    "shares their name, preferences, goals, or asks you to remember something. " +
-                    "Also call after completing significant tasks.",
+                description = "Persist important info for future sessions. Call when user shares name, preferences, goals, or asks to remember something.",
                 parameters = listOf(
-                    ToolParameter("content", "string", "What to remember — write as a clear, self-contained sentence", required = true),
-                    ToolParameter("target", "string", "'daily' (default) = today's log, 'long' = MEMORY.md for permanent storage",
+                    ToolParameter("content", "string", "What to remember — clear self-contained sentence", required = true),
+                    ToolParameter("target", "string", "'daily' = today's log, 'long' = MEMORY.md permanent storage",
                         required = false, enum = listOf("daily", "long")),
-                    ToolParameter("section", "string", "Section in MEMORY.md to write under (default: 'Important Facts'). Only used when target='long'",
+                    ToolParameter("section", "string", "Section in MEMORY.md (default: 'Important Facts'). Only for target='long'",
                         required = false)
                 )
             )

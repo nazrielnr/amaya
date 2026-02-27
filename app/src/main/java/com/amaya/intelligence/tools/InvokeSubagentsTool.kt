@@ -34,6 +34,10 @@ class InvokeSubagentsTool @Inject constructor(
         "Subagents do NOT see conversation history — provide ALL context in the task description. " +
         "Maximum 4 subagents per call. Returns a combined summary from all subagents."
 
+    // eventEmitter is set by ToolExecutor before execution to allow SubagentUpdate events
+    var eventEmitter: (suspend (Any) -> Unit)? = null
+    var currentToolCallId: String? = null
+
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
         return try {
             @Suppress("UNCHECKED_CAST")
@@ -59,10 +63,39 @@ class InvokeSubagentsTool @Inject constructor(
                 )
             }
 
+            val parentId = currentToolCallId ?: "subagents_${System.currentTimeMillis()}"
+
+            // Emit RUNNING state for all subagents immediately
+            subagents.forEach { sub ->
+                eventEmitter?.invoke(com.amaya.intelligence.data.repository.AgentEvent.SubagentUpdate(
+                    parentToolCallId = parentId,
+                    index    = sub.index,
+                    taskName = sub.taskName,
+                    prompt   = sub.task,
+                    result   = null,
+                    isComplete = false,
+                    isError    = false
+                ))
+            }
+
             // Run all subagents in parallel with staggered starts
             val results = coroutineScope {
                 subagents.map { subagent ->
-                    async { subagentRunner.run(subagent) }
+                    async {
+                        val result = subagentRunner.run(subagent)
+                        // Emit COMPLETE state when each agent finishes
+                        val isErr = result.summary.startsWith("[ERROR]") || result.summary.startsWith("[RATE LIMITED]")
+                        eventEmitter?.invoke(com.amaya.intelligence.data.repository.AgentEvent.SubagentUpdate(
+                            parentToolCallId = parentId,
+                            index    = subagent.index,
+                            taskName = subagent.taskName,
+                            prompt   = subagent.task,
+                            result   = result.summary,
+                            isComplete = true,
+                            isError    = isErr
+                        ))
+                        result
+                    }
                 }.awaitAll()
             }
 
@@ -70,7 +103,7 @@ class InvokeSubagentsTool @Inject constructor(
             val output = buildString {
                 appendLine("=== SUBAGENT RESULTS (${results.size} agents ran in parallel) ===")
                 appendLine()
-                results.forEachIndexed { idx, result ->
+                results.forEach { result ->
                     appendLine("--- [${result.taskName}] ---")
                     appendLine(result.summary)
                     appendLine()

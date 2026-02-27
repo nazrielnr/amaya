@@ -23,15 +23,10 @@ class ToolExecutor @Inject constructor(
     private val createDirectoryTool: CreateDirectoryTool,
     private val deleteFileTool: DeleteFileTool,
     private val runShellTool: RunShellTool,
-    private val copyFileTool: CopyFileTool,
-    private val moveFileTool: MoveFileTool,
-    private val searchFilesTool: SearchFilesTool,
-    private val editFileTool: EditFileTool,
-    private val getFileInfoTool: GetFileInfoTool,
-    private val findFilesTool: FindFilesTool,
+    private val transferFileTool: TransferFileTool,  // replaces copy_file + move_file
+    private val editFileTool: EditFileTool,           // now includes apply_diff
+    private val findFilesTool: FindFilesTool,         // now includes search_files
     private val undoChangeTool: UndoChangeTool,
-    private val batchReadTool: BatchReadTool,
-    private val applyDiffTool: ApplyDiffTool,
     // Memory & reminder tools
     private val createReminderTool: CreateReminderTool,
     private val updateMemoryTool: UpdateMemoryTool,
@@ -39,30 +34,24 @@ class ToolExecutor @Inject constructor(
     private val updateTodoTool: UpdateTodoTool,
     // Subagent tool
     private val invokeSubagentsTool: InvokeSubagentsTool,
-    // npm/node/npx commands now handled by RunShellTool directly
     private val commandValidator: CommandValidator
 ) {
     
     private val tools: Map<String, Tool> by lazy {
         mapOf(
-            listFilesTool.name to listFilesTool,
-            readFileTool.name to readFileTool,
-            writeFileTool.name to writeFileTool,
+            listFilesTool.name      to listFilesTool,
+            readFileTool.name       to readFileTool,
+            writeFileTool.name      to writeFileTool,
             createDirectoryTool.name to createDirectoryTool,
-            deleteFileTool.name to deleteFileTool,
-            runShellTool.name to runShellTool,
-            copyFileTool.name to copyFileTool,
-            moveFileTool.name to moveFileTool,
-            searchFilesTool.name to searchFilesTool,
-            editFileTool.name to editFileTool,
-            getFileInfoTool.name to getFileInfoTool,
-            findFilesTool.name to findFilesTool,
-            undoChangeTool.name to undoChangeTool,
-            batchReadTool.name to batchReadTool,
-            applyDiffTool.name to applyDiffTool,
+            deleteFileTool.name     to deleteFileTool,
+            runShellTool.name       to runShellTool,
+            transferFileTool.name   to transferFileTool,
+            editFileTool.name       to editFileTool,
+            findFilesTool.name      to findFilesTool,
+            undoChangeTool.name     to undoChangeTool,
             createReminderTool.name to createReminderTool,
-            updateMemoryTool.name to updateMemoryTool,
-            updateTodoTool.name to updateTodoTool,
+            updateMemoryTool.name   to updateMemoryTool,
+            updateTodoTool.name     to updateTodoTool,
             invokeSubagentsTool.name to invokeSubagentsTool
         )
     }
@@ -80,6 +69,8 @@ class ToolExecutor @Inject constructor(
         toolName: String,
         arguments: Map<String, Any?>,
         workspacePath: String? = null,
+        toolCallId: String? = null,
+        onEvent: (suspend (Any) -> Unit)? = null,
         onConfirmationRequired: suspend (ConfirmationRequest) -> Boolean = { false }
     ): ToolResult {
         val tool = tools[toolName]
@@ -87,6 +78,12 @@ class ToolExecutor @Inject constructor(
                 "Unknown tool: $toolName. Available: ${tools.keys.joinToString()}",
                 ErrorType.VALIDATION_ERROR
             )
+
+        // Wire up InvokeSubagentsTool with event emitter for live progress
+        if (tool is InvokeSubagentsTool && onEvent != null) {
+            tool.eventEmitter = onEvent
+            tool.currentToolCallId = toolCallId
+        }
         
         // Auto-inject workspace as default working_dir for run_shell
         val finalArguments = if (toolName == "run_shell" && 
@@ -179,13 +176,14 @@ class ToolExecutor @Inject constructor(
             ),
             ToolDefinition(
                 name = "read_file",
-                description = "Read the content of a text file. Returns an error if the file is too large or binary.",
+                description = "Read one or multiple text files. Single: pass 'path'. Batch: pass 'paths' array (max 10). Info-only: pass 'info_only=true' for file metadata.",
                 parameters = listOf(
-                    ToolParameter("path", "string", "Absolute path to the file", required = true),
-                    ToolParameter("max_size", "integer", "Maximum file size in bytes (default: 1MB, max: 10MB)", required = false),
+                    ToolParameter("path", "string", "Absolute path to single file", required = false),
+                    ToolParameter("paths", "array", "Array of absolute paths for batch read (max 10)", required = false, items = "string"),
                     ToolParameter("start_line", "integer", "Start reading from this line (1-indexed)", required = false),
                     ToolParameter("end_line", "integer", "Stop reading at this line (inclusive)", required = false),
-                    ToolParameter("encoding", "string", "Character encoding (default: UTF-8)", required = false)
+                    ToolParameter("info_only", "boolean", "Return only metadata (size, modified, permissions) instead of content", required = false),
+                    ToolParameter("max_lines", "integer", "Max lines per file in batch mode (default: 100)", required = false)
                 )
             ),
             ToolDefinition(
@@ -230,59 +228,35 @@ class ToolExecutor @Inject constructor(
                 )
             ),
             ToolDefinition(
-                name = "copy_file",
-                description = "Copy a file or directory to a new location.",
+                name = "transfer_file",
+                description = "Copy or move/rename a file or directory. mode='copy' duplicates, mode='move' relocates/renames.",
                 parameters = listOf(
                     ToolParameter("source", "string", "Absolute path to source file/directory", required = true),
                     ToolParameter("destination", "string", "Absolute path to destination", required = true),
+                    ToolParameter("mode", "string", "Operation: 'copy' or 'move' (default: copy)", required = false, enum = listOf("copy", "move")),
                     ToolParameter("overwrite", "boolean", "Overwrite if destination exists (default: false)", required = false)
-                )
-            ),
-            ToolDefinition(
-                name = "move_file",
-                description = "Move or rename a file or directory. Can move to different directory, rename in place, or both.",
-                parameters = listOf(
-                    ToolParameter("source", "string", "Absolute path to source file/directory", required = true),
-                    ToolParameter("destination", "string", "Absolute path to destination", required = true),
-                    ToolParameter("overwrite", "boolean", "Overwrite if destination exists (default: false)", required = false)
-                )
-            ),
-            ToolDefinition(
-                name = "search_files",
-                description = "Search for text or patterns within files in a directory. Like grep but with native performance.",
-                parameters = listOf(
-                    ToolParameter("query", "string", "Text or regex pattern to search for", required = true),
-                    ToolParameter("path", "string", "Directory path to search in", required = true),
-                    ToolParameter("regex", "boolean", "Treat query as regex (default: false)", required = false),
-                    ToolParameter("case_insensitive", "boolean", "Ignore case (default: true)", required = false),
-                    ToolParameter("include", "string", "File pattern to include (e.g., *.kt)", required = false),
-                    ToolParameter("max_results", "integer", "Maximum results (default: 50, max: 100)", required = false)
                 )
             ),
             ToolDefinition(
                 name = "edit_file",
-                description = "Edit a file by replacing specific text content. More efficient than rewriting the entire file. Creates backup automatically.",
+                description = "Edit a file by replacing text or applying a unified diff. Use 'old_content'+'new_content' for text replacement, or 'diff' for patch mode.",
                 parameters = listOf(
                     ToolParameter("path", "string", "Absolute path to the file", required = true),
-                    ToolParameter("old_content", "string", "Exact text to find and replace", required = true),
-                    ToolParameter("new_content", "string", "Text to replace with", required = true),
+                    ToolParameter("old_content", "string", "Exact text to find and replace", required = false),
+                    ToolParameter("new_content", "string", "Text to replace with", required = false),
+                    ToolParameter("diff", "string", "Unified diff content (@@ hunks) to apply as patch", required = false),
                     ToolParameter("all_occurrences", "boolean", "Replace all occurrences (default: false)", required = false),
                     ToolParameter("dry_run", "boolean", "Preview changes without saving (default: false)", required = false)
                 )
             ),
             ToolDefinition(
-                name = "get_file_info",
-                description = "Get detailed information about a file or directory including size, type, permissions, and dates.",
-                parameters = listOf(
-                    ToolParameter("path", "string", "Absolute path to file or directory", required = true)
-                )
-            ),
-            ToolDefinition(
                 name = "find_files",
-                description = "Find files by name pattern (glob) in a directory. Supports patterns like *.kt, Test*.java, *.{js,ts}",
+                description = "Find files by name pattern (glob) or search content within files. Use 'pattern' for filename glob, or 'content' for grep-style search.",
                 parameters = listOf(
                     ToolParameter("path", "string", "Directory path to search in", required = true),
-                    ToolParameter("pattern", "string", "Glob pattern to match (e.g., *.kt)", required = true),
+                    ToolParameter("pattern", "string", "Glob pattern to match filenames (e.g., *.kt)", required = false),
+                    ToolParameter("content", "string", "Text to search for inside files (grep mode)", required = false),
+                    ToolParameter("case_sensitive", "boolean", "Case-sensitive content search (default: false)", required = false),
                     ToolParameter("type", "string", "Filter: 'file', 'directory', or 'all' (default: all)", required = false),
                     ToolParameter("max_depth", "integer", "Maximum search depth (default: 10)", required = false),
                     ToolParameter("max_results", "integer", "Maximum results (default: 50)", required = false)
@@ -290,28 +264,10 @@ class ToolExecutor @Inject constructor(
             ),
             ToolDefinition(
                 name = "undo_change",
-                description = "Undo the last change to a file by restoring from backup. Use when you made a mistake.",
+                description = "Undo the last change to a file by restoring from backup.",
                 parameters = listOf(
                     ToolParameter("path", "string", "Absolute path to the file to restore", required = true),
                     ToolParameter("list_backups", "boolean", "List available backups instead of restoring", required = false)
-                )
-            ),
-            ToolDefinition(
-                name = "batch_read",
-                description = "Read multiple files in a single call for efficiency. Use when you need to read several files at once.",
-                parameters = listOf(
-                    ToolParameter("paths", "array", "List of absolute file paths to read", required = true, items = "string"),
-                    ToolParameter("max_lines", "integer", "Max lines per file (default: 100)", required = false),
-                    ToolParameter("summary_only", "boolean", "Return only first/last 10 lines per file", required = false)
-                )
-            ),
-            ToolDefinition(
-                name = "apply_diff",
-                description = "Apply a unified diff patch to a file. More precise than edit_file for complex multi-line changes.",
-                parameters = listOf(
-                    ToolParameter("path", "string", "Absolute path to the file", required = true),
-                    ToolParameter("diff", "string", "Unified diff content with @@ headers and +/- lines", required = true),
-                    ToolParameter("dry_run", "boolean", "Preview changes without saving (default: false)", required = false)
                 )
             ),
             // ── Subagent tool ──────────────────────────────────────────────────────

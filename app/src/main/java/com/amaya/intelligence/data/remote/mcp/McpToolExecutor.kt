@@ -15,12 +15,14 @@ class McpToolExecutor @Inject constructor(
         toolName: String,
         arguments: Map<String, Any?>,
         workspacePath: String?,
+        toolCallId: String? = null,
+        onEvent: (suspend (Any) -> Unit)? = null,
         onConfirmationRequired: suspend (ConfirmationRequest) -> Boolean
     ): ToolResult {
         return if (toolName.startsWith(McpClientManager.TOOL_PREFIX)) {
             mcpClientManager.callTool(toolName, arguments)
         } else {
-            toolExecutor.execute(toolName, arguments, workspacePath, onConfirmationRequired)
+            toolExecutor.execute(toolName, arguments, workspacePath, toolCallId, onEvent, onConfirmationRequired)
         }
     }
 }

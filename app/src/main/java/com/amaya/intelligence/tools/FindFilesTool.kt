@@ -24,21 +24,44 @@ class FindFilesTool @Inject constructor(
     }
     
     override val name = "find_files"
-    
-    override val description = """
-        Find files by name pattern in a directory.
-        
-        Arguments:
-        - path (string, required): Directory path to search in
-        - pattern (string, required): Glob pattern (e.g., "*.kt", "Test*.java", "*.{js,ts}")
-        - type (string, optional): Filter by type - "file", "directory", or "all" (default: "all")
-        - max_depth (int, optional): Maximum search depth (default: 10)
-        - max_results (int, optional): Maximum results (default: 50)
-    """.trimIndent()
+
+    override val description = "Find files by name pattern (glob) or search content within files. Use 'pattern' for filename glob (*.kt), or 'content' for grep-style content search."
     
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult =
         withContext(Dispatchers.IO) {
-            
+
+        // ── Content search mode (replaces search_files) ──────────────────
+        val contentQuery = arguments["content"] as? String
+        if (contentQuery != null) {
+            val searchPath = arguments["path"] as? String ?: return@withContext ToolResult.Error(
+                "Missing required argument: path", ErrorType.VALIDATION_ERROR)
+            val caseSensitive = arguments["case_sensitive"] as? Boolean ?: false
+            val maxResults = (arguments["max_results"] as? Number)?.toInt() ?: 50
+            val dir = java.io.File(searchPath)
+            if (!dir.exists()) return@withContext ToolResult.Error("Path not found: $searchPath", ErrorType.NOT_FOUND)
+
+            val matches = mutableListOf<String>()
+            dir.walkTopDown()
+                .filter { it.isFile && it.length() < 5 * 1024 * 1024 }
+                .forEach { file ->
+                    if (matches.size >= maxResults) return@forEach
+                    try {
+                        val lines = file.readLines(Charsets.UTF_8)
+                        lines.forEachIndexed { idx, line ->
+                            val found = if (caseSensitive) line.contains(contentQuery)
+                                        else line.contains(contentQuery, ignoreCase = true)
+                            if (found && matches.size < maxResults) {
+                                matches.add("${file.absolutePath}:${idx + 1}: ${line.trim()}")
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+            val output = if (matches.isEmpty()) "No matches found for: \"$contentQuery\""
+                         else matches.joinToString("\n")
+            return@withContext ToolResult.Success(output, metadata = mapOf(
+                "query" to contentQuery, "matches" to matches.size, "path" to searchPath))
+        }
+
         val pathStr = arguments["path"] as? String
             ?: return@withContext ToolResult.Error(
                 "Missing required argument: path",

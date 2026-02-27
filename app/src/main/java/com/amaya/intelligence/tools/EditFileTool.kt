@@ -26,29 +26,29 @@ class EditFileTool @Inject constructor(
     }
     
     override val name = "edit_file"
-    
-    override val description = """
-        Edit a file by replacing specific text content.
-        Creates a backup before making changes.
-        
-        Arguments:
-        - path (string, required): Absolute path to the file
-        - old_content (string, required): Exact text to find and replace
-        - new_content (string, required): Text to replace with
-        - all_occurrences (boolean, optional): Replace all occurrences (default: false, only first)
-        - dry_run (boolean, optional): Preview changes without saving (default: false)
-        
-        Returns the number of replacements made and a preview of changes.
-    """.trimIndent()
+
+    override val description = "Edit a file by replacing specific text, or apply a unified diff/patch. Use 'old_content'+'new_content' for text replacement, or 'diff' for patch mode."
     
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult =
         withContext(Dispatchers.IO) {
-            
+
         val pathStr = arguments["path"] as? String
-            ?: return@withContext ToolResult.Error(
-                "Missing required argument: path",
-                ErrorType.VALIDATION_ERROR
-            )
+            ?: return@withContext ToolResult.Error("Missing required argument: path", ErrorType.VALIDATION_ERROR)
+
+        // ── Diff/patch mode (replaces apply_diff) ────────────────────────
+        val diffStr = arguments["diff"] as? String
+        if (diffStr != null) {
+            when (val v = commandValidator.validatePath(pathStr, isWrite = true)) {
+                is ValidationResult.Denied -> return@withContext ToolResult.Error(v.reason, ErrorType.SECURITY_VIOLATION)
+                is ValidationResult.RequiresConfirmation -> return@withContext ToolResult.RequiresConfirmation(v.reason, pathStr)
+                is ValidationResult.Allowed -> {}
+            }
+            val file = java.io.File(pathStr)
+            if (!file.exists()) return@withContext ToolResult.Error("File not found: $pathStr", ErrorType.NOT_FOUND)
+            val content = file.readText(Charsets.UTF_8)
+            // Parse unified diff — apply @@ hunks
+            return@withContext applyUnifiedDiff(file, content, diffStr)
+        }
         
         val oldContent = arguments["old_content"] as? String
             ?: return@withContext ToolResult.Error(
@@ -194,6 +194,56 @@ class EditFileTool @Inject constructor(
                 "Edit failed: ${e.message}",
                 ErrorType.EXECUTION_ERROR
             )
+        }
+    }
+
+    private fun applyUnifiedDiff(file: java.io.File, original: String, diff: String): ToolResult {
+        return try {
+            val lines = original.lines().toMutableList()
+            val hunkRegex = Regex("""^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@""")
+            val diffLines = diff.lines()
+            var i = 0
+            var lineOffset = 0
+            while (i < diffLines.size) {
+                val hunkMatch = hunkRegex.find(diffLines[i])
+                if (hunkMatch != null) {
+                    val origStart = hunkMatch.groupValues[1].toInt() - 1 + lineOffset
+                    i++
+                    val insertAt = origStart.coerceIn(0, lines.size)
+                    val removals = mutableListOf<String>()
+                    val additions = mutableListOf<String>()
+                    while (i < diffLines.size && !diffLines[i].startsWith("@@")) {
+                        val dl = diffLines[i]
+                        when {
+                            dl.startsWith("-") -> removals.add(dl.drop(1))
+                            dl.startsWith("+") -> additions.add(dl.drop(1))
+                        }
+                        i++
+                    }
+                    // Remove lines
+                    var removed = 0
+                    removals.forEach { rem ->
+                        val idx = lines.indexOfFirst { it == rem }
+                        if (idx >= 0) { lines.removeAt(idx); removed++ }
+                    }
+                    // Insert additions
+                    additions.forEachIndexed { addIdx, add ->
+                        val pos = (insertAt + addIdx).coerceIn(0, lines.size)
+                        lines.add(pos, add)
+                    }
+                    lineOffset += additions.size - removed
+                } else i++
+            }
+            val result = lines.joinToString("\n")
+            val backup = java.io.File(file.parent, "${file.name}.bak.${System.currentTimeMillis()}")
+            file.copyTo(backup, overwrite = true)
+            file.writeText(result, Charsets.UTF_8)
+            ToolResult.Success(
+                "Diff applied to ${file.name}. Backup: ${backup.name}",
+                metadata = mapOf("path" to file.absolutePath)
+            )
+        } catch (e: Exception) {
+            ToolResult.Error("Failed to apply diff: ${e.message}", ErrorType.EXECUTION_ERROR)
         }
     }
 }

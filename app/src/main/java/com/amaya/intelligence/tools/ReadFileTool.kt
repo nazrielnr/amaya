@@ -25,27 +25,30 @@ class ReadFileTool @Inject constructor(
     }
     
     override val name = "read_file"
-    
-    override val description = """
-        Read the content of a text file.
-        Returns an error if the file is too large or appears to be binary.
-        
-        Arguments:
-        - path (string, required): Absolute path to the file
-        - max_size (int, optional): Maximum file size in bytes (default: 1MB, max: 10MB)
-        - start_line (int, optional): Start reading from this line (1-indexed)
-        - end_line (int, optional): Stop reading at this line (inclusive)
-        - encoding (string, optional): Character encoding (default: UTF-8)
-    """.trimIndent()
-    
-    override suspend fun execute(arguments: Map<String, Any?>): ToolResult = 
+
+    override val description = "Read one or multiple text files. Pass 'path' for single file or 'paths' array for batch. Use 'info_only' for metadata only."
+
+    override suspend fun execute(arguments: Map<String, Any?>): ToolResult =
         withContext(Dispatchers.IO) {
-            
+
+        // ── Batch mode: paths[] ──────────────────────────────────────────
+        @Suppress("UNCHECKED_CAST")
+        val pathsList = (arguments["paths"] as? List<*>)?.mapNotNull { it?.toString() }
+        if (pathsList != null) {
+            return@withContext executeBatch(pathsList, arguments)
+        }
+
         val pathStr = arguments["path"] as? String
             ?: return@withContext ToolResult.Error(
-                "Missing required argument: path",
+                "Missing required argument: path or paths",
                 ErrorType.VALIDATION_ERROR
             )
+
+        // ── Info-only mode ───────────────────────────────────────────────
+        val infoOnly = arguments["info_only"] as? Boolean ?: false
+        if (infoOnly) {
+            return@withContext executeInfo(pathStr)
+        }
         
         // Validate path access
         when (val validation = commandValidator.validatePath(pathStr, isWrite = false)) {
@@ -188,5 +191,61 @@ class ReadFileTool @Inject constructor(
             bytes < 1024 * 1024 -> "${bytes / 1024} KB"
             else -> "${bytes / (1024 * 1024)} MB"
         }
+    }
+
+    // ── Batch mode ───────────────────────────────────────────────────────────
+    private suspend fun executeBatch(paths: List<String>, arguments: Map<String, Any?>): ToolResult =
+        withContext(Dispatchers.IO) {
+            if (paths.size > 10) {
+                return@withContext ToolResult.Error("Too many files: ${paths.size} (max: 10)", ErrorType.SIZE_LIMIT)
+            }
+            val maxLines = (arguments["max_lines"] as? Number)?.toInt()?.coerceIn(1, 500) ?: 100
+            val summaryOnly = arguments["summary_only"] as? Boolean ?: false
+
+            val output = buildString {
+                paths.forEachIndexed { idx, path ->
+                    val file = java.io.File(path)
+                    appendLine("=== ${file.name} ===")
+                    if (!file.exists()) { appendLine("ERROR: File not found"); appendLine(); return@forEachIndexed }
+                    if (!file.isFile)   { appendLine("ERROR: Not a file");      appendLine(); return@forEachIndexed }
+                    try {
+                        val lines = file.readLines(Charsets.UTF_8)
+                        if (summaryOnly && lines.size > 20) {
+                            lines.take(10).forEach { appendLine(it) }
+                            appendLine("... (${lines.size - 20} lines omitted) ...")
+                            lines.takeLast(10).forEach { appendLine(it) }
+                        } else if (lines.size > maxLines) {
+                            lines.take(maxLines).forEach { appendLine(it) }
+                            appendLine("... (${lines.size - maxLines} more lines)")
+                        } else {
+                            appendLine(file.readText(Charsets.UTF_8))
+                        }
+                    } catch (e: Exception) { appendLine("ERROR: ${e.message}") }
+                    appendLine()
+                }
+            }
+            ToolResult.Success(output.trimEnd(), metadata = mapOf("files_read" to paths.size))
+        }
+
+    // ── Info-only mode ───────────────────────────────────────────────────────
+    private suspend fun executeInfo(pathStr: String): ToolResult = withContext(Dispatchers.IO) {
+        when (val v = commandValidator.validatePath(pathStr, isWrite = false)) {
+            is ValidationResult.Denied -> return@withContext ToolResult.Error(v.reason, ErrorType.SECURITY_VIOLATION)
+            is ValidationResult.RequiresConfirmation -> return@withContext ToolResult.RequiresConfirmation(v.reason, pathStr)
+            is ValidationResult.Allowed -> {}
+        }
+        val file = java.io.File(pathStr)
+        if (!file.exists()) return@withContext ToolResult.Error("Not found: $pathStr", ErrorType.NOT_FOUND)
+        val type = if (file.isDirectory) "directory" else "file"
+        val output = buildString {
+            appendLine("Path: $pathStr")
+            appendLine("Type: $type")
+            appendLine("Size: ${formatSize(file.length())}")
+            appendLine("Modified: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date(file.lastModified()))}")
+            if (file.isFile) appendLine("Extension: ${file.extension.ifEmpty { "(none)" }}")
+            appendLine("Permissions: ${if (file.canRead()) "r" else "-"}${if (file.canWrite()) "w" else "-"}${if (file.canExecute()) "x" else "-"}")
+            if (file.isDirectory) appendLine("Children: ${file.listFiles()?.size ?: 0} items")
+        }
+        ToolResult.Success(output.trim(), metadata = mapOf("path" to pathStr, "type" to type, "size" to file.length()))
     }
 }

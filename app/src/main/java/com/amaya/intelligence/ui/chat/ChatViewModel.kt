@@ -230,6 +230,43 @@ class ChatViewModel @Inject constructor(
                         }
                     }
                     
+                    is AgentEvent.SubagentUpdate -> {
+                        _uiState.update { state ->
+                            val messages = state.messages.toMutableList()
+                            for (msgIndex in messages.indices.reversed()) {
+                                val msg = messages[msgIndex]
+                                if (msg.role == MessageRole.ASSISTANT) {
+                                    val execIndex = msg.toolExecutions.indexOfFirst {
+                                        it.toolCallId == event.parentToolCallId
+                                    }
+                                    if (execIndex >= 0) {
+                                        val executions = msg.toolExecutions.toMutableList()
+                                        val exec = executions[execIndex]
+                                        val children = exec.children.toMutableList()
+                                        val childIdx = children.indexOfFirst { it.index == event.index }
+                                        val child = SubagentExecution(
+                                            index    = event.index,
+                                            taskName = event.taskName,
+                                            prompt   = event.prompt,
+                                            result   = event.result,
+                                            status   = when {
+                                                !event.isComplete          -> ToolStatus.RUNNING
+                                                event.isError              -> ToolStatus.ERROR
+                                                else                       -> ToolStatus.SUCCESS
+                                            }
+                                        )
+                                        if (childIdx >= 0) children[childIdx] = child
+                                        else children.add(child)
+                                        executions[execIndex] = exec.copy(children = children.sortedBy { it.index })
+                                        messages[msgIndex] = msg.copy(toolExecutions = executions)
+                                        break
+                                    }
+                                }
+                            }
+                            state.copy(messages = messages)
+                        }
+                    }
+
                     is AgentEvent.Done -> {
                         _uiState.update { it.copy(isLoading = false) }
                         saveCurrentConversation()
@@ -425,6 +462,24 @@ class ChatViewModel @Inject constructor(
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
+
+    /**
+     * Remove a single tool execution card from a specific message.
+     * Used by the delete button on ToolCallCard.
+     */
+    fun removeToolExecution(messageId: String, toolCallId: String) {
+        _uiState.update { state ->
+            val messages = state.messages.toMutableList()
+            val msgIndex = messages.indexOfFirst { it.id == messageId }
+            if (msgIndex >= 0) {
+                val msg = messages[msgIndex]
+                messages[msgIndex] = msg.copy(
+                    toolExecutions = msg.toolExecutions.filter { it.toolCallId != toolCallId }
+                )
+            }
+            state.copy(messages = messages)
+        }
+    }
 }
 
 @Immutable
@@ -456,6 +511,17 @@ data class ToolExecution(
     val toolCallId: String,
     val name: String,
     val arguments: Map<String, Any?>,
+    val result: String? = null,
+    val status: ToolStatus = ToolStatus.PENDING,
+    // For invoke_subagents — each subagent becomes a child
+    val children: List<SubagentExecution> = emptyList()
+)
+
+@Immutable
+data class SubagentExecution(
+    val index: Int,
+    val taskName: String,
+    val prompt: String,
     val result: String? = null,
     val status: ToolStatus = ToolStatus.PENDING
 )

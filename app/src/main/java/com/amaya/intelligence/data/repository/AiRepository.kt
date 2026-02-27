@@ -230,10 +230,13 @@ class AiRepository @Inject constructor(
                 
                 // Execute each tool call
                 for (toolCall in toolCalls) {
+                    val emitter = this
                     val result = mcpToolExecutor.execute(
                         toolName = toolCall.name,
                         arguments = toolCall.arguments,
                         workspacePath = workspacePath,
+                        toolCallId = toolCall.id,
+                        onEvent = { event -> emitter.emit(event as AgentEvent) },
                         onConfirmationRequired = onConfirmation
                     )
                     
@@ -442,8 +445,18 @@ sealed class AgentEvent {
     data class ToolCallResult(val toolCallId: String, val toolName: String, val result: String, val isError: Boolean) : AgentEvent()
     data class Usage(val inputTokens: Int, val outputTokens: Int) : AgentEvent()
     data class Error(val message: String, val retryable: Boolean) : AgentEvent()
-    data object NewIteration : AgentEvent() // Signals start of a new iteration (after tool results)
+    data object NewIteration : AgentEvent()
     data object Done : AgentEvent()
+    // Emitted by InvokeSubagentsTool as each subagent starts/completes
+    data class SubagentUpdate(
+        val parentToolCallId: String,
+        val index: Int,
+        val taskName: String,
+        val prompt: String,
+        val result: String? = null,
+        val isComplete: Boolean = false,
+        val isError: Boolean = false
+    ) : AgentEvent()
 }
 
 /**

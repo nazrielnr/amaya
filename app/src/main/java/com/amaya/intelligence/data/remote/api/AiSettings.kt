@@ -48,7 +48,6 @@ class AiSettingsManager @Inject constructor(
         private val KEY_ACTIVE_MODEL    = stringPreferencesKey("active_model")
         private val KEY_OPENAI_BASE_URL = stringPreferencesKey("openai_base_url")
         private val KEY_THEME           = stringPreferencesKey("theme")
-        private val KEY_ACCENT_COLOR    = stringPreferencesKey("accent_color")
         private val KEY_AGENT_CONFIGS   = stringPreferencesKey("agent_configs")
         private val KEY_ACTIVE_AGENT_ID = stringPreferencesKey("active_agent_id")
         private val KEY_MCP_CONFIG_JSON = stringPreferencesKey("mcp_config_json")
@@ -84,7 +83,6 @@ class AiSettingsManager @Inject constructor(
             activeProvider  = prefs[KEY_ACTIVE_PROVIDER] ?: ProviderType.OPENAI.name,
             activeModel     = prefs[KEY_ACTIVE_MODEL] ?: "",
             theme           = prefs[KEY_THEME] ?: "system",
-            accentColor     = prefs[KEY_ACCENT_COLOR] ?: "Purple",
             agentConfigs    = configs,
             activeAgentId   = prefs[KEY_ACTIVE_AGENT_ID] ?: "",
             mcpConfigJson   = prefs[KEY_MCP_CONFIG_JSON] ?: ""
@@ -166,10 +164,6 @@ class AiSettingsManager @Inject constructor(
         context.dataStore.edit { prefs -> prefs[KEY_THEME] = theme }
     }
 
-    suspend fun setAccentColor(color: String) {
-        context.dataStore.edit { prefs -> prefs[KEY_ACCENT_COLOR] = color }
-    }
-
     suspend fun setMcpConfigJson(json: String) {
         context.dataStore.edit { prefs -> prefs[KEY_MCP_CONFIG_JSON] = json }
         writeMcpConfigToFixedPath(json)
@@ -232,7 +226,6 @@ data class AiSettings(
     val activeProvider:  String          = ProviderType.OPENAI.name,
     val activeModel:     String          = "",
     val theme:           String          = "system",
-    val accentColor:     String          = "Purple",
     val agentConfigs:    List<AgentConfig> = emptyList(),
     val activeAgentId:   String          = "",
     val mcpConfigJson:   String          = ""

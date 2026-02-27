@@ -1,4 +1,4 @@
-﻿package com.amaya.intelligence.ui.chat
+package com.amaya.intelligence.ui.chat
 
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
@@ -117,7 +117,7 @@ fun ChatScreen(
                         .fillMaxSize()
                         .statusBarsPadding()
                 ) {
-                    // ── Header ──────────────────────────────────────────────
+                    // -- Header ----------------------------------------------
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -144,7 +144,7 @@ fun ChatScreen(
                         }
                     }
 
-                    // ── Action buttons ──────────────────────────────────────
+                    // -- Action buttons --------------------------------------
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -216,10 +216,10 @@ fun ChatScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // ── Search bar ──────────────────────────────────────────
+                    // -- Search bar ------------------------------------------
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
@@ -247,7 +247,7 @@ fun ChatScreen(
                                 decorationBox = { inner ->
                                     if (searchQuery.isEmpty()) {
                                         Text(
-                                            "Search conversations…",
+                                            "Search conversations�",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -273,7 +273,7 @@ fun ChatScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // ── Section label ───────────────────────────────────────
+                    // -- Section label ---------------------------------------
                     if (conversations.isNotEmpty()) {
                         Text(
                             "Recent",
@@ -283,7 +283,7 @@ fun ChatScreen(
                         )
                     }
 
-                    // ── Conversation list ────────────────────────────────────
+                    // -- Conversation list ------------------------------------
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
@@ -368,13 +368,13 @@ fun ChatScreen(
                         }
                     }
 
-                    // ── Divider ─────────────────────────────────────────────
+                    // -- Divider ---------------------------------------------
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
-                    // ── Footer: Settings ────────────────────────────────────
+                    // -- Footer: Settings ------------------------------------
                     Surface(
                         onClick = {
                             onNavigateToSettings()
@@ -428,7 +428,7 @@ fun ChatScreen(
             topBar = {
                 Column {
                 Surface(
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    color = MaterialTheme.colorScheme.surface,
                     tonalElevation = 1.dp,
                     shadowElevation = 0.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -448,7 +448,7 @@ fun ChatScreen(
                                     ) {
                                         Text(
                                             (activeAgent?.name ?: selectedModel).ifBlank { "Select Agent" }
-                                                .let { if (it.length > 20) it.take(18) + "…" else it },
+                                                .let { if (it.length > 20) it.take(18) + "�" else it },
                                             style = MaterialTheme.typography.labelLarge,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                                             maxLines = 1,
@@ -464,14 +464,14 @@ fun ChatScreen(
                                     }
                                 }
 
-                            // ── Model / Agent Selector Dropdown ──────────────────────────
+                            // -- Model / Agent Selector Dropdown --------------------------
                                 DropdownMenu(
                                     expanded = showModelSelector,
                                     onDismissRequest = { showModelSelector = false },
                                     modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
                                 ) {
                                     if (agentConfigs.isEmpty()) {
-                                        // No enabled agents — show hint
+                                        // No enabled agents � show hint
                                         DropdownMenuItem(
                                             text = {
                                                 Column {
@@ -481,7 +481,7 @@ fun ChatScreen(
                                                         color = MaterialTheme.colorScheme.onSurface
                                                     )
                                                     Text(
-                                                        "Enable agents in Settings → AI Agents",
+                                                        "Enable agents in Settings ? AI Agents",
                                                         style = MaterialTheme.typography.labelSmall,
                                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                                     )
@@ -593,7 +593,7 @@ fun ChatScreen(
                         }
                     }
 
-                    // Scrollable pills — only on welcome screen
+                    // Scrollable pills � only on welcome screen
                     if (uiState.messages.isEmpty()) {
                         ScrollablePills(
                             onPromptClick = { viewModel.sendMessage(it) }
@@ -641,7 +641,7 @@ fun ChatScreen(
         }
     }
 
-    // ─── Session Info bottom sheet ───
+    // --- Session Info bottom sheet ---
     if (showSessionInfo) {
         SessionInfoSheet(
             totalTokens = uiState.totalInputTokens + uiState.totalOutputTokens,
@@ -654,9 +654,9 @@ fun ChatScreen(
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 //  Session Info Button (replaces WorkspaceTokenChip)
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 // FIX #24: Extract duplicated context window calculation to top-level function
 private fun estimateContextWindow(modelName: String): String = when {
@@ -670,7 +670,7 @@ private fun estimateContextWindow(modelName: String): String = when {
     modelName.contains("mistral", ignoreCase = true)    -> "32K"
     modelName.contains("deepseek", ignoreCase = true)   -> "64K"
     modelName.contains("llama", ignoreCase = true)      -> "128K"
-    else                                                -> "—"
+    else                                                -> "�"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -685,7 +685,7 @@ fun SessionInfoButton(
     val hasAlert = activeReminderCount > 0
     val tokenColor = when {
         totalTokens > 100_000 -> MaterialTheme.colorScheme.error
-        totalTokens > 50_000  -> Color(0xFFFF9800)
+        totalTokens > 50_000  -> MaterialTheme.colorScheme.tertiary
         else                  -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
@@ -724,7 +724,7 @@ fun SessionInfoSheet(
     hasTodayMemory: Boolean,
     onDismiss: () -> Unit
 ) {
-    // FIX #24: Use shared estimateContextWindow() — removed duplicate block
+    // FIX #24: Use shared estimateContextWindow() � removed duplicate block
     val contextWindow = estimateContextWindow(activeModel)
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -750,7 +750,7 @@ fun SessionInfoSheet(
                 value = if (totalTokens > 0) formatTokenCount(totalTokens) else "0",
                 valueColor = when {
                     totalTokens > 100_000 -> MaterialTheme.colorScheme.error
-                    totalTokens > 50_000  -> Color(0xFFFF9800)
+                    totalTokens > 50_000  -> MaterialTheme.colorScheme.tertiary
                     else                  -> MaterialTheme.colorScheme.onSurface
                 }
             )
@@ -817,9 +817,9 @@ private fun formatTokenCount(count: Int): String = when {
     else               -> count.toString()
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  TodoBar — collapsible task list shown below TopAppBar
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
+//  TodoBar � collapsible task list shown below TopAppBar
+// -----------------------------------------------------------------------------
 
 @Composable
 fun TodoBar(items: List<TodoItem>) {
@@ -840,7 +840,7 @@ fun TodoBar(items: List<TodoItem>) {
         ?: items.lastOrNull()?.id
         ?: 1
 
-    // ── Shimmer — identical technique to LoadingIndicator / Thinking.. ────
+    // -- Shimmer � identical technique to LoadingIndicator / Thinking.. ----
     // Key: teks HARUS warna solid (onSurface), shimmer di-overlay via SrcAtop.
     // baseShimmer = warna redup (teks saat tidak kena sorot)
     // peakShimmer = warna terang bergerak
@@ -865,13 +865,13 @@ fun TodoBar(items: List<TodoItem>) {
         end    = Offset(shimmerOffset + 300f, 0f)
     )
 
-    // Surface background — sedikit berbeda dari surface biasa agar terlihat sebagai banner
+    // Surface background � sedikit berbeda dari surface biasa agar terlihat sebagai banner
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column {
-            // ── Collapsed row ────────────────────────────────────────────────
+            // -- Collapsed row ------------------------------------------------
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -879,7 +879,7 @@ fun TodoBar(items: List<TodoItem>) {
                     .padding(horizontal = 16.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // ── Step number pill ─────────────────────────────────────────
+                // -- Step number pill -----------------------------------------
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -902,7 +902,7 @@ fun TodoBar(items: List<TodoItem>) {
 
                 Spacer(Modifier.width(10.dp))
 
-                // ── Label — shimmer if running, muted if not ─────────────────
+                // -- Label � shimmer if running, muted if not -----------------
                 if (isRunning) {
                     // Shimmer text: warna solid onSurface, lalu SrcAtop overlay shimmerBrush
                     Text(
@@ -933,7 +933,7 @@ fun TodoBar(items: List<TodoItem>) {
 
                 Spacer(Modifier.width(10.dp))
 
-                // ── Progress fraction ─────────────────────────────────────────
+                // -- Progress fraction -----------------------------------------
                 Text(
                     text = "$completed/$total",
                     style = MaterialTheme.typography.labelSmall,
@@ -943,7 +943,7 @@ fun TodoBar(items: List<TodoItem>) {
 
                 Spacer(Modifier.width(6.dp))
 
-                // ── Chevron ───────────────────────────────────────────────────
+                // -- Chevron ---------------------------------------------------
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
@@ -952,7 +952,7 @@ fun TodoBar(items: List<TodoItem>) {
                 )
             }
 
-            // ── Expanded list ─────────────────────────────────────────────────
+            // -- Expanded list -------------------------------------------------
             AnimatedVisibility(
                 visible = expanded,
                 enter = expandVertically(animationSpec = tween(220, easing = FastOutSlowInEasing)) + fadeIn(tween(180)),
@@ -987,7 +987,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
                 else item.content ?: "Task ${item.id}"
 
     val iconTint = when (item.status) {
-        TodoStatus.COMPLETED   -> Color(0xFF4CAF50)
+        TodoStatus.COMPLETED   -> MaterialTheme.colorScheme.primary
         TodoStatus.IN_PROGRESS -> MaterialTheme.colorScheme.primary
         TodoStatus.PENDING     -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
     }
@@ -998,7 +998,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
             .fillMaxWidth()
             .padding(vertical = 5.dp)
     ) {
-        // ── Status icon ────────────────────────────────────────────────────
+        // -- Status icon ----------------------------------------------------
         Icon(
             imageVector = when (item.status) {
                 TodoStatus.COMPLETED   -> Icons.Default.CheckCircle
@@ -1012,9 +1012,9 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
 
         Spacer(Modifier.width(10.dp))
 
-        // ── Label ───────────────────────────────────────────────────────────
+        // -- Label -----------------------------------------------------------
         if (isActive) {
-            // Shimmer: solid onSurface + SrcAtop shimmerBrush — persis teknik Thinking..
+            // Shimmer: solid onSurface + SrcAtop shimmerBrush � persis teknik Thinking..
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
@@ -1044,7 +1044,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
             )
         }
 
-        // ── Step number — right aligned ────────────────────────────────────
+        // -- Step number � right aligned ------------------------------------
         Text(
             text = "${item.id}",
             style = MaterialTheme.typography.labelSmall,
@@ -1058,14 +1058,14 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
 fun MessageBubble(message: UiMessage) {
     val isUser = message.role == MessageRole.USER
     if (isUser) {
-        // ── User bubble: measure actual text width, then shrink-wrap ──
+        // -- User bubble: measure actual text width, then shrink-wrap --
         val density = LocalDensity.current
         val screenWidth = LocalConfiguration.current.screenWidthDp
         val maxBubbleWidthDp = (screenWidth * 0.7f).dp
         val hPad = 14.dp
         val vPad = 10.dp
 
-        // Actual rendered content width — measured via onTextLayout
+        // Actual rendered content width � measured via onTextLayout
         var measuredWidth by remember(message.content) { mutableStateOf<Int?>(null) }
 
         Column(
@@ -1101,7 +1101,7 @@ fun MessageBubble(message: UiMessage) {
             }
         }
     } else {
-        // ── AI message: full-width markdown, no bubble ──
+        // -- AI message: full-width markdown, no bubble --
         Column(modifier = Modifier.fillMaxWidth()) {
             if (message.content.isNotBlank()) {
                 MarkdownText(
@@ -1139,9 +1139,9 @@ fun ToolCallCard(
     var expanded by remember { mutableStateOf(false) }
     val isDark    = isSystemInDarkTheme()
 
-    // ── Colors ───────────────────────────────────────────────────────────
-    val iosGreen = Color(0xFF34C759)
-    val iosBlue  = Color(0xFF007AFF)
+    // -- Colors -----------------------------------------------------------
+    val iosGreen = MaterialTheme.colorScheme.primary
+    val iosBlue  = MaterialTheme.colorScheme.secondary
     val iosRed   = MaterialTheme.colorScheme.error
 
     val statusColor = when (execution.status) {
@@ -1157,7 +1157,7 @@ fun ToolCallCard(
         ToolStatus.ERROR   -> Icons.Default.Cancel
     }
 
-    // ── Tool icon ─────────────────────────────────────────────────────────
+    // -- Tool icon ---------------------------------------------------------
     val toolIcon = when {
         execution.name.contains("read",     ignoreCase = true) -> Icons.Default.Description
         execution.name.contains("write",    ignoreCase = true) -> Icons.Default.Edit
@@ -1177,7 +1177,7 @@ fun ToolCallCard(
         else                                                    -> Icons.Default.Terminal
     }
 
-    // ── Shimmer (identical to Thinking.. / TodoBar technique) ─────────────
+    // -- Shimmer (identical to Thinking.. / TodoBar technique) -------------
     val shimmerTransition = rememberInfiniteTransition(label = "tool_shimmer")
     val shimmerOffset by shimmerTransition.animateFloat(
         initialValue = -500f,
@@ -1195,7 +1195,7 @@ fun ToolCallCard(
         end    = Offset(shimmerOffset + 400f, 0f)
     )
 
-    // ── Container color ───────────────────────────────────────────────────
+    // -- Container color ---------------------------------------------------
     val bgColor = when (execution.status) {
         ToolStatus.ERROR   ->
             if (isDark) iosRed.copy(alpha = 0.10f)
@@ -1216,7 +1216,7 @@ fun ToolCallCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column {
-            // ── Header row — tap to expand/collapse ───────────────────────
+            // -- Header row � tap to expand/collapse -----------------------
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1229,7 +1229,7 @@ fun ToolCallCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // ── Tool icon pill ────────────────────────────────────────
+                // -- Tool icon pill ----------------------------------------
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = statusColor.copy(alpha = if (isDark) 0.18f else 0.12f),
@@ -1245,7 +1245,7 @@ fun ToolCallCard(
                     }
                 }
 
-                // ── Tool name — shimmer when RUNNING ─────────────────────
+                // -- Tool name � shimmer when RUNNING ---------------------
                 val toolLabel = formatToolName(execution.name, execution.arguments)
                 if (execution.status == ToolStatus.RUNNING) {
                     Text(
@@ -1275,7 +1275,7 @@ fun ToolCallCard(
                     )
                 }
 
-                // ── Status icon ────────────────────────────────────────────
+                // -- Status icon --------------------------------------------
                 Icon(
                     imageVector = statusIcon,
                     contentDescription = null,
@@ -1283,7 +1283,7 @@ fun ToolCallCard(
                     tint = statusColor
                 )
 
-                // ── Expand chevron — only when done & has content ─────────
+                // -- Expand chevron � only when done & has content ---------
                 val canExpand = (execution.status == ToolStatus.SUCCESS || execution.status == ToolStatus.ERROR)
                     && (execution.result != null || execution.children.isNotEmpty())
                 if (canExpand) {
@@ -1299,7 +1299,7 @@ fun ToolCallCard(
                 }
             }
 
-            // ── Subagent children ─────────────────────────────────────────
+            // -- Subagent children -----------------------------------------
             if (execution.name == "invoke_subagents" && execution.children.isNotEmpty()) {
                 AnimatedVisibility(
                     visible = execution.status == ToolStatus.RUNNING || expanded,
@@ -1326,7 +1326,7 @@ fun ToolCallCard(
                 }
             }
 
-            // ── Expanded result (non-subagent) ────────────────────────────
+            // -- Expanded result (non-subagent) ----------------------------
             AnimatedVisibility(
                 visible = expanded && execution.name != "invoke_subagents",
                 enter = expandVertically(tween(200, easing = FastOutSlowInEasing)) + fadeIn(tween(160)),
@@ -1353,7 +1353,7 @@ fun ToolCallCard(
     }
 }
 
-// ── Subagent child card ───────────────────────────────────────────────────────
+// -- Subagent child card -------------------------------------------------------
 
 @Composable
 private fun SubagentChildCard(
@@ -1373,7 +1373,7 @@ private fun SubagentChildCard(
     }
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = if (isDark) Color(0xFF1C1C1E).copy(alpha = 0.6f)
+        color = if (isDark) MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f)
                 else MaterialTheme.colorScheme.surfaceContainerLowest,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1426,7 +1426,7 @@ private fun SubagentChildCard(
                         fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        text = child.prompt.take(180).let { if (child.prompt.length > 180) "$it…" else it },
+                        text = child.prompt.take(180).let { if (child.prompt.length > 180) "$it�" else it },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         fontStyle = FontStyle.Italic)
@@ -1437,7 +1437,7 @@ private fun SubagentChildCard(
                     Spacer(Modifier.height(3.dp))
                     Text(
                         text = child.result?.take(400)?.let {
-                            if ((child.result?.length ?: 0) > 400) "$it…" else it
+                            if ((child.result?.length ?: 0) > 400) "$it�" else it
                         } ?: "",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
@@ -1447,7 +1447,7 @@ private fun SubagentChildCard(
     }
 }
 
-// ── Pro result preview per tool type ─────────────────────────────────────────
+// -- Pro result preview per tool type -----------------------------------------
 
 @Composable
 private fun ToolResultPreview(
@@ -1456,8 +1456,8 @@ private fun ToolResultPreview(
     result: String,
     isDark: Boolean
 ) {
-    val codeBlockBg   = if (isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
-    val codeTextColor = if (isDark) Color(0xFFD1D1D6) else Color(0xFF3A3A3C)
+    val codeBlockBg   = MaterialTheme.colorScheme.surfaceContainerHighest
+    val codeTextColor = MaterialTheme.colorScheme.onSurface
     val metaColor     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
 
     @Suppress("UNCHECKED_CAST")
@@ -1531,7 +1531,7 @@ private fun ToolResultPreview(
                             }
                             if (lines.size > 12) {
                                 Spacer(Modifier.height(4.dp))
-                                Text("  ⋯  ${lines.size - 12} more lines",
+                                Text("  ?  ${lines.size - 12} more lines",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = metaColor, fontFamily = FontFamily.Monospace)
                             }
@@ -1568,7 +1568,7 @@ private fun ToolResultPreview(
                 Spacer(Modifier.height(6.dp))
                 Surface(shape = RoundedCornerShape(8.dp), color = codeBlockBg,
                     modifier = Modifier.fillMaxWidth()) {
-                    Text(result.trim().let { if (it.length > 1500) it.take(1500) + "\n⋯" else it },
+                    Text(result.trim().let { if (it.length > 1500) it.take(1500) + "\n?" else it },
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontFamily = FontFamily.Monospace, lineHeight = 18.sp, fontSize = 11.sp),
                         color = codeTextColor,
@@ -1597,7 +1597,7 @@ private fun ToolResultPreview(
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                if (lines.size > 10) Text("  ⋯  ${lines.size - 10} more",
+                if (lines.size > 10) Text("  ?  ${lines.size - 10} more",
                     style = MaterialTheme.typography.labelSmall, color = metaColor)
             }
         }
@@ -1614,14 +1614,14 @@ private fun ToolResultPreview(
                         verticalAlignment = Alignment.CenterVertically) {
                         Icon(if (isDir) Icons.Default.Folder else Icons.Default.Description,
                             null, modifier = Modifier.size(12.dp),
-                            tint = if (isDir) Color(0xFF007AFF) else metaColor)
+                            tint = if (isDir) MaterialTheme.colorScheme.primary else metaColor)
                         Spacer(Modifier.width(6.dp))
                         Text(line.trim(), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                if (lines.size > 8) Text("  ⋯  ${lines.size - 8} more",
+                if (lines.size > 8) Text("  ?  ${lines.size - 8} more",
                     style = MaterialTheme.typography.labelSmall, color = metaColor)
             }
         }
@@ -1631,13 +1631,13 @@ private fun ToolResultPreview(
             @Suppress("UNCHECKED_CAST")
             val todos = args?.get("todos") as? List<Map<String, Any?>> ?: emptyList()
             val statusIcon = { status: String -> when (status) {
-                "completed"  -> "✓"
-                "in_progress" -> "●"
-                else          -> "○"
+                "completed"  -> "?"
+                "in_progress" -> "?"
+                else          -> "?"
             }}
             val statusColor = @Composable { status: String -> when (status) {
-                "completed"   -> Color(0xFF34C759)
-                "in_progress" -> Color(0xFF007AFF)
+                "completed"   -> MaterialTheme.colorScheme.primary
+                "in_progress" -> MaterialTheme.colorScheme.secondary
                 else          -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
             }}
             val done  = todos.count { (it["status"] as? String) == "completed" }
@@ -1649,7 +1649,7 @@ private fun ToolResultPreview(
                     LinearProgressIndicator(
                         progress = { if (total > 0) done.toFloat() / total else 0f },
                         modifier = Modifier.weight(1f).height(3.dp).clip(CircleShape),
-                        color = Color(0xFF34C759),
+                        color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
                     Text("$done/$total", style = MaterialTheme.typography.labelSmall,
@@ -1690,7 +1690,7 @@ private fun ToolResultPreview(
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(title, style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                Text("$datetime  ·  $repeat", style = MaterialTheme.typography.labelSmall, color = metaColor)
+                Text("$datetime  �  $repeat", style = MaterialTheme.typography.labelSmall, color = metaColor)
             }
         }
 
@@ -1717,7 +1717,7 @@ private fun ToolResultPreview(
         else -> {
             Surface(shape = RoundedCornerShape(8.dp), color = codeBlockBg,
                 modifier = Modifier.fillMaxWidth()) {
-                Text(result.trim().let { if (it.length > 1500) it.take(1500) + "\n⋯" else it },
+                Text(result.trim().let { if (it.length > 1500) it.take(1500) + "\n?" else it },
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontFamily = FontFamily.Monospace, lineHeight = 18.sp, fontSize = 11.sp),
                     color = codeTextColor,
@@ -1731,12 +1731,12 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
     // Helper: extract just the filename from a full path
     fun fileName(key: String) = args?.get(key)?.toString()?.substringAfterLast("/")?.take(30) ?: ""
     fun filePath(key: String) = args?.get(key)?.toString()?.let {
-        if (it.length > 28) "…" + it.takeLast(26) else it
+        if (it.length > 28) "�" + it.takeLast(26) else it
     } ?: ""
 
     @Suppress("UNCHECKED_CAST")
     return when (name) {
-        // ── File tools ─────────────────────────────────────────────────────
+        // -- File tools -----------------------------------------------------
         "read_file"  -> {
             val paths = args?.get("paths") as? List<*>
             val infoOnly = args?.get("info_only") as? Boolean ?: false
@@ -1757,7 +1757,7 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
             val src  = fileName("source")
             val dst  = fileName("destination")
             val mode = args?.get("mode")?.toString() ?: "copy"
-            if (mode == "move") "Move  $src → $dst" else "Copy  $src → $dst"
+            if (mode == "move") "Move  $src ? $dst" else "Copy  $src ? $dst"
         }
         "create_directory"  -> "Mkdir  ${fileName("path")}/"
         "list_files"        -> "List  ${filePath("path")}"
@@ -1771,9 +1771,9 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
             }
         }
         "undo_change"       -> "Undo  ${fileName("path")}"
-        // ── Shell ───────────────────────────────────────────────────────────
+        // -- Shell -----------------------------------------------------------
         "run_shell"         -> "$  ${args?.get("command")?.toString()?.take(32) ?: ""}"
-        // ── AI tools ───────────────────────────────────────────────────────
+        // -- AI tools -------------------------------------------------------
         "update_todo"       -> {
             val todos = args?.get("todos") as? List<*>
             val done  = todos?.count {
@@ -1787,16 +1787,16 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
             @Suppress("UNCHECKED_CAST")
             val subagents = args?.get("subagents") as? List<Map<String, Any?>>
             if (subagents.isNullOrEmpty()) {
-                "Agents  ×0"
+                "Agents  �0"
             } else {
-                // Show first 2 task names + overflow count, e.g. "Audit UI · Backend +2"
+                // Show first 2 task names + overflow count, e.g. "Audit UI � Backend +2"
                 val names = subagents.mapNotNull { it["task_name"]?.toString()?.take(14) }
-                val shown = names.take(2).joinToString(" · ")
+                val shown = names.take(2).joinToString(" � ")
                 val overflow = names.size - 2
                 if (overflow > 0) "$shown  +$overflow" else shown
             }
         }
-        // ── MCP tools ──────────────────────────────────────────────────────
+        // -- MCP tools ------------------------------------------------------
         else -> if (name.startsWith("mcp__")) {
             val parts = name.split("__")
             val server = parts.getOrNull(1) ?: ""

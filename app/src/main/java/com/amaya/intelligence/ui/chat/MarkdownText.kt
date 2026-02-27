@@ -420,11 +420,20 @@ private fun CodeBlockCard(language: String, code: String) {
     val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     var copied by remember { mutableStateOf(false) }
+    val scheme = MaterialTheme.colorScheme
+
+    // Code block uses surfaceContainerHighest as background (darkest tonal surface)
+    // so it visually "pops" from the chat background in both light and dark mode.
+    val codeBackground  = scheme.surfaceContainerHighest
+    val codeHeaderBg    = scheme.surfaceContainer
+    val codeLangColor   = scheme.onSurfaceVariant
+    val codeTextColor   = scheme.onSurface
+    val codeCopiedColor = scheme.primary
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
-        color = Color(0xFF1E1E2E),
+        color = codeBackground,
         shadowElevation = 2.dp
     ) {
         Column {
@@ -432,7 +441,7 @@ private fun CodeBlockCard(language: String, code: String) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF2D2D3D))
+                    .background(codeHeaderBg)
                     .padding(horizontal = 14.dp, vertical = 7.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -440,7 +449,7 @@ private fun CodeBlockCard(language: String, code: String) {
                 Text(
                     text = language.ifBlank { "text" }.lowercase(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF9A9ABF),
+                    color = codeLangColor,
                     fontFamily = FontFamily.Monospace,
                     letterSpacing = 0.5.sp
                 )
@@ -459,12 +468,12 @@ private fun CodeBlockCard(language: String, code: String) {
                         if (copied) Icons.Default.Done else Icons.Default.ContentCopy,
                         contentDescription = null,
                         modifier = Modifier.size(13.dp),
-                        tint = if (copied) Color(0xFF73DCA0) else Color(0xFF9A9ABF)
+                        tint = if (copied) codeCopiedColor else codeLangColor
                     )
                     Text(
                         if (copied) "Copied!" else "Copy",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (copied) Color(0xFF73DCA0) else Color(0xFF9A9ABF)
+                        color = if (copied) codeCopiedColor else codeLangColor
                     )
                 }
             }
@@ -480,7 +489,7 @@ private fun CodeBlockCard(language: String, code: String) {
                     fontFamily = FontFamily.Monospace,
                     fontSize = 13.sp,
                     lineHeight = 20.sp,
-                    color = Color(0xFFCDD6F4)
+                    color = codeTextColor
                 )
             }
         }

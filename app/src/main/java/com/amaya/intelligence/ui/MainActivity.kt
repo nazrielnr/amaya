@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            AmayaTheme(darkTheme = isDark, accentColor = settings.accentColor) {
+            AmayaTheme(darkTheme = isDark) {
                 AppContent(
                     hasStoragePermission = hasStoragePermission,
                     appViewModel = appViewModel,

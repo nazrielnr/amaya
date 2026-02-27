@@ -233,7 +233,7 @@ private fun AgentCard(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
         color = if (config.enabled) MaterialTheme.colorScheme.surface
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                else MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = if (config.enabled) 1.dp else 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -389,7 +389,7 @@ private fun AgentEditSheet(
             ExposedDropdownMenu(
                 expanded = providerExpanded,
                 onDismissRequest = { providerExpanded = false },
-                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
             ) {
                 providerOptions.forEach { option ->
                     DropdownMenuItem(

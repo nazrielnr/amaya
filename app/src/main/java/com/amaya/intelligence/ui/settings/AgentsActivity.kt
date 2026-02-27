@@ -31,7 +31,7 @@ class AgentsActivity : ComponentActivity() {
                 "dark" -> true
                 else -> androidx.compose.foundation.isSystemInDarkTheme()
             }
-            AmayaTheme(darkTheme = isDarkTheme, accentColor = settings.accentColor) {
+            AmayaTheme(darkTheme = isDarkTheme) {
                 AgentsScreen(
                     onNavigateBack = { finish() },
                     aiSettingsManager = aiSettingsManager

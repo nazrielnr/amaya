@@ -1,0 +1,514 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.amaya.intelligence.debug"
+4    android:versionCode="1"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="26"
+9        android:targetSdkVersion="34" />
+10
+11    <!-- Network permissions for AI API communication -->
+12    <uses-permission android:name="android.permission.INTERNET" />
+12-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:6:5-67
+12-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:6:22-64
+13    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+13-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:7:5-79
+13-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:7:22-76
+14
+15    <!-- File access for code editing (Android 11+ requires special handling) -->
+16    <uses-permission
+16-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:10:5-11:38
+17        android:name="android.permission.READ_EXTERNAL_STORAGE"
+17-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:10:22-77
+18        android:maxSdkVersion="32" />
+18-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:11:9-35
+19    <uses-permission
+19-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:12:5-14:40
+20        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+20-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:12:22-78
+21        android:maxSdkVersion="29" />
+21-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:13:9-35
+22    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+22-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:15:5-16:40
+22-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:15:22-79
+23
+24    <!-- Foreground service for long-running operations -->
+25    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+25-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:19:5-77
+25-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:19:22-74
+26    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+26-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:20:5-87
+26-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:20:22-84
+27
+28    <!-- Notifications (required Android 13+) -->
+29    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+29-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:23:5-77
+29-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:23:22-74
+30
+31    <!-- Exact alarms for cron job reminders (Android 12+) -->
+32    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+32-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:26:5-27:37
+32-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:26:22-76
+33
+34    <!-- Reschedule alarms after device reboot -->
+35    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+35-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:30:5-81
+35-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:30:22-78
+36    <uses-permission android:name="android.permission.WAKE_LOCK" />
+36-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:23:5-68
+36-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:23:22-65
+37
+38    <permission
+38-->[androidx.core:core:1.15.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\e9b1c0730105b1ae768f4e41aa0f9a69\transformed\core-1.15.0\AndroidManifest.xml:22:5-24:47
+39        android:name="com.amaya.intelligence.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+39-->[androidx.core:core:1.15.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\e9b1c0730105b1ae768f4e41aa0f9a69\transformed\core-1.15.0\AndroidManifest.xml:23:9-81
+40        android:protectionLevel="signature" />
+40-->[androidx.core:core:1.15.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\e9b1c0730105b1ae768f4e41aa0f9a69\transformed\core-1.15.0\AndroidManifest.xml:24:9-44
+41
+42    <uses-permission android:name="com.amaya.intelligence.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+42-->[androidx.core:core:1.15.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\e9b1c0730105b1ae768f4e41aa0f9a69\transformed\core-1.15.0\AndroidManifest.xml:26:5-97
+42-->[androidx.core:core:1.15.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\e9b1c0730105b1ae768f4e41aa0f9a69\transformed\core-1.15.0\AndroidManifest.xml:26:22-94
+43
+44    <application
+44-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:32:5-142:19
+45        android:name="com.amaya.intelligence.AmayaApplication"
+45-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:33:9-41
+46        android:allowBackup="true"
+46-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:34:9-35
+47        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+47-->[androidx.core:core:1.15.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\e9b1c0730105b1ae768f4e41aa0f9a69\transformed\core-1.15.0\AndroidManifest.xml:28:18-86
+48        android:dataExtractionRules="@xml/data_extraction_rules"
+48-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:35:9-65
+49        android:debuggable="true"
+50        android:enableOnBackInvokedCallback="true"
+50-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:44:9-51
+51        android:extractNativeLibs="true"
+51-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:43:9-41
+52        android:fullBackupContent="@xml/backup_rules"
+52-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:36:9-54
+53        android:icon="@mipmap/ic_launcher"
+53-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:37:9-43
+54        android:label="@string/app_name"
+54-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:38:9-41
+55        android:requestLegacyExternalStorage="true"
+55-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:42:9-52
+56        android:roundIcon="@mipmap/ic_launcher_round"
+56-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:39:9-54
+57        android:supportsRtl="true"
+57-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:40:9-35
+58        android:theme="@style/Theme.Amaya" >
+58-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:41:9-43
+59        <activity
+59-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:47:9-56:20
+60            android:name="com.amaya.intelligence.ui.MainActivity"
+60-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:48:13-44
+61            android:exported="true"
+61-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:49:13-36
+62            android:theme="@style/Theme.Amaya"
+62-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:51:13-47
+63            android:windowSoftInputMode="adjustResize" >
+63-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:50:13-55
+64            <intent-filter>
+64-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:52:13-55:29
+65                <action android:name="android.intent.action.MAIN" />
+65-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:53:17-69
+65-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:53:25-66
+66
+67                <category android:name="android.intent.category.LAUNCHER" />
+67-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:54:17-77
+67-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:54:27-74
+68            </intent-filter>
+69        </activity>
+70        <activity
+70-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:58:9-62:50
+71            android:name="com.amaya.intelligence.ui.settings.SettingsActivity"
+71-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:59:13-57
+72            android:exported="false"
+72-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:60:13-37
+73            android:theme="@style/Theme.Amaya"
+73-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:62:13-47
+74            android:windowSoftInputMode="adjustResize" />
+74-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:61:13-55
+75        <activity
+75-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:64:9-68:50
+76            android:name="com.amaya.intelligence.ui.settings.PersonaActivity"
+76-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:65:13-56
+77            android:exported="false"
+77-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:66:13-37
+78            android:theme="@style/Theme.Amaya"
+78-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:68:13-47
+79            android:windowSoftInputMode="adjustResize" />
+79-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:67:13-55
+80        <activity
+80-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:70:9-74:50
+81            android:name="com.amaya.intelligence.ui.settings.AgentsActivity"
+81-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:71:13-55
+82            android:exported="false"
+82-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:72:13-37
+83            android:theme="@style/Theme.Amaya"
+83-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:74:13-47
+84            android:windowSoftInputMode="adjustResize" />
+84-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:73:13-55
+85        <activity
+85-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:76:9-80:50
+86            android:name="com.amaya.intelligence.ui.settings.CronJobActivity"
+86-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:77:13-56
+87            android:exported="false"
+87-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:78:13-37
+88            android:theme="@style/Theme.Amaya"
+88-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:80:13-47
+89            android:windowSoftInputMode="adjustResize" />
+89-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:79:13-55
+90        <activity
+90-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:82:9-86:50
+91            android:name="com.amaya.intelligence.ui.settings.McpActivity"
+91-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:83:13-52
+92            android:exported="false"
+92-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:84:13-37
+93            android:theme="@style/Theme.Amaya"
+93-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:86:13-47
+94            android:windowSoftInputMode="adjustResize" />
+94-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:85:13-55
+95        <activity
+95-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:88:9-92:50
+96            android:name="com.amaya.intelligence.ui.workspace.WorkspaceActivity"
+96-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:89:13-59
+97            android:exported="false"
+97-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:90:13-37
+98            android:theme="@style/Theme.Amaya"
+98-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:92:13-47
+99            android:windowSoftInputMode="adjustResize" />
+99-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:91:13-55
+100
+101        <!-- File provider for secure file sharing -->
+102        <provider
+103            android:name="androidx.core.content.FileProvider"
+103-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:96:13-62
+104            android:authorities="com.amaya.intelligence.debug.fileprovider"
+104-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:97:13-64
+105            android:exported="false"
+105-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:98:13-37
+106            android:grantUriPermissions="true" >
+106-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:99:13-47
+107            <meta-data
+107-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:100:13-102:54
+108                android:name="android.support.FILE_PROVIDER_PATHS"
+108-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:101:17-67
+109                android:resource="@xml/file_paths" />
+109-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:102:17-51
+110        </provider>
+111
+112        <!-- Disable WorkManager default init; AmayaApplication provides HiltWorkerFactory -->
+113        <provider
+114            android:name="androidx.startup.InitializationProvider"
+114-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:107:13-67
+115            android:authorities="com.amaya.intelligence.debug.androidx-startup"
+115-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:108:13-68
+116            android:exported="false" >
+116-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:109:13-37
+117            <meta-data
+117-->[androidx.emoji2:emoji2:1.3.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\2b4deecf4808a387d18d81df66db4c60\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+118                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+118-->[androidx.emoji2:emoji2:1.3.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\2b4deecf4808a387d18d81df66db4c60\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+119                android:value="androidx.startup" />
+119-->[androidx.emoji2:emoji2:1.3.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\2b4deecf4808a387d18d81df66db4c60\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+120            <meta-data
+120-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\4eec6568ebb1b1288b5a64590af32b56\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:29:13-31:52
+121                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+121-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\4eec6568ebb1b1288b5a64590af32b56\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:30:17-78
+122                android:value="androidx.startup" />
+122-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\4eec6568ebb1b1288b5a64590af32b56\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:31:17-49
+123            <meta-data
+123-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:29:13-31:52
+124                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+124-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:30:17-85
+125                android:value="androidx.startup" />
+125-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:31:17-49
+126        </provider>
+127
+128        <!-- Foreground service for AI operations -->
+129        <service
+129-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:118:9-121:56
+130            android:name="com.amaya.intelligence.service.AiOperationService"
+130-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:119:13-55
+131            android:exported="false"
+131-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:120:13-37
+132            android:foregroundServiceType="dataSync" />
+132-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:121:13-53
+133
+134        <!-- BroadcastReceiver for cron job alarms -->
+135        <receiver
+135-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:124:9-130:20
+136            android:name="com.amaya.intelligence.service.CronJobReceiver"
+136-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:125:13-52
+137            android:exported="false" >
+137-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:126:13-37
+138            <intent-filter>
+138-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:127:13-129:29
+139                <action android:name="com.amaya.intelligence.CRON_JOB_FIRE" />
+139-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:128:17-79
+139-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:128:25-76
+140            </intent-filter>
+141        </receiver>
+142
+143        <!-- BroadcastReceiver to reschedule alarms after reboot -->
+144        <receiver
+144-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:133:9-140:20
+145            android:name="com.amaya.intelligence.service.BootReceiver"
+145-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:134:13-49
+146            android:exported="true" >
+146-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:135:13-36
+147            <intent-filter>
+147-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:136:13-139:29
+148                <action android:name="android.intent.action.BOOT_COMPLETED" />
+148-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:137:17-79
+148-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:137:25-76
+149                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+149-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:138:17-82
+149-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:138:25-79
+150            </intent-filter>
+151        </receiver>
+152
+153        <service
+153-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:39:9-45:35
+154            android:name="androidx.work.impl.background.systemalarm.SystemAlarmService"
+154-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:40:13-88
+155            android:directBootAware="false"
+155-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:41:13-44
+156            android:enabled="@bool/enable_system_alarm_service_default"
+156-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:42:13-72
+157            android:exported="false" />
+157-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:43:13-37
+158        <service
+158-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:46:9-52:35
+159            android:name="androidx.work.impl.background.systemjob.SystemJobService"
+159-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:47:13-84
+160            android:directBootAware="false"
+160-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:48:13-44
+161            android:enabled="@bool/enable_system_job_service_default"
+161-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:49:13-70
+162            android:exported="true"
+162-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:50:13-36
+163            android:permission="android.permission.BIND_JOB_SERVICE" />
+163-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:51:13-69
+164        <service
+164-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:53:9-59:35
+165            android:name="androidx.work.impl.foreground.SystemForegroundService"
+165-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:54:13-81
+166            android:directBootAware="false"
+166-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:55:13-44
+167            android:enabled="@bool/enable_system_foreground_service_default"
+167-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:56:13-77
+168            android:exported="false" />
+168-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:57:13-37
+169
+170        <receiver
+170-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:61:9-66:35
+171            android:name="androidx.work.impl.utils.ForceStopRunnable$BroadcastReceiver"
+171-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:62:13-88
+172            android:directBootAware="false"
+172-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:63:13-44
+173            android:enabled="true"
+173-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:64:13-35
+174            android:exported="false" />
+174-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:65:13-37
+175        <receiver
+175-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:67:9-77:20
+176            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryChargingProxy"
+176-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:68:13-106
+177            android:directBootAware="false"
+177-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:69:13-44
+178            android:enabled="false"
+178-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:70:13-36
+179            android:exported="false" >
+179-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:71:13-37
+180            <intent-filter>
+180-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:73:13-76:29
+181                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
+181-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:74:17-87
+181-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:74:25-84
+182                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
+182-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:75:17-90
+182-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:75:25-87
+183            </intent-filter>
+184        </receiver>
+185        <receiver
+185-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:78:9-88:20
+186            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryNotLowProxy"
+186-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:79:13-104
+187            android:directBootAware="false"
+187-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:80:13-44
+188            android:enabled="false"
+188-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:81:13-36
+189            android:exported="false" >
+189-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:82:13-37
+190            <intent-filter>
+190-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:84:13-87:29
+191                <action android:name="android.intent.action.BATTERY_OKAY" />
+191-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:85:17-77
+191-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:85:25-74
+192                <action android:name="android.intent.action.BATTERY_LOW" />
+192-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:86:17-76
+192-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:86:25-73
+193            </intent-filter>
+194        </receiver>
+195        <receiver
+195-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:89:9-99:20
+196            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$StorageNotLowProxy"
+196-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:90:13-104
+197            android:directBootAware="false"
+197-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:91:13-44
+198            android:enabled="false"
+198-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:92:13-36
+199            android:exported="false" >
+199-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:93:13-37
+200            <intent-filter>
+200-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:95:13-98:29
+201                <action android:name="android.intent.action.DEVICE_STORAGE_LOW" />
+201-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:96:17-83
+201-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:96:25-80
+202                <action android:name="android.intent.action.DEVICE_STORAGE_OK" />
+202-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:97:17-82
+202-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:97:25-79
+203            </intent-filter>
+204        </receiver>
+205        <receiver
+205-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:100:9-109:20
+206            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$NetworkStateProxy"
+206-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:101:13-103
+207            android:directBootAware="false"
+207-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:102:13-44
+208            android:enabled="false"
+208-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:103:13-36
+209            android:exported="false" >
+209-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:104:13-37
+210            <intent-filter>
+210-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:106:13-108:29
+211                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+211-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:107:17-79
+211-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:107:25-76
+212            </intent-filter>
+213        </receiver>
+214        <receiver
+214-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:110:9-121:20
+215            android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver"
+215-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:111:13-88
+216            android:directBootAware="false"
+216-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:112:13-44
+217            android:enabled="false"
+217-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:113:13-36
+218            android:exported="false" >
+218-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:114:13-37
+219            <intent-filter>
+219-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:116:13-120:29
+220                <action android:name="android.intent.action.BOOT_COMPLETED" />
+220-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:137:17-79
+220-->C:\Users\BiuBiu\Documents\my app\opencode mobile\app\src\main\AndroidManifest.xml:137:25-76
+221                <action android:name="android.intent.action.TIME_SET" />
+221-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:118:17-73
+221-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:118:25-70
+222                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+222-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:119:17-81
+222-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:119:25-78
+223            </intent-filter>
+224        </receiver>
+225        <receiver
+225-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:122:9-131:20
+226            android:name="androidx.work.impl.background.systemalarm.ConstraintProxyUpdateReceiver"
+226-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:123:13-99
+227            android:directBootAware="false"
+227-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:124:13-44
+228            android:enabled="@bool/enable_system_alarm_service_default"
+228-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:125:13-72
+229            android:exported="false" >
+229-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:126:13-37
+230            <intent-filter>
+230-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:128:13-130:29
+231                <action android:name="androidx.work.impl.background.systemalarm.UpdateProxies" />
+231-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:129:17-98
+231-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:129:25-95
+232            </intent-filter>
+233        </receiver>
+234        <receiver
+234-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:132:9-142:20
+235            android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver"
+235-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:133:13-78
+236            android:directBootAware="false"
+236-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:134:13-44
+237            android:enabled="true"
+237-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:135:13-35
+238            android:exported="true"
+238-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:136:13-36
+239            android:permission="android.permission.DUMP" >
+239-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:137:13-57
+240            <intent-filter>
+240-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:139:13-141:29
+241                <action android:name="androidx.work.diagnostics.REQUEST_DIAGNOSTICS" />
+241-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:140:17-88
+241-->[androidx.work:work-runtime:2.9.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\39731cb5d981f5209f54b38d5cdc0537\transformed\work-runtime-2.9.1\AndroidManifest.xml:140:25-85
+242            </intent-filter>
+243        </receiver>
+244
+245        <activity
+245-->[androidx.compose.ui:ui-tooling-android:1.7.6] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\51f19875044313173452eebce60070c9\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
+246            android:name="androidx.compose.ui.tooling.PreviewActivity"
+246-->[androidx.compose.ui:ui-tooling-android:1.7.6] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\51f19875044313173452eebce60070c9\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
+247            android:exported="true" />
+247-->[androidx.compose.ui:ui-tooling-android:1.7.6] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\51f19875044313173452eebce60070c9\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
+248        <activity
+248-->[androidx.compose.ui:ui-test-manifest:1.7.6] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\84bf545b11b2665523ef9d61fb99d51b\transformed\ui-test-manifest-1.7.6\AndroidManifest.xml:23:9-25:39
+249            android:name="androidx.activity.ComponentActivity"
+249-->[androidx.compose.ui:ui-test-manifest:1.7.6] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\84bf545b11b2665523ef9d61fb99d51b\transformed\ui-test-manifest-1.7.6\AndroidManifest.xml:24:13-63
+250            android:exported="true" />
+250-->[androidx.compose.ui:ui-test-manifest:1.7.6] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\84bf545b11b2665523ef9d61fb99d51b\transformed\ui-test-manifest-1.7.6\AndroidManifest.xml:25:13-36
+251
+252        <service
+252-->[androidx.room:room-runtime:2.6.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\7e581bc8294e6c1a76ff1ad513128179\transformed\room-runtime-2.6.1\AndroidManifest.xml:24:9-28:63
+253            android:name="androidx.room.MultiInstanceInvalidationService"
+253-->[androidx.room:room-runtime:2.6.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\7e581bc8294e6c1a76ff1ad513128179\transformed\room-runtime-2.6.1\AndroidManifest.xml:25:13-74
+254            android:directBootAware="true"
+254-->[androidx.room:room-runtime:2.6.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\7e581bc8294e6c1a76ff1ad513128179\transformed\room-runtime-2.6.1\AndroidManifest.xml:26:13-43
+255            android:exported="false" />
+255-->[androidx.room:room-runtime:2.6.1] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\7e581bc8294e6c1a76ff1ad513128179\transformed\room-runtime-2.6.1\AndroidManifest.xml:27:13-37
+256
+257        <receiver
+257-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:34:9-52:20
+258            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+258-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:35:13-76
+259            android:directBootAware="false"
+259-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:36:13-44
+260            android:enabled="true"
+260-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:37:13-35
+261            android:exported="true"
+261-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:38:13-36
+262            android:permission="android.permission.DUMP" >
+262-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:39:13-57
+263            <intent-filter>
+263-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:40:13-42:29
+264                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+264-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:17-91
+264-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:25-88
+265            </intent-filter>
+266            <intent-filter>
+266-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:43:13-45:29
+267                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+267-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:17-85
+267-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:25-82
+268            </intent-filter>
+269            <intent-filter>
+269-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:46:13-48:29
+270                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+270-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:17-88
+270-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:25-85
+271            </intent-filter>
+272            <intent-filter>
+272-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:49:13-51:29
+273                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+273-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:17-95
+273-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\BiuBiu\.gradle\caches\8.9\transforms\bcb7a168c87d343f578ca47f40d76e6c\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:25-92
+274            </intent-filter>
+275        </receiver>
+276    </application>
+277
+278</manifest>

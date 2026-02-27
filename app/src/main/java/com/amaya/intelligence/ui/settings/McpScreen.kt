@@ -254,7 +254,7 @@ private fun McpServerCard(
         color = if (server.enabled)
             MaterialTheme.colorScheme.surface
         else
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = if (server.enabled) 1.dp else 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -531,7 +531,7 @@ private fun AddEditMcpSheet(
 private fun McpFormatGuide() {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp)

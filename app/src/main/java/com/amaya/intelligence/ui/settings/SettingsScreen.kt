@@ -124,52 +124,6 @@ fun SettingsScreen(
                             }
                         }
                     }
-                    Spacer(Modifier.height(24.dp))
-                    Text("Accent Color", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(Modifier.height(12.dp))
-                    
-                    val accentColors = listOf(
-                        "Purple" to Color(0xFF6750A4),
-                        "Blue" to Color(0xFF0061A4),
-                        "Green" to Color(0xFF006D36),
-                        "Red" to Color(0xFFB3261E),
-                        "Amber" to Color(0xFF7A5900)
-                    )
-                    
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        accentColors.forEach { (name, displayColor) ->
-                            val isSelected = settings.accentColor == name
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .clickable { scope.launch { aiSettingsManager.setAccentColor(name) } },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                // The color swatch
-                                Box(
-                                    modifier = Modifier
-                                        .size(if (isSelected) 36.dp else 40.dp)
-                                        .clip(CircleShape)
-                                        .background(displayColor)
-                                )
-                                // Selection ring
-                                if (isSelected) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                                    )
-                                }
-                            }
-                        }
-                    }
                 }
             }
 

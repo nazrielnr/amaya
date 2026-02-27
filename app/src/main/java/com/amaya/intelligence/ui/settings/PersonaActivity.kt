@@ -38,7 +38,7 @@ class PersonaActivity : ComponentActivity() {
                 "dark" -> true
                 else -> androidx.compose.foundation.isSystemInDarkTheme()
             }
-            AmayaTheme(darkTheme = isDarkTheme, accentColor = settings.accentColor) {
+            AmayaTheme(darkTheme = isDarkTheme) {
                 PersonaScreen(
                     onNavigateBack = { finish() },
                     personaRepository = personaRepository

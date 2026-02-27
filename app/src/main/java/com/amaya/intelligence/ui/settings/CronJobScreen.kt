@@ -167,7 +167,7 @@ private fun CronJobCard(
         color = if (job.isActive && !isPast)
             MaterialTheme.colorScheme.surface
         else
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = if (job.isActive) 1.dp else 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {

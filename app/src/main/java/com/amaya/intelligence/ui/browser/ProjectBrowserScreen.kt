@@ -91,7 +91,7 @@ fun ProjectBrowserScreen(
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent
+                            containerColor = MaterialTheme.colorScheme.surface
                         )
                     )
                     

@@ -36,7 +36,7 @@ class WorkspaceActivity : ComponentActivity() {
                 "dark" -> true
                 else -> androidx.compose.foundation.isSystemInDarkTheme()
             }
-            AmayaTheme(darkTheme = isDarkTheme, accentColor = settings.accentColor) {
+            AmayaTheme(darkTheme = isDarkTheme) {
                 ProjectBrowserScreen(
                     onWorkspaceSelected = { path ->
                         val resultIntent = Intent().apply {

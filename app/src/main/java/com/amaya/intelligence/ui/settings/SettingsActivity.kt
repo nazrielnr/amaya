@@ -36,7 +36,7 @@ class SettingsActivity : ComponentActivity() {
                 "dark" -> true
                 else -> androidx.compose.foundation.isSystemInDarkTheme()
             }
-            AmayaTheme(darkTheme = isDarkTheme, accentColor = settings.accentColor) {
+            AmayaTheme(darkTheme = isDarkTheme) {
                 SettingsScreen(
                     onNavigateBack = { finish() },
                     currentWorkspace = currentWorkspace,

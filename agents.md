@@ -576,7 +576,7 @@ Update the live task list shown above the chat input. AI uses this to communicat
 - **Collapsed** (default): Shows step number pill + current `active_form`/`content` with shimmer + `2/5` progress fraction
 - **Expanded** (tap to open): Full list with icons — ✅ completed (green), ● in_progress (shimmer), ○ pending (dimmed)
 - **Shimmer technique**: Text must have **solid `color = onSurface`** first, then `BlendMode.SrcAtop` overlay via `drawWithContent`. Requires `CompositingStrategy.Offscreen` on the modifier. Same as `Thinking..` indicator. **DO NOT use `alpha=0.99f` + `BlendMode.SrcIn` — this is incorrect and produces wrong results.**
-- **Shimmer colors**: `baseShimmer = Color(0xFF9E9E9E)` dark / `Color(0xFF757575)` light; `peakShimmer = Color.White` dark / `Color.Black` light
+- **Shimmer colors**: `baseShimmer = MaterialTheme.colorScheme.onSurfaceVariant` (adapts to theme automatically); `peakShimmer = Color.White` dark / `Color.Black` light
 - **Only active items shimmer**: `in_progress` items get shimmer in both collapsed row and expanded list. `pending`/`completed` use plain muted color.
 - Cleared automatically on new conversation (`todoRepository.clear()` called in `clearConversation()`)
 - **ToolResultPreview for `update_todo`**: Shows real task list with status icons (`✓` completed green, `●` in_progress blue, `○` pending muted) + progress bar. Reads from `arguments["todos"]` list, NOT from result string.
@@ -1285,19 +1285,44 @@ The app strictly adheres to a "Material 3 Expensive" design language, prioritizi
 - **Generous Padding**: Minimum `16.dp` global margins, `24.dp` spacing between major sections.
 - **Expressive Shapes**: Heavy use of `RoundedCornerShape(24.dp)` instead of standard `12.dp`.
 - **Tonal Elevation**: Use `surfaceContainer`, `surfaceContainerHigh`, and `surfaceContainerHighest` instead of stark shadows (`elevation = 0.dp` is preferred for modern flatness with tonal differentiation).
-- **Edge-to-Edge**: Full screen rendering. Layouts MUST pad exactly to system status bars and navigation bars (e.g., `statusBarsPadding()`, `navigationBarsPadding()`). DO NOT hardcode padding that overlaps with system UI.
+- **Edge-to-Edge**: Full screen rendering. Most screens use `statusBarsPadding()` / `navigationBarsPadding()`. **Exception: `ChatScreen` intentionally skips `statusBarsPadding()` on its root Box so gradient scrim can extend behind the status bar** — see ChatScreen Layout Architecture section. DO NOT hardcode padding that overlaps with system UI.
 
-### Color Palette (VS Code Inspired)
+### Color Palette — Neutral Monochrome
 
-| Role | Light | Dark | Usage |
-|------|-------|------|-------|
-| Primary | `#0066CC` | `#569CD6` | Buttons, links, keywords |
-| Secondary | `#008080` | `#4EC9B0` | Types, classes |
-| Tertiary | `#A31515` | `#CE9178` | Strings |
-| Background | `#FFFFFF` | `#1E1E1E` | Main background |
-| Surface | `#F3F3F3` | `#252526` | Cards, dialogs |
-| Error | `#E51400` | `#F44747` | Errors |
-| Success | `#008000` | `#4EC9B0` | Success states |
+All colors are purely neutral (grey-scale). **Zero accent/purple allowed.** Material3 default tones are fully overridden in `Theme.kt`.
+
+#### Light Mode
+| Token | Value | Usage |
+|-------|-------|-------|
+| `primary` | `#1C1B1F` | Buttons, Switch, FAB (near-black) |
+| `onPrimary` | `#FFFFFF` | Text/icon on primary |
+| `primaryContainer` | `#DEDEDE` | Neutral grey container |
+| `secondary` | `#5F5F5F` | Secondary actions |
+| `background` | `#EEEEEE` | Main background |
+| `surface` | `#EEEEEE` | Same as background |
+| `surfaceVariant` | `#F9F9F9` | Cards, pills, elevated surface |
+| `onSurfaceVariant` | `#5F5F5F` | Icons, secondary text |
+| `surfaceContainer` | `#E8E8E8` | Default container |
+| `surfaceContainerLow` | `#EBEBEB` | Slightly lower container |
+| `surfaceContainerHigh` | `#E4E4E4` | Slightly elevated container |
+| `surfaceContainerHighest` | `#E0E0E0` | Most elevated container |
+| `outline` | `#BDBDBD` | Borders |
+| `outlineVariant` | `#D8D8D8` | Dividers |
+
+#### Dark Mode
+| Token | Value | Usage |
+|-------|-------|-------|
+| `primary` | `#E0E0E0` | Buttons, Switch, FAB (near-white) |
+| `background` | `#1E1E1E` | Main background |
+| `surface` | `#252526` | Cards, panels |
+| `surfaceVariant` | `#2D2D2D` | Slightly lighter than surface |
+| `onSurfaceVariant` | `#AAAAAA` | Icons, secondary text |
+| `surfaceContainer` | `#2A2A2A` | Default container |
+| `surfaceContainerLow` | `#202020` | Slightly lower |
+| `surfaceContainerHigh` | `#303030` | Slightly elevated |
+| `surfaceContainerHighest` | `#383838` | Most elevated |
+
+> **Critical:** Never use `Color(0xFF6650A4)` or any purple/violet/indigo hex. All `surfaceContainer*` tokens MUST be explicitly set in `lightColorScheme()`/`darkColorScheme()` — otherwise Material3 defaults to purple.
 
 ### AI Chat UI Strict Rules
 The chat interface intentionally deviates from standard SMS-style apps to feel like an integrated IDE terminal/assistant:
@@ -1305,8 +1330,42 @@ The chat interface intentionally deviates from standard SMS-style apps to feel l
 1. **NO Chat Bubbles**: Text messages must flow naturally without being enclosed in rounded bubbles.
 2. **Minimal Tool Calls**: `ToolCallCard` components must be extra minimal (no green dot header).
 3. **Exit Codes**: Tool results use exit codes. `exit 0` = minimal green background. `exit 1` = minimal red background.
-4. **Shimmering Thinking Indicator**: Never use static "AI is thinking" text. Use exactly "Thinking.." with an animated gradient shimmering effect (Black -> White -> Black on Light mode, inverse on Dark mode).
+4. **Shimmering Thinking Indicator**: Never use static "AI is thinking" text. Use exactly "Thinking.." with an animated gradient shimmering effect (`onSurface` → `Color.White` on dark mode, `onSurface` → `Color.Black` on light mode via `BlendMode.SrcAtop`).
 5. **Dynamic Input Bar**: The message input area contains a single dynamic button: Send icon when typing, Stop icon (square) during AI streaming to halt generation. The input bar's padding MUST perfectly align with the screen edges and navigation bars.
+
+### ChatScreen Layout Architecture (Box Overlay Pattern)
+
+**IMPORTANT:** `Scaffold` is NOT used in `ChatScreen`. `Scaffold`'s `topBar` and `bottomBar` slots always paint a solid background — they cannot be made truly transparent. Instead, `ChatScreen` uses a **Box overlay pattern**:
+
+```
+ModalNavigationDrawer {
+  Box(fillMaxSize)  ← NO statusBarsPadding — edge-to-edge behind status bar
+    ├── Content layer (LazyColumn or WelcomeScreen) — full screen
+    │     contentPadding: top=72dp (header), bottom=96dp (input)
+    │
+    ├── Gradient scrim Box (height=160dp, align=TopStart)
+    │     drawBehind: solid at top (alpha=0.98) → transparent at bottom (alpha=0.0)
+    │     Covers status bar area — gives iOS frosted glass feel
+    │
+    ├── App bar Column (align=TopStart) — NO statusBarsPadding
+    │     TopAppBar with default windowInsets (shifts content below status bar icons)
+    │     containerColor = Color.Transparent, windowInsets uses system default
+    │     TodoBar (AnimatedVisibility)
+    │
+    └── Input Column (align=BottomStart, imePadding)
+          drawBehind: transparent at top (alpha=0.0) → solid at bottom (alpha=0.98)
+          Error banner (AnimatedVisibility)
+          ScrollablePills (welcome screen only)
+          ChatInput (floating, RoundedCornerShape(28dp), shadowElevation=4dp)
+}
+```
+
+**Key rules:**
+- **No `statusBarsPadding()` on main Box** — gradient must extend behind status bar
+- **TopAppBar `containerColor = Color.Transparent`** — gradient scrim does the background
+- **`imePadding()` on input Column** — keyboard pushes entire input up
+- **`WelcomeScreen`** uses `Box(padding(top=64dp, bottom=96dp), imePadding)` for true center alignment
+- **`MainActivity` `Surface` color = `Color.Transparent`** — allows edge-to-edge rendering
 
 ### Settings & Persona UI Rules
 1. **Agent Configuration**: Provider selection must use space-saving layouts like `ExposedDropdownMenuBox` to keep forms clean. Standard providers (OpenAI, Anthropic, Gemini) handle base URLs automatically under-the-hood to simplify UX.
@@ -1752,6 +1811,19 @@ This causes `FATAL EXCEPTION: main` → app force close every time `invoke_subag
   - [x] `ChatScreen` dead code — stray `LocalDensity` no-op call removed; duplicate `contextWindow` extracted to `estimateContextWindow()`
   - [x] `removeToolExecution()` dead code removed from `ChatViewModel`
   - [x] `AiRepository.chat()` — `flow {}` → `channelFlow {}` to fix concurrent emission crash from parallel subagents (`invoke_subagents` force close)
+- [x] **Color system overhaul (v1.1.2)**:
+  - [x] Light mode: `background`/`surface` = `#EEEEEE`, `surfaceVariant` = `#F9F9F9`, `onSurfaceVariant` = `#5F5F5F`
+  - [x] All `surfaceContainer*` tokens explicitly set (no more Material3 purple defaults)
+  - [x] Dark mode: removed all purple (`E6E0E9`, `CAC4D0`) → neutral grey
+  - [x] All hardcoded `Color(0xFF...)` removed from UI files — semantic tokens only
+  - [x] `outlineVariant` added to both light and dark schemes
+- [x] **ChatScreen iOS-style redesign (v1.1.2)**:
+  - [x] Scaffold replaced with Box overlay pattern (true transparent header/input)
+  - [x] Gradient scrim header: solid at top (status bar) → transparent at bottom
+  - [x] Gradient input: transparent at top → solid at bottom (WhatsApp-style float)
+  - [x] Edge-to-edge: gradient extends behind status bar (no `statusBarsPadding` on root Box)
+  - [x] Agent selector pill: `surfaceVariant` (neutral grey, was purple `secondaryContainer`)
+  - [x] `WelcomeScreen` true center alignment with `imePadding()` keyboard awareness
 - [ ] Project browser
 - [ ] Syntax highlighting for code blocks
 

@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.opencode.mobile"
+    namespace = "com.amaya.intelligence"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.opencode.mobile"
+        applicationId = "com.amaya.intelligence"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -96,6 +96,11 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
+
+    // WorkManager (for background reminder AI reply)
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
 
     // DataStore
     implementation(libs.androidx.datastore.preferences)

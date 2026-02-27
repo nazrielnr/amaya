@@ -1,23 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 
-    ============================================================================
-    PERMISSIONS EXPLAINED
-    ============================================================================
-    
-    1. INTERNET: Required for AI API communication (Claude, OpenAI, Gemini)
-    2. ACCESS_NETWORK_STATE: Required to check connectivity before API calls
-    3. MANAGE_EXTERNAL_STORAGE: Required for Android 11+ to access project files
-       outside the app's sandbox. This is essential for a coding agent that
-       needs to read/write source code files.
-    4. FOREGROUND_SERVICE: For long-running AI operations in background
-    
-    Note: MANAGE_EXTERNAL_STORAGE requires special permission flow on Android 11+
-    ============================================================================
-    -->
-    
     <!-- Network permissions for AI API communication -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -35,8 +19,18 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+    <!-- Notifications (required Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Exact alarms for cron job reminders (Android 12+) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        tools:ignore="ExactAlarm" />
+
+    <!-- Reschedule alarms after device reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
-        android:name=".OpenCodeApplication"
+        android:name=".AmayaApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -78,6 +72,12 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Amaya" />
+
+        <activity
+            android:name=".ui.settings.CronJobActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Amaya" />
         
         <activity
             android:name=".ui.workspace.WorkspaceActivity"
@@ -95,12 +95,43 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Disable WorkManager default init; AmayaApplication provides HiltWorkerFactory -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="@string/androidx_startup"
+                tools:node="remove" />
+        </provider>
         
         <!-- Foreground service for AI operations -->
         <service
             android:name=".service.AiOperationService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- BroadcastReceiver for cron job alarms -->
+        <receiver
+            android:name=".service.CronJobReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.amaya.intelligence.CRON_JOB_FIRE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- BroadcastReceiver to reschedule alarms after reboot -->
+        <receiver
+            android:name=".service.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
         
     </application>
 

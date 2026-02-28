@@ -3,6 +3,7 @@
 import android.content.Context
 import com.amaya.intelligence.data.local.db.entity.CronJobEntity
 import com.amaya.intelligence.data.local.db.entity.CronRecurringType
+import com.amaya.intelligence.data.local.db.entity.CronSessionMode
 import com.amaya.intelligence.data.repository.CronJobRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -36,9 +37,10 @@ class CreateReminderTool @Inject constructor(
         - title (string, required): Short title for the reminder (e.g., "Buy milk")
         - message (string, required): The reminder message shown in the notification
         - datetime (string, required): Date and time in ISO format "YYYY-MM-DDTHH:MM" 
-          (e.g., "2026-02-27T17:00") or natural-language offset like "in 2 hours" (not recommended)
+          (e.g., "2026-02-27T17:00")
         - repeat (string, optional): "once" (default), "daily", or "weekly"
         - conversation_id (long, optional): ID of the current conversation so Amaya can reply there when the reminder fires
+        - session_mode (string, optional): "continue" (default) = reply appended to the existing conversation; "new" = always start a fresh conversation when the reminder fires
     """.trimIndent()
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult =
@@ -50,6 +52,7 @@ class CreateReminderTool @Inject constructor(
             val datetimeStr = arguments["datetime"] as? String
                 ?: return@withContext ToolResult.Error("Missing required: datetime (use YYYY-MM-DDTHH:MM)", ErrorType.VALIDATION_ERROR)
             val repeatStr      = (arguments["repeat"] as? String)?.lowercase() ?: "once"
+            val sessionModeStr = (arguments["session_mode"] as? String)?.lowercase() ?: "continue"
             val conversationId = (arguments["conversation_id"] as? Number)?.toLong()
                 ?: (arguments["conversation_id"] as? String)?.toLongOrNull()
 
@@ -73,13 +76,16 @@ class CreateReminderTool @Inject constructor(
                 else     -> CronRecurringType.ONCE
             }
 
+            val sessionMode = if (sessionModeStr == "new") CronSessionMode.NEW else CronSessionMode.CONTINUE
+
             val job = CronJobEntity(
                 title             = title.trim(),
                 prompt            = message.trim(),
                 triggerTimeMillis = triggerMillis,
                 recurringType     = recurringType,
                 isActive          = true,
-                conversationId    = conversationId
+                conversationId    = conversationId,
+                sessionMode       = sessionMode
             )
 
             val id = try {

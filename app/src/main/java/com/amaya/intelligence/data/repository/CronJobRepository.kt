@@ -132,6 +132,7 @@ class CronJobRepository @Inject constructor(
             putExtra("conversation_id", job.conversationId ?: -1L)
             putExtra("title", job.title)
             putExtra("prompt", job.prompt)
+            putExtra("session_mode", job.sessionMode.name)  // "CONTINUE" | "NEW"
         }
         // FIX 1: job.id.toInt() overflows for large IDs (Long > Int.MAX_VALUE).
         // Use stable hash that preserves uniqueness within Int range.

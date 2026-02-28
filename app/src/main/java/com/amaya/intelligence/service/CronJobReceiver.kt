@@ -29,8 +29,9 @@ class CronJobReceiver : BroadcastReceiver() {
         val conversationId = intent.getLongExtra("conversation_id", -1L)
         val title          = intent.getStringExtra("title") ?: "Reminder"
         val prompt         = intent.getStringExtra("prompt") ?: title
+        val sessionMode    = intent.getStringExtra("session_mode") ?: "CONTINUE"
 
-        debugLog(TAG) { "onReceive: jobId=$jobId, convId=$conversationId, title=$title" }
+        debugLog(TAG) { "onReceive: jobId=$jobId, convId=$conversationId, mode=$sessionMode, title=$title" }
 
         if (jobId < 0) {
             errorLog(TAG, "onReceive: invalid jobId=$jobId, aborting")
@@ -42,6 +43,7 @@ class CronJobReceiver : BroadcastReceiver() {
             .putLong(ReminderWorker.KEY_CONVERSATION_ID, conversationId)
             .putString(ReminderWorker.KEY_TITLE, title)
             .putString(ReminderWorker.KEY_PROMPT, prompt)
+            .putString(ReminderWorker.KEY_SESSION_MODE, sessionMode)
             .build()
 
         val request = OneTimeWorkRequestBuilder<ReminderWorker>()

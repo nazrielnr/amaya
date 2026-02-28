@@ -242,7 +242,10 @@ class AiRepository @Inject constructor(
                         // FIX: Use channel.send() — channelFlow's ProducerScope is thread-safe,
                         // unlike flow{}'s emit() which panics on concurrent coroutine access.
                         onEvent = { event -> if (event is AgentEvent) channel.send(event) },
-                        onConfirmationRequired = onConfirmation
+                        onConfirmationRequired = onConfirmation,
+                        // Pass resolved agentConfig so SubagentRunner uses the SAME provider/model
+                        // as the main chat loop — not a stale DataStore snapshot.
+                        agentConfig = agentConfig
                     )
                     
                     val resultContent = when (result) {
@@ -316,7 +319,9 @@ class AiRepository @Inject constructor(
             TOOLS — MEMORY & REMINDERS:
             - Use update_memory(content, target="daily") to log important events from this session
             - Use update_memory(content, target="long") to persist user preferences/facts permanently
-            - Use create_reminder(title, message, datetime, conversation_id=$conversationId) when user asks to be reminded — ALWAYS pass conversation_id so replies come back to this chat
+            - Use create_reminder(title, message, datetime, conversation_id=$conversationId, session_mode=...) when user asks to be reminded — ALWAYS pass conversation_id so replies come back to this chat
+            - session_mode="continue" (default): when reminder fires, AI reply is appended to THIS conversation (id=$conversationId). Best for reminders related to ongoing tasks.
+            - session_mode="new": when reminder fires, a brand new conversation is created. Best for standalone/recurring reminders unrelated to current context.
             
             TOOLS — TASK PROGRESS (update_todo):
             - For any multi-step task, call update_todo at the START with merge=false to set your full plan.

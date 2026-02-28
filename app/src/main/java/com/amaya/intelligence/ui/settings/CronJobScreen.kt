@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.data.local.db.entity.CronJobEntity
 import com.amaya.intelligence.data.local.db.entity.CronRecurringType
+import com.amaya.intelligence.data.local.db.entity.CronSessionMode
 import com.amaya.intelligence.data.repository.CronJobRepository
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -218,14 +219,43 @@ private fun CronJobCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.secondaryContainer
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh
                     ) {
                         Text(
                             job.recurringType.name.lowercase().replaceFirstChar { it.uppercase() },
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = if (job.sessionMode == CronSessionMode.CONTINUE)
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        else
+                            MaterialTheme.colorScheme.surfaceContainerHighest
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                if (job.sessionMode == CronSessionMode.CONTINUE)
+                                    Icons.Default.Forum
+                                else
+                                    Icons.Default.AddComment,
+                                contentDescription = null,
+                                modifier = Modifier.size(10.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Text(
+                                if (job.sessionMode == CronSessionMode.CONTINUE) "Continue session" else "New session",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                     if (isPast) {
                         Spacer(Modifier.width(6.dp))
@@ -278,6 +308,7 @@ private fun AddCronJobSheet(
     var title by remember { mutableStateOf("") }
     var prompt by remember { mutableStateOf("") }
     var recurringType by remember { mutableStateOf(CronRecurringType.ONCE) }
+    var sessionMode by remember { mutableStateOf(CronSessionMode.CONTINUE) }
     var selectedCalendar by remember { mutableStateOf(Calendar.getInstance().apply { add(Calendar.HOUR_OF_DAY, 1) }) }
 
     val fmtDisplay = remember { SimpleDateFormat("EEE, dd MMM yyyy · HH:mm", Locale.getDefault()) }
@@ -394,15 +425,45 @@ private fun AddCronJobSheet(
                 }
             }
 
+            // Session mode
+            Text("When reminder fires", style = MaterialTheme.typography.labelLarge)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = sessionMode == CronSessionMode.CONTINUE,
+                    onClick = { sessionMode = CronSessionMode.CONTINUE },
+                    shape = SegmentedButtonDefaults.itemShape(0, 2),
+                    icon = { Icon(Icons.Default.Forum, null, modifier = Modifier.size(14.dp)) }
+                ) {
+                    Text("Continue session")
+                }
+                SegmentedButton(
+                    selected = sessionMode == CronSessionMode.NEW,
+                    onClick = { sessionMode = CronSessionMode.NEW },
+                    shape = SegmentedButtonDefaults.itemShape(1, 2),
+                    icon = { Icon(Icons.Default.AddComment, null, modifier = Modifier.size(14.dp)) }
+                ) {
+                    Text("New session")
+                }
+            }
+            Text(
+                if (sessionMode == CronSessionMode.CONTINUE)
+                    "AI reply will be added to the current chat session"
+                else
+                    "AI reply will open a fresh conversation each time",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
             Button(
                 onClick = {
                     onAdd(
                         CronJobEntity(
-                            title = title.trim().ifBlank { "Reminder" },
-                            prompt = prompt.trim(),
+                            title             = title.trim().ifBlank { "Reminder" },
+                            prompt            = prompt.trim(),
                             triggerTimeMillis = selectedCalendar.timeInMillis,
-                            recurringType = recurringType,
-                            isActive = true
+                            recurringType     = recurringType,
+                            isActive          = true,
+                            sessionMode       = sessionMode
                         )
                     )
                 },

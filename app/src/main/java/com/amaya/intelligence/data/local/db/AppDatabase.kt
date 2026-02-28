@@ -28,7 +28,7 @@ import com.amaya.intelligence.data.local.db.entity.ProjectEntity
         ConversationEntity::class,
         CronJobEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

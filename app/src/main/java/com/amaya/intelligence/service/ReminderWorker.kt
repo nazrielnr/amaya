@@ -37,12 +37,13 @@ class ReminderWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val TAG              = "ReminderWorker"
-        const val KEY_JOB_ID          = "job_id"
-        const val KEY_CONVERSATION_ID = "conversation_id"
-        const val KEY_TITLE           = "title"
-        const val KEY_PROMPT          = "prompt"
-        private const val CHANNEL_ID  = "amaya_reminders"
+        private const val TAG               = "ReminderWorker"
+        const val KEY_JOB_ID           = "job_id"
+        const val KEY_CONVERSATION_ID  = "conversation_id"
+        const val KEY_TITLE            = "title"
+        const val KEY_PROMPT           = "prompt"
+        const val KEY_SESSION_MODE     = "session_mode"   // "CONTINUE" | "NEW"
+        private const val CHANNEL_ID   = "amaya_reminders"
         private const val CHANNEL_NAME = "Amaya Reminders"
     }
 
@@ -51,13 +52,61 @@ class ReminderWorker @AssistedInject constructor(
         val conversationId = inputData.getLong(KEY_CONVERSATION_ID, -1L).takeIf { it > 0 }
         val title          = inputData.getString(KEY_TITLE) ?: "Reminder"
         val prompt         = inputData.getString(KEY_PROMPT) ?: title
+        val sessionMode    = inputData.getString(KEY_SESSION_MODE) ?: "CONTINUE"
 
-        debugLog(TAG) { "doWork: START jobId=$jobId, convId=$conversationId, title=$title" }
+        debugLog(TAG) { "doWork: START jobId=$jobId, convId=$conversationId, mode=$sessionMode, title=$title" }
 
         try {
-            // ── Build AI reply ────────────────────────────────────────────
-            val history: List<ChatMessage> = if (conversationId != null) {
-                conversationDao.getConversationById(conversationId)
+            // ── Resolve target conversation BEFORE calling AI ────────────
+            // This is done atomically here to avoid race conditions with concurrent workers.
+            // For NEW mode: create conversation first so we have a stable ID for the notification.
+            // For CONTINUE mode: find existing or fall back to new.
+            val now = System.currentTimeMillis()
+
+            val targetConversationId: Long = when (sessionMode) {
+                "NEW" -> {
+                    // Always create a fresh conversation — AI reply will be appended after
+                    val newId = conversationDao.insertConversation(
+                        ConversationEntity(
+                            id            = 0,
+                            title         = title.take(50),
+                            workspacePath = null,
+                            messagesJson  = "[]",
+                            createdAt     = now,
+                            updatedAt     = now
+                        )
+                    )
+                    debugLog(TAG) { "doWork: NEW mode — created conversation $newId" }
+                    newId
+                }
+                else -> {
+                    // CONTINUE: use existing conversationId if found, else create new
+                    val existing = conversationId?.let { conversationDao.getConversationById(it) }
+                    if (existing != null) {
+                        debugLog(TAG) { "doWork: CONTINUE mode — using existing conversation $conversationId" }
+                        existing.id
+                    } else {
+                        val newId = conversationDao.insertConversation(
+                            ConversationEntity(
+                                id            = 0,
+                                title         = title.take(50),
+                                workspacePath = null,
+                                messagesJson  = "[]",
+                                createdAt     = now,
+                                updatedAt     = now
+                            )
+                        )
+                        debugLog(TAG) { "doWork: CONTINUE mode — no existing conversation, created $newId" }
+                        newId
+                    }
+                }
+            }
+
+            // ── Build conversation history for AI context ────────────────
+            // For CONTINUE mode: load existing messages so AI has full context
+            // For NEW mode: no history (fresh start)
+            val history: List<ChatMessage> = if (sessionMode != "NEW") {
+                conversationDao.getConversationById(targetConversationId)
                     ?.let { parseHistory(it) }
                     ?: emptyList()
             } else {
@@ -65,9 +114,10 @@ class ReminderWorker @AssistedInject constructor(
             }
             debugLog(TAG) { "doWork: loaded ${history.size} history messages" }
 
+            // ── Call AI ──────────────────────────────────────────────────
             val reminderTriggerMsg = "⏰ [REMINDER FIRED] Your scheduled reminder has arrived: \"$title\". " +
-                    "Please acknowledge this reminder and respond to the user naturally as Amaya, " +
-                    "referencing the context of the original request if visible in history."
+                "Please acknowledge this reminder and respond to the user naturally as Amaya, " +
+                "referencing the context of the original request if visible in history."
 
             val aiReply = StringBuilder()
             aiRepository.chat(
@@ -79,35 +129,32 @@ class ReminderWorker @AssistedInject constructor(
             ).collect { event ->
                 when (event) {
                     is AgentEvent.TextDelta -> aiReply.append(event.text)
-                    is AgentEvent.Error -> errorLog(TAG, "doWork: AI error: ${event.message}")
-                    else -> Unit
+                    is AgentEvent.Error     -> errorLog(TAG, "doWork: AI error: ${event.message}")
+                    else                    -> Unit
                 }
             }
 
             val replyText = aiReply.toString().trim().ifBlank { "⏰ Reminder: $title" }
             debugLog(TAG) { "doWork: AI reply length=${replyText.length}" }
 
-            // ── Append AI reply to conversation in Room ───────────────────
-            if (conversationId != null) {
-                appendReplyToConversation(conversationId, replyText)
-                debugLog(TAG) { "doWork: reply appended to conversation $conversationId" }
-            }
+            // ── Append AI reply to target conversation ───────────────────
+            appendReplyToConversation(targetConversationId, replyText)
+            debugLog(TAG) { "doWork: reply appended to conversation $targetConversationId" }
 
             // ── Mark job fired ────────────────────────────────────────────
             if (jobId > 0) cronJobRepository.onJobFired(jobId)
 
             // ── Show notification ─────────────────────────────────────────
-            showNotification(title, replyText, conversationId)
+            showNotification(title, replyText, targetConversationId)
             debugLog(TAG) { "doWork: DONE successfully" }
 
             return Result.success()
         } catch (e: Exception) {
-            // FIX 8: Log exception details, not silently swallowed
             errorLog(TAG, "doWork: FAILED - ${e.javaClass.simpleName}: ${e.message}")
             // Still show a basic notification even if AI call fails
             showNotification(title, "⏰ $title", conversationId)
             if (jobId > 0) runCatching { cronJobRepository.onJobFired(jobId) }
-            return Result.retry() // FIX 8: Use retry() instead of failure() so WorkManager can attempt again
+            return Result.retry()
         }
     }
 

@@ -309,7 +309,10 @@ class ToolExecutor @Inject constructor(
                     ToolParameter("repeat", "string", "Recurrence: 'once' (default), 'daily', or 'weekly'", required = false,
                         enum = listOf("once", "daily", "weekly")),
                     ToolParameter("conversation_id", "integer",
-                        "Current conversation ID so reply appears in this chat when reminder fires.", required = false)
+                        "Current conversation ID so reply appears in this chat when reminder fires.", required = false),
+                    ToolParameter("session_mode", "string",
+                        "'continue' (default) = append reply to existing conversation; 'new' = create fresh conversation each firing.",
+                        required = false, enum = listOf("continue", "new"))
                 )
             ),
             ToolDefinition(

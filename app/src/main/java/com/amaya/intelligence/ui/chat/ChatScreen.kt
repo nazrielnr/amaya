@@ -863,7 +863,7 @@ fun TodoBar(items: List<TodoItem>) {
         ?: items.lastOrNull()?.id
         ?: 1
 
-    // -- Shimmer — flow: hitam → transparan → hitam (light) | putih → transparan → putih (dark) ----
+    // -- Shimmer — centered gradient for symmetrical fade ----
     val transition = rememberInfiniteTransition(label = "todo_shimmer")
     val shimmerOffset by transition.animateFloat(
         initialValue = -400f,
@@ -875,15 +875,21 @@ fun TodoBar(items: List<TodoItem>) {
         label = "todo_shimmer_x"
     )
 
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val gradientWidth = 500f
     val shimmerBrush = Brush.linearGradient(
         colors = listOf(
-            onSurfaceColor,                      // Start: solid
-            onSurfaceColor.copy(alpha = 0.2f),   // Mid: transparent
-            onSurfaceColor                       // End: solid
+            Color.White.copy(alpha = 1f),    // Edge left: visible
+            Color.White.copy(alpha = 0.7f),  // Fade in
+            Color.White.copy(alpha = 0.4f),
+            Color.White.copy(alpha = 0.1f),
+            Color.White.copy(alpha = 0f),    // Center: invisible
+            Color.White.copy(alpha = 0.1f),
+            Color.White.copy(alpha = 0.4f),
+            Color.White.copy(alpha = 0.7f),  // Fade out
+            Color.White.copy(alpha = 1f)     // Edge right: visible
         ),
-        start  = Offset(shimmerOffset, 0f),
-        end    = Offset(shimmerOffset + 300f, 0f)
+        start  = Offset(shimmerOffset - gradientWidth / 2, 0f),
+        end    = Offset(shimmerOffset + gradientWidth / 2, 0f)
     )
 
     // Surface background — sedikit berbeda dari surface biasa agar terlihat sebagai banner
@@ -938,7 +944,7 @@ fun TodoBar(items: List<TodoItem>) {
                             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                             .drawWithContent {
                                 drawContent()
-                                drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop)
+                                drawRect(brush = shimmerBrush, blendMode = BlendMode.DstIn)
                             }
                     )
                 } else {
@@ -1048,7 +1054,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
                     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                     .drawWithContent {
                         drawContent()
-                        drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop)
+                        drawRect(brush = shimmerBrush, blendMode = BlendMode.DstIn)
                     }
             )
         } else {
@@ -1203,16 +1209,22 @@ fun ToolCallCard(execution: ToolExecution) {
         animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing), RepeatMode.Restart),
         label = "shimmer_x"
     )
-    // Shimmer flow: hitam → transparan → hitam (light mode) | putih → transparan → putih (dark mode)
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    // Shimmer: centered gradient for symmetrical fade (alpha mask via DstIn)
+    val gradientWidth = 600f
     val shimmerBrush = Brush.linearGradient(
         colors = listOf(
-            onSurfaceColor,                      // Start: solid color
-            onSurfaceColor.copy(alpha = 0.2f),   // Mid: transparent
-            onSurfaceColor                       // End: solid color
+            Color.White.copy(alpha = 1f),    // Edge left: visible
+            Color.White.copy(alpha = 0.7f),  // Fade in
+            Color.White.copy(alpha = 0.4f),
+            Color.White.copy(alpha = 0.1f),
+            Color.White.copy(alpha = 0f),    // Center: invisible
+            Color.White.copy(alpha = 0.1f),
+            Color.White.copy(alpha = 0.4f),
+            Color.White.copy(alpha = 0.7f),  // Fade out
+            Color.White.copy(alpha = 1f)     // Edge right: visible
         ),
-        start = Offset(shimmerOffset, 0f),
-        end   = Offset(shimmerOffset + 400f, 0f)
+        start = Offset(shimmerOffset - gradientWidth / 2, 0f),
+        end   = Offset(shimmerOffset + gradientWidth / 2, 0f)
     )
 
     // STICKY HEADER PATTERN: Surface wraps Column, header always visible, expandable content below
@@ -1249,7 +1261,7 @@ fun ToolCallCard(execution: ToolExecution) {
                             if (execution.status == ToolStatus.RUNNING)
                                 Modifier
                                     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                                    .drawWithContent { drawContent(); drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop) }
+                                    .drawWithContent { drawContent(); drawRect(brush = shimmerBrush, blendMode = BlendMode.DstIn) }
                             else Modifier
                         )
                 )
@@ -1445,7 +1457,7 @@ private fun SubagentChildCard(
                             if (child.status == ToolStatus.RUNNING)
                                 Modifier
                                     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                                    .drawWithContent { drawContent(); drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop) }
+                                    .drawWithContent { drawContent(); drawRect(brush = shimmerBrush, blendMode = BlendMode.DstIn) }
                             else Modifier
                         )
                 )
@@ -2098,17 +2110,22 @@ fun LoadingIndicator() {
         label = "translate"
     )
 
-    // Shimmer: flow hitam → transparan → hitam (light) | putih → transparan → putih (dark)
-    // MUST use solid onSurface color + CompositingStrategy.Offscreen + BlendMode.SrcAtop
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    // Shimmer: centered gradient for symmetrical fade (alpha mask via DstIn)
+    val gradientWidth = 600f
     val shimmerBrush = Brush.linearGradient(
         colors = listOf(
-            onSurfaceColor,                      // Start: solid
-            onSurfaceColor.copy(alpha = 0.2f),   // Mid: transparent
-            onSurfaceColor                       // End: solid
+            Color.White.copy(alpha = 1f),    // Edge left: visible
+            Color.White.copy(alpha = 0.7f),  // Fade in
+            Color.White.copy(alpha = 0.4f),
+            Color.White.copy(alpha = 0.1f),
+            Color.White.copy(alpha = 0f),    // Center: invisible
+            Color.White.copy(alpha = 0.1f),
+            Color.White.copy(alpha = 0.4f),
+            Color.White.copy(alpha = 0.7f),  // Fade out
+            Color.White.copy(alpha = 1f)     // Edge right: visible
         ),
-        start  = Offset(translateAnim, 0f),
-        end    = Offset(translateAnim + 400f, 0f)
+        start  = Offset(translateAnim - gradientWidth / 2, 0f),
+        end    = Offset(translateAnim + gradientWidth / 2, 0f)
     )
 
     Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
@@ -2122,7 +2139,7 @@ fun LoadingIndicator() {
                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                 .drawWithContent {
                     drawContent()
-                    drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop)
+                    drawRect(brush = shimmerBrush, blendMode = BlendMode.DstIn)
                 }
         )
     }

@@ -326,7 +326,20 @@ class ChatViewModel @Inject constructor(
                     }
 
                     is AgentEvent.Done -> {
-                        _uiState.update { it.copy(isLoading = false) }
+                        // Capture current todo items and attach to last assistant message
+                        val currentTodos = todoRepository.items.value
+                        if (currentTodos.isNotEmpty()) {
+                            _uiState.update { state ->
+                                val messages = state.messages.toMutableList()
+                                val lastIndex = messages.lastIndex
+                                if (lastIndex >= 0 && messages[lastIndex].role == MessageRole.ASSISTANT) {
+                                    messages[lastIndex] = messages[lastIndex].copy(todoItems = currentTodos)
+                                }
+                                state.copy(messages = messages, isLoading = false)
+                            }
+                        } else {
+                            _uiState.update { it.copy(isLoading = false) }
+                        }
                         saveCurrentConversation()
                     }
                 }
@@ -379,6 +392,15 @@ class ChatViewModel @Inject constructor(
                 if (conversation != null) {
                     currentConversationId = conversationId
                     val messages = parseMessagesFromJson(conversation.messagesJson)
+                    
+                    // Restore todos from last assistant message
+                    val lastAssistantTodos = messages
+                        .lastOrNull { it.role == MessageRole.ASSISTANT }
+                        ?.todoItems
+                        ?: emptyList()
+                    
+                    todoRepository.replaceAll(lastAssistantTodos)
+                    
                     _uiState.update {
                         it.copy(
                             workspacePath = conversation.workspacePath,
@@ -449,12 +471,28 @@ class ChatViewModel @Inject constructor(
                         )
                     }
                 }
+                // Restore todo items
+                val todoItems = mutableListOf<TodoItem>()
+                if (obj.has("todoItems")) {
+                    val todoArr = obj.getJSONArray("todoItems")
+                    for (j in 0 until todoArr.length()) {
+                        val t = todoArr.getJSONObject(j)
+                        todoItems.add(TodoItem(
+                            id          = t.getInt("id"),
+                            content     = t.optString("content", null),
+                            activeForm  = t.optString("activeForm", null),
+                            status      = try { com.amaya.intelligence.tools.TodoStatus.valueOf(t.getString("status")) }
+                                         catch (_: Exception) { com.amaya.intelligence.tools.TodoStatus.PENDING }
+                        ))
+                    }
+                }
                 messages.add(UiMessage(
                     id             = obj.optString("id", java.util.UUID.randomUUID().toString()),
                     role           = role,
                     content        = content,
                     timestamp      = obj.optLong("timestamp", System.currentTimeMillis()),
-                    toolExecutions = toolExecutions
+                    toolExecutions = toolExecutions,
+                    todoItems      = todoItems
                 ))
             }
             messages
@@ -536,6 +574,19 @@ class ChatViewModel @Inject constructor(
                 }
                 obj.put("toolExecutions", execArr)
             }
+            // Serialize todo items
+            if (msg.todoItems.isNotEmpty()) {
+                val todoArr = org.json.JSONArray()
+                msg.todoItems.forEach { todo ->
+                    val t = org.json.JSONObject()
+                    t.put("id", todo.id)
+                    todo.content?.let { t.put("content", it) }
+                    todo.activeForm?.let { t.put("activeForm", it) }
+                    t.put("status", todo.status.name)
+                    todoArr.put(t)
+                }
+                obj.put("todoItems", todoArr)
+            }
             jsonArray.put(obj)
         }
         return jsonArray.toString()
@@ -589,7 +640,8 @@ data class UiMessage(
     val role: MessageRole,
     val content: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val toolExecutions: List<ToolExecution> = emptyList()
+    val toolExecutions: List<ToolExecution> = emptyList(),
+    val todoItems: List<TodoItem> = emptyList()  // Per-conversation todo history
 )
 
 @Immutable

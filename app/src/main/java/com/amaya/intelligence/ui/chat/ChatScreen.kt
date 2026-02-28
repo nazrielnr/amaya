@@ -459,12 +459,14 @@ fun ChatScreen(
                 // Normal LazyColumn: latest message at bottom
                 LazyColumn(
                     state               = listState,
-                    modifier            = Modifier.fillMaxSize(),
+                    modifier            = Modifier
+                        .fillMaxSize()
+                        .imePadding(),  // Auto-adjust for keyboard
                     contentPadding      = PaddingValues(
                         start  = 16.dp,
                         end    = 16.dp,
                         top    = headerDp + with(LocalDensity.current) { todoBarHeight.toDp() } + 8.dp,  // header + todoBar + gap
-                        bottom = bottomDp + 8.dp     // space above input bar
+                        bottom = 96.dp     // Increased padding for better visibility (no navBar, imePadding handles it)
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {

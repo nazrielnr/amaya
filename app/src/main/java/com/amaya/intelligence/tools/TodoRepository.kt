@@ -39,6 +39,9 @@ class TodoRepository @Inject constructor() {
         // FIX #14: Use update{} to ensure atomic compare-and-set, preventing lost updates
         _items.value = newItems
     }
+    
+    /** Alias for replaceItems - used when loading conversation history. */
+    fun replaceAll(newItems: List<TodoItem>) = replaceItems(newItems)
 
     /**
      * Merge incoming items into the existing list by id.

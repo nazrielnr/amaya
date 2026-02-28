@@ -32,7 +32,9 @@ import javax.inject.Singleton
 class GeminiProvider @Inject constructor(
     private val httpClient: OkHttpClient,
     private val moshi: Moshi,
-    private val settingsProvider: () -> AiSettings
+    private val settingsProvider: () -> AiSettings,
+    // FIX 2.2: Inject settingsManager to look up per-agent API key via getAgentApiKey(agentId)
+    private val settingsManager: AiSettingsManager
 ) : AiProvider {
     
     companion object {
@@ -45,14 +47,20 @@ class GeminiProvider @Inject constructor(
     override val supportedModels = emptyList<String>()
     
     override fun isConfigured(): Boolean {
-        return settingsProvider().geminiApiKey.isNotBlank()
+        // FIX 2.2: Check agent key via per-agent storage, not legacy geminiApiKey field
+        val settings = settingsProvider()
+        val agentKey = settingsManager.getAgentApiKey(settings.activeAgentId)
+        return agentKey.isNotBlank()
     }
     
     override suspend fun chat(request: ChatRequest): Flow<ChatResponse> = callbackFlow {
         val settings = settingsProvider()
+        // FIX: Use agentId from request (resolved by AiRepository) — not settings.activeAgentId
+        val agentId = request.agentId.ifBlank { settings.activeAgentId }
+        val apiKey = settingsManager.getAgentApiKey(agentId)
         
-        if (settings.geminiApiKey.isBlank()) {
-            trySend(ChatResponse.Error("Gemini API key not configured", "AUTH_ERROR"))
+        if (apiKey.isBlank()) {
+            trySend(ChatResponse.Error("Gemini API key not configured for active agent", "AUTH_ERROR"))
             close()
             return@callbackFlow
         }
@@ -62,7 +70,7 @@ class GeminiProvider @Inject constructor(
         val jsonBody = moshi.adapter(GeminiRequest::class.java).toJson(geminiRequest)
         
         val endpoint = if (request.stream) "streamGenerateContent" else "generateContent"
-        val url = "$BASE_URL/models/${request.model}:$endpoint?key=${settings.geminiApiKey}"
+        val url = "$BASE_URL/models/${request.model}:$endpoint?key=$apiKey"
         
         val httpRequest = Request.Builder()
             .url(url)
@@ -85,8 +93,11 @@ class GeminiProvider @Inject constructor(
                 val reader = BufferedReader(InputStreamReader(response.body?.byteStream()))
                 val jsonBuffer = StringBuilder()
                 var bracketCount = 0
+                // FIX 2.4: Use escapeCount parity to correctly handle \\" (double-escaped backslash).
+                // Old logic: prevChar != '\\' only handled one level — "\\" before '"' was wrongly
+                // treated as escape, flipping inString mid-object and causing parse errors.
                 var inString = false
-                var prevChar: Char? = null
+                var escapeCount = 0
                 
                 reader.use { bufferedReader ->
                     var char: Int
@@ -100,9 +111,14 @@ class GeminiProvider @Inject constructor(
                         
                         jsonBuffer.append(c)
                         
-                        // Track string state
-                        if (c == '"' && prevChar != '\\') {
-                            inString = !inString
+                        // Track string state with backslash parity
+                        if (c == '\\') {
+                            escapeCount++
+                        } else {
+                            if (c == '"' && escapeCount % 2 == 0) {
+                                inString = !inString
+                            }
+                            escapeCount = 0
                         }
                         
                         if (!inString) {
@@ -124,8 +140,6 @@ class GeminiProvider @Inject constructor(
                                 }
                             }
                         }
-                        
-                        prevChar = c
                     }
                 }
                 

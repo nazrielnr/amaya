@@ -158,15 +158,14 @@ class EditFileTool @Inject constructor(
                 )
             }
             
-            // Create backup
-            val backupDir = File(context.cacheDir, "backups")
-            backupDir.mkdirs()
-            val backupFile = File(backupDir, "${file.name}.bak.${System.currentTimeMillis()}")
+            // FIX 4.7: Standardize backup location — always use same dir as the file,
+            // consistent with diff mode and UndoChangeTool's search pattern.
+            val backupFile = File(file.parentFile ?: file, "${file.name}.bak.${System.currentTimeMillis()}")
             file.copyTo(backupFile, overwrite = true)
 
             // FIX #7: Atomic write — write to temp file first, then rename/copy to target
             // to prevent file corruption if the process is killed mid-write.
-            val tempFile = File.createTempFile(".edit_", ".tmp", file.parentFile ?: backupDir)
+            val tempFile = File.createTempFile(".edit_", ".tmp", file.parentFile ?: File(context.cacheDir, "backups").also { it.mkdirs() })
             try {
                 tempFile.writeText(newFullContent)
                 if (!tempFile.renameTo(file)) {
@@ -263,7 +262,10 @@ class EditFileTool @Inject constructor(
                     lineOffset += added - removed
                 } else i++
             }
-            val result = lines.joinToString("\n")
+            // FIX 2.5: Preserve trailing newline — original.lines() on "a\nb\n" yields ["a","b",""]
+            // so joinToString("\n") would drop the final newline. Restore it explicitly.
+            val hasTrailingNewline = original.endsWith("\n")
+            val result = lines.joinToString("\n") + if (hasTrailingNewline) "\n" else ""
             val backup = java.io.File(file.parent, "${file.name}.bak.${System.currentTimeMillis()}")
             file.copyTo(backup, overwrite = true)
             // FIX #7: Atomic write for diff mode too — temp file + rename/fallback

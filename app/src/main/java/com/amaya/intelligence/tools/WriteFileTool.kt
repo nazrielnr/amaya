@@ -312,7 +312,9 @@ class WriteFileTool @Inject constructor(
     
     private fun validateXml(content: String): String? {
         val tagStack = ArrayDeque<String>()
-        val tagPattern = Regex("""<(/?)(\\w+)[^>]*(/?)\>""")
+        // FIX 2.6: In raw strings ("""), \\w is two literal chars — must use \w for regex word-char.
+        // Also fixed self-closing pattern: (/)? at end instead of (/?)\> which was broken.
+        val tagPattern = Regex("""<(/?)(\w+)[^>]*(/)?>""")
         
         for (match in tagPattern.findAll(content)) {
             val isClosing = match.groupValues[1] == "/"

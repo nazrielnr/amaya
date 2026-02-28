@@ -6,7 +6,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
+import com.amaya.intelligence.util.debugLog
+import com.amaya.intelligence.util.errorLog
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -51,7 +52,7 @@ class ReminderWorker @AssistedInject constructor(
         val title          = inputData.getString(KEY_TITLE) ?: "Reminder"
         val prompt         = inputData.getString(KEY_PROMPT) ?: title
 
-        Log.d(TAG, "doWork: START jobId=$jobId, convId=$conversationId, title=$title")
+        debugLog(TAG) { "doWork: START jobId=$jobId, convId=$conversationId, title=$title" }
 
         try {
             // ── Build AI reply ────────────────────────────────────────────
@@ -62,7 +63,7 @@ class ReminderWorker @AssistedInject constructor(
             } else {
                 emptyList()
             }
-            Log.d(TAG, "doWork: loaded ${history.size} history messages")
+            debugLog(TAG) { "doWork: loaded ${history.size} history messages" }
 
             val reminderTriggerMsg = "⏰ [REMINDER FIRED] Your scheduled reminder has arrived: \"$title\". " +
                     "Please acknowledge this reminder and respond to the user naturally as Amaya, " +
@@ -78,18 +79,18 @@ class ReminderWorker @AssistedInject constructor(
             ).collect { event ->
                 when (event) {
                     is AgentEvent.TextDelta -> aiReply.append(event.text)
-                    is AgentEvent.Error -> Log.e(TAG, "doWork: AI error: ${event.message}")
+                    is AgentEvent.Error -> errorLog(TAG, "doWork: AI error: ${event.message}")
                     else -> Unit
                 }
             }
 
             val replyText = aiReply.toString().trim().ifBlank { "⏰ Reminder: $title" }
-            Log.d(TAG, "doWork: AI reply length=${replyText.length}")
+            debugLog(TAG) { "doWork: AI reply length=${replyText.length}" }
 
             // ── Append AI reply to conversation in Room ───────────────────
             if (conversationId != null) {
                 appendReplyToConversation(conversationId, replyText)
-                Log.d(TAG, "doWork: reply appended to conversation $conversationId")
+                debugLog(TAG) { "doWork: reply appended to conversation $conversationId" }
             }
 
             // ── Mark job fired ────────────────────────────────────────────
@@ -97,15 +98,16 @@ class ReminderWorker @AssistedInject constructor(
 
             // ── Show notification ─────────────────────────────────────────
             showNotification(title, replyText, conversationId)
-            Log.d(TAG, "doWork: DONE successfully")
+            debugLog(TAG) { "doWork: DONE successfully" }
 
             return Result.success()
         } catch (e: Exception) {
-            Log.e(TAG, "doWork: FAILED", e)
+            // FIX 8: Log exception details, not silently swallowed
+            errorLog(TAG, "doWork: FAILED - ${e.javaClass.simpleName}: ${e.message}")
             // Still show a basic notification even if AI call fails
             showNotification(title, "⏰ $title", conversationId)
             if (jobId > 0) runCatching { cronJobRepository.onJobFired(jobId) }
-            return Result.failure()
+            return Result.retry() // FIX 8: Use retry() instead of failure() so WorkManager can attempt again
         }
     }
 
@@ -176,6 +178,10 @@ class ReminderWorker @AssistedInject constructor(
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
-        notifManager.notify(System.currentTimeMillis().toInt(), notification)
+        // FIX 1: Use stable notification ID based on jobId/conversationId to avoid collision.
+        // System.currentTimeMillis().toInt() would overflow and collide for rapid notifications.
+        val inputJobId = inputData.getLong(KEY_JOB_ID, -1L)
+        val notifId = (conversationId?.toInt() ?: inputJobId.toInt().let { if (it == 0) (inputJobId % Int.MAX_VALUE).toInt() else it })
+        notifManager.notify(notifId, notification)
     }
 }

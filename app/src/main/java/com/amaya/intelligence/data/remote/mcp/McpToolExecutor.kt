@@ -19,6 +19,7 @@ class McpToolExecutor @Inject constructor(
         onEvent: (suspend (Any) -> Unit)? = null,
         onConfirmationRequired: suspend (ConfirmationRequest) -> Boolean
     ): ToolResult {
+        // FIX 9: Use McpClientManager.TOOL_PREFIX constant — no hardcoded "mcp__" string here
         return if (toolName.startsWith(McpClientManager.TOOL_PREFIX)) {
             mcpClientManager.callTool(toolName, arguments)
         } else {

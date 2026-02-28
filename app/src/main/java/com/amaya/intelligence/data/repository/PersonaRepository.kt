@@ -7,7 +7,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -172,9 +171,12 @@ Occupation:
 
     // --- Mode ---
 
-    fun getMode(): PersonaMode = runBlocking {
+    // FIX 5.7: Make suspend to avoid runBlocking blocking the calling thread.
+    // buildPromptFragment() → buildSystemPrompt() runs in IO dispatcher (suspend context),
+    // so getMode()/getSimplePersona() can safely be suspend functions.
+    suspend fun getMode(): PersonaMode {
         val raw = context.personaStore.data.map { it[KEY_MODE] ?: "SIMPLE" }.first()
-        try { PersonaMode.valueOf(raw) } catch (_: Exception) { PersonaMode.SIMPLE }
+        return try { PersonaMode.valueOf(raw) } catch (_: Exception) { PersonaMode.SIMPLE }
     }
 
     suspend fun setMode(mode: PersonaMode) {
@@ -183,8 +185,9 @@ Occupation:
 
     // --- Simple ---
 
-    fun getSimplePersona(): SimplePersona = runBlocking {
-        context.personaStore.data.map { prefs ->
+    // FIX 5.7: Make suspend — eliminates runBlocking anti-pattern
+    suspend fun getSimplePersona(): SimplePersona {
+        return context.personaStore.data.map { prefs ->
             SimplePersona(
                 tone = prefs[KEY_TONE] ?: "",
                 characteristic = prefs[KEY_CHARACTERISTIC] ?: "",
@@ -255,14 +258,15 @@ Occupation:
 
     // --- Build prompt fragment ---
 
-    fun buildPromptFragment(): String {
+    // FIX 5.7: Propagate suspend to callers to eliminate runBlocking chain
+    suspend fun buildPromptFragment(): String {
         return when (getMode()) {
             PersonaMode.SIMPLE -> buildSimpleFragment()
             PersonaMode.PRO -> buildProFragment()
         }
     }
 
-    private fun buildSimpleFragment(): String {
+    private suspend fun buildSimpleFragment(): String {
         val p = getSimplePersona()
         val parts = mutableListOf<String>()
         if (p.nickname.isNotBlank()) parts.add("Address the user as \"${p.nickname}\".")

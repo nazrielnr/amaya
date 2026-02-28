@@ -1,6 +1,17 @@
 package com.amaya.intelligence.tools
 
-import com.amaya.intelligence.data.remote.api.*
+import com.amaya.intelligence.data.remote.api.AiProvider
+import com.amaya.intelligence.data.remote.api.AiSettingsManager
+import com.amaya.intelligence.data.remote.api.AnthropicProvider
+import com.amaya.intelligence.data.remote.api.ChatMessage
+import com.amaya.intelligence.data.remote.api.ChatRequest
+import com.amaya.intelligence.data.remote.api.ChatResponse
+import com.amaya.intelligence.data.remote.api.GeminiProvider
+import com.amaya.intelligence.data.remote.api.MessageRole
+import com.amaya.intelligence.data.remote.api.OpenAiProvider
+import com.amaya.intelligence.data.remote.api.ProviderType
+import com.amaya.intelligence.data.remote.api.ToolCallMessage
+import com.amaya.intelligence.data.remote.api.ToolResultMessage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -34,11 +45,10 @@ class InvokeSubagentsTool @Inject constructor(
         "Subagents do NOT see conversation history — provide ALL context in the task description. " +
         "Maximum 4 subagents per call. Returns a combined summary from all subagents."
 
-    // FIX #1/#18: Remove mutable singleton state — pass via execute() arguments map instead.
-    // eventEmitter and toolCallId are injected per-call via the arguments map by ToolExecutor.
-    // This eliminates race conditions when multiple chats run concurrently.
-    @Volatile var eventEmitter: (suspend (Any) -> Unit)? = null
-    @Volatile var currentToolCallId: String? = null
+    // FIX 1.6/3.6: Mutable singleton state removed. eventEmitter and currentToolCallId are now
+    // passed per-call through the arguments map by ToolExecutor (keyed "__eventEmitter" and
+    // "__toolCallId"). This eliminates the race condition where two concurrent chat sessions
+    // would overwrite each other's emitter reference on this singleton.
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
         return try {
@@ -71,9 +81,11 @@ class InvokeSubagentsTool @Inject constructor(
                 )
             }
 
-            // Snapshot emitter/id at call time to avoid race conditions between concurrent calls
-            val emitter = eventEmitter
-            val parentId = currentToolCallId ?: "subagents_${System.currentTimeMillis()}"
+            // FIX 1.6/3.6: Read emitter and parentId from per-call arguments map (injected by ToolExecutor)
+            // instead of mutable singleton fields. Safe for concurrent chat sessions.
+            @Suppress("UNCHECKED_CAST")
+            val emitter = arguments["__eventEmitter"] as? (suspend (Any) -> Unit)
+            val parentId = arguments["__toolCallId"] as? String ?: "subagents_${System.currentTimeMillis()}"
 
             // Emit RUNNING state for all subagents immediately
             subagents.forEach { sub ->
@@ -131,7 +143,8 @@ class InvokeSubagentsTool @Inject constructor(
 data class SubagentTask(
     val index: Int,
     val taskName: String,
-    val task: String
+    val task: String,
+    val workspacePath: String? = null  // FIX 2.11: workspace for tool execution context
 )
 
 data class SubagentResult(
@@ -200,7 +213,7 @@ class SubagentRunner @Inject constructor(
             ?: settings.agentConfigs.firstOrNull { it.enabled }
         val providerType = activeAgent?.let {
             runCatching { ProviderType.valueOf(it.providerType) }.getOrNull()
-        } ?: runCatching { ProviderType.valueOf(settings.activeProvider) }.getOrElse { ProviderType.OPENAI }
+        } ?: ProviderType.OPENAI
 
         val provider: AiProvider = when (providerType) {
             ProviderType.ANTHROPIC -> anthropicProvider
@@ -220,26 +233,10 @@ class SubagentRunner @Inject constructor(
             ${if (isRetry) "NOTE: This is a retry after a rate limit error." else ""}
         """.trimIndent()
 
+        // FIX 4.3: Use shared toAiToolDefinition() extension — removes duplicate mapping from AiRepository
         val tools = toolExecutor.getToolDefinitions()
             .filter { it.name != "invoke_subagents" } // no nested subagents
-            .map { def ->
-                AiToolDefinition(
-                    name = def.name,
-                    description = def.description,
-                    parameters = AiToolParameters(
-                        type = "object",
-                        properties = def.parameters.associate { param ->
-                            param.name to AiToolProperty(
-                                type = param.type,
-                                description = param.description,
-                                enum = param.enum,
-                                items = if (param.items != null) AiToolPropertyItems(param.items) else null
-                            )
-                        },
-                        required = def.parameters.filter { it.required }.map { it.name }
-                    )
-                )
-            }
+            .map { it.toAiToolDefinition(truncateDesc = true) }
 
         val messages = mutableListOf(
             ChatMessage(role = MessageRole.USER, content = task.task)
@@ -311,8 +308,11 @@ class SubagentRunner @Inject constructor(
 
                 for (toolCall in toolCalls) {
                     val result = toolExecutor.execute(
-                        toolName  = toolCall.name,
-                        arguments = toolCall.arguments
+                        toolName      = toolCall.name,
+                        arguments     = toolCall.arguments,
+                        // FIX 2.11: Pass workspacePath so run_shell inside subagents
+                        // gets the correct working directory (git, gradle, etc.)
+                        workspacePath = task.workspacePath
                     )
                     val resultContent = when (result) {
                         is ToolResult.Success              -> result.output

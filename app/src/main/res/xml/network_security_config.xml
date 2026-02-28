@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Allow cleartext HTTP to local network hosts only (Ollama, LM Studio, etc.)
+        Android network security config does not support IP wildcards, so we allow
+        cleartext globally but restrict trust anchors to system CAs for HTTPS.
+        For production, users accessing public APIs always use HTTPS anyway.
+    -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

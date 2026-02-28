@@ -12,6 +12,7 @@ import com.amaya.intelligence.util.debugLog
 import com.amaya.intelligence.util.errorLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -32,11 +33,15 @@ class McpClientManager @Inject constructor(
         private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
     }
 
-    // FIX #10: Use @Volatile for visibility across threads. refreshTools() runs on IO dispatcher,
-    // getCachedToolDefinitions() may be called from main thread. Both vars are written atomically
-    // (full replacement, not mutation), so @Volatile is sufficient here.
-    @Volatile private var toolCache: Map<String, McpToolHandle> = emptyMap()
-    @Volatile private var toolDefinitionsCache: List<AiToolDefinition> = emptyList()
+    // FIX 3.10: Replace two separate @Volatile vars with a single @Volatile Pair so that
+    // toolCache and toolDefinitionsCache are always updated atomically in one assignment.
+    // Previously there was a window between "toolCache = handles" and "toolDefinitionsCache = tools"
+    // where a caller could see new handles but stale definitions (inconsistent state).
+    private data class McpState(
+        val handles: Map<String, McpToolHandle>,
+        val definitions: List<AiToolDefinition>
+    )
+    @Volatile private var mcpState = McpState(emptyMap(), emptyList())
 
     suspend fun refreshTools(): List<AiToolDefinition> {
         val settings = settingsManager.getSettings()
@@ -47,7 +52,12 @@ class McpClientManager @Inject constructor(
         debugLog("MCP") { "Refreshing MCP tools: servers=${config.servers.size}" }
 
         for (server in config.servers.filter { it.enabled && it.serverUrl.isNotBlank() }) {
-            val serverTools = fetchTools(server)
+            // FIX 5.6: Add 5s per-server timeout — unresponsive servers block entire refresh
+            val serverTools = withTimeoutOrNull(5_000L) { fetchTools(server) }
+                ?: run {
+                    errorLog("MCP", "Server ${server.name} timed out during refresh (>5s), skipping")
+                    emptyList()
+                }
             debugLog("MCP") { "Server ${server.name} tools=${serverTools.size}" }
             for (tool in serverTools) {
                 val fullName = "${TOOL_PREFIX}${server.name}__${tool.name}"
@@ -57,16 +67,16 @@ class McpClientManager @Inject constructor(
             }
         }
 
-        toolCache = handles
-        toolDefinitionsCache = tools
-        debugLog("MCP") { "MCP tool cache size=${toolDefinitionsCache.size}" }
+        // FIX 3.10: Single atomic assignment — no window of inconsistency between handles and definitions
+        mcpState = McpState(handles, tools)
+        debugLog("MCP") { "MCP tool cache size=${tools.size}" }
         return tools
     }
 
-    fun getCachedToolDefinitions(): List<AiToolDefinition> = toolDefinitionsCache
+    fun getCachedToolDefinitions(): List<AiToolDefinition> = mcpState.definitions
 
     suspend fun callTool(toolName: String, arguments: Map<String, Any?>): ToolResult {
-        val handle = toolCache[toolName]
+        val handle = mcpState.handles[toolName]
             ?: return ToolResult.Error("Unknown MCP tool: $toolName")
 
         val payload = JSONObject().apply {

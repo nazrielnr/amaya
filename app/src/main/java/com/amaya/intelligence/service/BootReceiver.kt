@@ -24,11 +24,17 @@ class BootReceiver : BroadcastReceiver() {
             intent.action != "android.intent.action.QUICKBOOT_POWERON") return
 
         val pendingResult = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
+        // FIX 7: Use SupervisorJob so a failure in rescheduleAll() doesn't silently kill the scope.
+        // The scope is created locally and tied to pendingResult.finish() — no leak.
+        val job = kotlinx.coroutines.SupervisorJob()
+        CoroutineScope(Dispatchers.IO + job).launch {
             try {
                 cronJobRepository.rescheduleAll()
+            } catch (e: Exception) {
+                com.amaya.intelligence.util.errorLog("BootReceiver", "rescheduleAll failed: ${e.message}")
             } finally {
                 pendingResult.finish()
+                job.cancel()
             }
         }
     }

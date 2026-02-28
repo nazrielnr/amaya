@@ -44,8 +44,8 @@ class CommandValidator @Inject constructor(
             "npm", "node", "npx",
             // Android tools
             "adb", "aapt", "apksigner",
-            // Background task management commands
-            "task_status", "task_stop"
+            // FIX 1.10: Removed "task_status" and "task_stop" — no tool/service/script defines them.
+            // Adding unimplemented commands to the whitelist expands attack surface for no benefit.
         )
         
         /**
@@ -197,7 +197,25 @@ class CommandValidator @Inject constructor(
      */
     fun validatePath(path: String, isWrite: Boolean): ValidationResult {
         val normalizedPath = normalizePath(path)
-        
+
+        // FIX 3: Resolve symlinks to prevent symlink-based path traversal bypass.
+        // e.g. /sdcard/mylink → /data/data/... would bypass normalized path checks.
+        val canonicalPath = try {
+            java.io.File(normalizedPath).canonicalPath
+        } catch (_: Exception) { normalizedPath }
+        if (canonicalPath != normalizedPath) {
+            // Re-check canonical path against protected prefixes
+            for (protected in PROTECTED_PATHS) {
+                if (canonicalPath.startsWith(protected.path) &&
+                    !canonicalPath.startsWith("/data/data/${context.packageName}")) {
+                    return ValidationResult.Denied(
+                        "Symlink traversal into protected path detected: $path → $canonicalPath",
+                        path
+                    )
+                }
+            }
+        }
+
         // Check if it's our app's directory (always allowed)
         if (normalizedPath.startsWith(appDataDir)) {
             return ValidationResult.Allowed
@@ -293,7 +311,27 @@ class CommandValidator @Inject constructor(
                 val path = arguments["path"] as? String ?: ""
                 validatePath(path, isWrite = true)
             }
-            
+
+            // FIX 2.9: Added missing path validation for edit_file, transfer_file, find_files
+            "edit_file" -> {
+                val path = arguments["path"] as? String ?: ""
+                validatePath(path, isWrite = true)
+            }
+
+            "transfer_file" -> {
+                // Validate both source (read) and destination (write)
+                val source = arguments["source"] as? String ?: ""
+                val destination = arguments["destination"] as? String ?: ""
+                val srcResult = validatePath(source, isWrite = false)
+                if (srcResult !is ValidationResult.Allowed) return srcResult
+                validatePath(destination, isWrite = true)
+            }
+
+            "find_files" -> {
+                val path = arguments["path"] as? String ?: ""
+                validatePath(path, isWrite = false)
+            }
+
             else -> ValidationResult.Allowed
         }
     }
@@ -303,11 +341,37 @@ class CommandValidator @Inject constructor(
     // ========================================================================
     
     private fun extractBaseCommand(command: String): String {
-        // Handle env vars at the start (e.g., "VAR=value command")
-        val withoutEnv = command.replace(Regex("""^\s*\w+=\S+\s+"""), "")
-        
-        // Get first word
-        return withoutEnv.split(Regex("""\s+""")).firstOrNull() ?: ""
+        // FIX 3.9: Strip all env var prefixes (A=1 B=2 cmd → cmd)
+        var trimmed = command.trim()
+        while (trimmed.matches(Regex("""\w+=\S+\s+.*"""))) {
+            trimmed = trimmed.substringAfter(" ").trim()
+        }
+        val base = trimmed.split(Regex("""\s+""")).firstOrNull() ?: ""
+
+        // FIX 9: Block "sh -c" / "bash -c" metacharacter bypass.
+        // "sh -c 'rm -rf /'" passes base="sh" (whitelisted) but executes blacklisted content.
+        // Detect -c flag and validate the shell argument string too.
+        val tokens = trimmed.split(Regex("""\s+"""))
+        val shell = setOf("sh", "bash", "dash", "zsh", "ash")
+        if (base in shell) {
+            val cIdx = tokens.indexOf("-c")
+            if (cIdx >= 0 && cIdx + 1 < tokens.size) {
+                // Extract the shell command string and re-validate it
+                val shellCmd = tokens.drop(cIdx + 1).joinToString(" ")
+                    .trim('"', '\'')
+                val innerBase = extractBaseCommand(shellCmd)
+                if (innerBase !in ALWAYS_ALLOWED) {
+                    // Return a sentinel that will fail whitelist check
+                    return "__BLOCKED_SHELL_INJECTION__"
+                }
+                // Also check blacklist patterns on the inner command
+                if (ALWAYS_BLOCKED.any { shellCmd.split(Regex("""\s+""")).firstOrNull() == it }) {
+                    return "__BLOCKED_SHELL_INJECTION__"
+                }
+            }
+        }
+
+        return base
     }
     
     private fun validateConditionalCommand(

@@ -232,7 +232,8 @@ class ReadFileTool @Inject constructor(
                             lines.take(maxLines).forEach { appendLine(it) }
                             appendLine("... (${lines.size - maxLines} more lines)")
                         } else {
-                            appendLine(file.readText(Charsets.UTF_8))
+                            // FIX 2.7: lines already read — don't call readText() again (double I/O, race risk)
+                            appendLine(lines.joinToString("\n"))
                         }
                     } catch (e: Exception) { appendLine("ERROR: ${e.message}") }
                     appendLine()

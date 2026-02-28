@@ -4,7 +4,6 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -34,7 +33,9 @@ import javax.inject.Singleton
 class AnthropicProvider @Inject constructor(
     private val httpClient: OkHttpClient,
     private val moshi: Moshi,
-    private val settingsProvider: () -> AiSettings
+    private val settingsProvider: () -> AiSettings,
+    // FIX 2.2: Inject settingsManager to look up per-agent API key via getAgentApiKey(agentId)
+    private val settingsManager: AiSettingsManager
 ) : AiProvider {
     
     companion object {
@@ -48,14 +49,20 @@ class AnthropicProvider @Inject constructor(
     override val supportedModels = emptyList<String>()
     
     override fun isConfigured(): Boolean {
-        return settingsProvider().anthropicApiKey.isNotBlank()
+        // FIX 2.2: Check agent key via per-agent storage, not legacy anthropicApiKey field
+        val settings = settingsProvider()
+        val agentKey = settingsManager.getAgentApiKey(settings.activeAgentId)
+        return agentKey.isNotBlank()
     }
     
     override suspend fun chat(request: ChatRequest): Flow<ChatResponse> = callbackFlow {
-        val settings = settingsProvider()
+        // FIX: Use agentId from request (resolved by AiRepository) — not settings.activeAgentId
+        // which may be stale if the user switched agents after the last DataStore write.
+        val agentId = request.agentId.ifBlank { settingsProvider().activeAgentId }
+        val apiKey = settingsManager.getAgentApiKey(agentId)
         
-        if (settings.anthropicApiKey.isBlank()) {
-            trySend(ChatResponse.Error("Anthropic API key not configured", "AUTH_ERROR"))
+        if (apiKey.isBlank()) {
+            trySend(ChatResponse.Error("Anthropic API key not configured for active agent", "AUTH_ERROR"))
             close()
             return@callbackFlow
         }
@@ -66,7 +73,7 @@ class AnthropicProvider @Inject constructor(
         
         val httpRequest = Request.Builder()
             .url("$BASE_URL/messages")
-            .addHeader("x-api-key", settings.anthropicApiKey)
+            .addHeader("x-api-key", apiKey)
             .addHeader("anthropic-version", API_VERSION)
             .addHeader("content-type", "application/json")
             .post(jsonBody.toRequestBody("application/json".toMediaType()))
@@ -143,8 +150,12 @@ class AnthropicProvider @Inject constructor(
                             }
                             
                             "message_delta" -> {
+                                // FIX 3.2: message_delta carries output_tokens usage — emit Done with usage
+                                // so AiRepository can track token consumption in streaming mode.
                                 event.usage?.let { usage ->
-                                    // Usage info comes at the end
+                                    trySend(ChatResponse.Done(
+                                        usage = TokenUsage(usage.inputTokens, usage.outputTokens)
+                                    ))
                                 }
                             }
                             
@@ -288,14 +299,8 @@ class AnthropicProvider @Inject constructor(
         )
     }
     
-    private fun parseJsonArgs(json: String): Map<String, Any?> {
-        return try {
-            val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
-            moshi.adapter<Map<String, Any?>>(type).fromJson(json) ?: emptyMap()
-        } catch (e: Exception) {
-            emptyMap()
-        }
-    }
+    // FIX 4.1: Replaced with shared extension moshi.parseJsonArgs() from AiProvider.kt
+    private fun parseJsonArgs(json: String): Map<String, Any?> = moshi.parseJsonArgs(json)
     
     private class ToolCallBuilder(val id: String, val name: String) {
         val jsonBuilder = StringBuilder()

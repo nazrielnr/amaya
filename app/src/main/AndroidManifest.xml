@@ -40,6 +40,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Amaya"
         android:requestLegacyExternalStorage="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:extractNativeLibs="true"
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="34">
@@ -130,9 +131,12 @@
         </receiver>
 
         <!-- BroadcastReceiver to reschedule alarms after reboot -->
+        <!-- FIX 2: android:exported="true" is required for BOOT_COMPLETED receivers (system sends it),
+             but restrict with android:permission so only the system can trigger it. -->
         <receiver
             android:name=".service.BootReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />

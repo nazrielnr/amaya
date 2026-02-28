@@ -71,9 +71,23 @@ class UpdateMemoryTool @Inject constructor(
         }
     }
 
+    companion object {
+        // FIX 8: Cap MEMORY.md at 512KB to prevent unbounded file growth.
+        // At ~500 bytes per entry, this allows ~1000 long-term memories.
+        private const val MAX_MEMORY_SIZE_BYTES = 512 * 1024
+    }
+
     private fun writeLongTermMemory(content: String, section: String): ToolResult {
         return try {
             val current = personaRepository.readFile("MEMORY.md")
+            // FIX 8: Refuse write if file already exceeds size cap
+            if (current.length > MAX_MEMORY_SIZE_BYTES) {
+                return ToolResult.Error(
+                    "MEMORY.md has reached the size limit (512KB). " +
+                    "Please ask the user to review and trim old entries before adding more.",
+                    ErrorType.VALIDATION_ERROR
+                )
+            }
             val sectionHeader = "## $section"
             val entry = "- $content"
 

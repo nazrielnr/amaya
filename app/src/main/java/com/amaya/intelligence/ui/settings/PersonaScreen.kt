@@ -27,7 +27,11 @@ fun PersonaScreen(
     personaRepository: PersonaRepository
 ) {
     val scope = rememberCoroutineScope()
-    var mode by remember { mutableStateOf(personaRepository.getMode()) }
+    // FIX 5.7: getMode() is now suspend — use produceState to collect asynchronously
+    val modeState by produceState(initialValue = PersonaMode.SIMPLE) {
+        value = personaRepository.getMode()
+    }
+    var mode by remember(modeState) { mutableStateOf(modeState) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Initialize empty files with default content on first launch
@@ -118,7 +122,11 @@ private fun SimplePersonaEditor(
     onSaved: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var persona by remember { mutableStateOf(personaRepository.getSimplePersona()) }
+    // FIX 5.7: getSimplePersona() is now suspend — use produceState
+    val personaState by produceState(initialValue = SimplePersona()) {
+        value = personaRepository.getSimplePersona()
+    }
+    var persona by remember(personaState) { mutableStateOf(personaState) }
 
     Surface(
         shape = MaterialTheme.shapes.large,

@@ -6,12 +6,14 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
+import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -19,6 +21,8 @@ import org.json.JSONObject
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+
+// FIX 1.3: Removed unused import androidx.security.crypto.MasterKeys (replaced by MasterKey)
 
 /**
  * A single agent / API profile the user has configured.
@@ -45,43 +49,39 @@ class AiSettingsManager @Inject constructor(
 ) {
 
     companion object {
-        private val KEY_ACTIVE_PROVIDER = stringPreferencesKey("active_provider")
+        // KEY_ACTIVE_PROVIDER: legacy key kept in DataStore for backwards compat (not read by new code)
         private val KEY_ACTIVE_MODEL    = stringPreferencesKey("active_model")
-        private val KEY_OPENAI_BASE_URL = stringPreferencesKey("openai_base_url")
         private val KEY_THEME           = stringPreferencesKey("theme")
         private val KEY_AGENT_CONFIGS   = stringPreferencesKey("agent_configs")
         private val KEY_ACTIVE_AGENT_ID = stringPreferencesKey("active_agent_id")
         private val KEY_MCP_CONFIG_JSON = stringPreferencesKey("mcp_config_json")
 
-        private const val ENC_OPENAI_KEY        = "openai_api_key"
-        private const val ENC_ANTHROPIC_KEY     = "anthropic_api_key"
-        private const val ENC_GEMINI_KEY        = "gemini_api_key"
+        // Per-agent encrypted API key storage: key = "agent_key_" + agentId
         private const val ENC_AGENT_KEY_PREFIX  = "agent_key_"
 
         const val MCP_FIXED_PATH = "/storage/emulated/0/Amaya/mcp.json"
     }
 
     private val encryptedPrefs: SharedPreferences by lazy {
-        val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+        // FIX 5.8: Use non-deprecated MasterKey.Builder API (MasterKeys was deprecated in security-crypto 1.1.0-alpha)
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
         EncryptedSharedPreferences.create(
-            "amaya_secure_prefs",
-            masterKeyAlias,
             context,
+            "amaya_secure_prefs",
+            masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
     }
 
-    fun getSettings(): AiSettings = runBlocking { settingsFlow.first() }
-
+    // FIX 3.1: Cache the last emitted settings so getSettings() rarely needs runBlocking.
+    // IMPORTANT: settingsFlow must be declared BEFORE init{} so it is non-null when the
+    // coroutine starts. Kotlin initializes properties top-to-bottom, so declaration order matters.
     val settingsFlow: Flow<AiSettings> = context.dataStore.data.map { prefs ->
         val configs = parseAgentConfigs(prefs[KEY_AGENT_CONFIGS] ?: "[]")
         AiSettings(
-            openaiApiKey    = encryptedPrefs.getString(ENC_OPENAI_KEY, "") ?: "",
-            anthropicApiKey = encryptedPrefs.getString(ENC_ANTHROPIC_KEY, "") ?: "",
-            geminiApiKey    = encryptedPrefs.getString(ENC_GEMINI_KEY, "") ?: "",
-            openaiBaseUrl   = prefs[KEY_OPENAI_BASE_URL] ?: "",
-            activeProvider  = prefs[KEY_ACTIVE_PROVIDER] ?: ProviderType.OPENAI.name,
             activeModel     = prefs[KEY_ACTIVE_MODEL] ?: "",
             theme           = prefs[KEY_THEME] ?: "system",
             agentConfigs    = configs,
@@ -90,20 +90,24 @@ class AiSettingsManager @Inject constructor(
         )
     }
 
+    // FIX 3.1: Cache declared AFTER settingsFlow so it is non-null when init{} coroutine starts.
+    @Volatile private var cachedSettings: AiSettings? = null
+
+    init {
+        // Warm the cache on a background thread — settingsFlow is guaranteed non-null here
+        CoroutineScope(Dispatchers.IO).launch {
+            settingsFlow.collect { cachedSettings = it }
+        }
+    }
+
+    fun getSettings(): AiSettings =
+        cachedSettings ?: runBlocking { settingsFlow.first() }.also { cachedSettings = it }
+
     /** Retrieve encrypted API key for a specific agent config ID */
     fun getAgentApiKey(agentId: String): String =
         encryptedPrefs.getString("$ENC_AGENT_KEY_PREFIX$agentId", "") ?: ""
 
     // ── Write ────────────────────────────────────────────────────────
-
-    fun setApiKey(provider: ProviderType, apiKey: String) {
-        val key = when (provider) {
-            ProviderType.OPENAI    -> ENC_OPENAI_KEY
-            ProviderType.ANTHROPIC -> ENC_ANTHROPIC_KEY
-            ProviderType.GEMINI    -> ENC_GEMINI_KEY
-        }
-        encryptedPrefs.edit().putString(key, apiKey).apply()
-    }
 
     /** Add or update an agent config and store its API key encrypted */
     suspend fun saveAgentConfig(config: AgentConfig, apiKey: String) {
@@ -138,27 +142,12 @@ class AiSettingsManager @Inject constructor(
         }
     }
 
-    suspend fun setOpenAiSettings(apiKey: String, baseUrl: String = "") {
-        setApiKey(ProviderType.OPENAI, apiKey)
-        context.dataStore.edit { prefs -> prefs[KEY_OPENAI_BASE_URL] = baseUrl }
-    }
-
-    suspend fun setAnthropicApiKey(apiKey: String) = setApiKey(ProviderType.ANTHROPIC, apiKey)
-    suspend fun setGeminiApiKey(apiKey: String)    = setApiKey(ProviderType.GEMINI, apiKey)
-
-    suspend fun setActiveProvider(provider: ProviderType, model: String) {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_ACTIVE_PROVIDER] = provider.name
-            prefs[KEY_ACTIVE_MODEL]    = model
-        }
-    }
+    // FIX 1.1: Removed setAnthropicApiKey() and setGeminiApiKey() — dead wrappers around setApiKey().
+    // FIX 1.2: Removed setActiveProvider() and setBaseUrl() — dead code from pre-agent-config era.
+    //          Provider is now resolved from AgentConfig.providerType, not from activeProvider DataStore key.
 
     suspend fun setActiveModel(model: String) {
         context.dataStore.edit { prefs -> prefs[KEY_ACTIVE_MODEL] = model }
-    }
-
-    suspend fun setBaseUrl(baseUrl: String) {
-        context.dataStore.edit { prefs -> prefs[KEY_OPENAI_BASE_URL] = baseUrl }
     }
 
     suspend fun setTheme(theme: String) {
@@ -222,11 +211,7 @@ class AiSettingsManager @Inject constructor(
 }
 
 data class AiSettings(
-    val openaiApiKey:    String          = "",
-    val anthropicApiKey: String          = "",
-    val geminiApiKey:    String          = "",
-    val openaiBaseUrl:   String          = "",
-    val activeProvider:  String          = ProviderType.OPENAI.name,
+    // activeModel: fallback model ID if no agent config found (rarely used)
     val activeModel:     String          = "",
     val theme:           String          = "system",
     val agentConfigs:    List<AgentConfig> = emptyList(),

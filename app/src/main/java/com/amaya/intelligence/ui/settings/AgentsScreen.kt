@@ -202,6 +202,12 @@ fun AgentsScreen(
                         editingConfig = null
                         scope.launch {
                             aiSettingsManager.saveAgentConfig(updatedConfig, key)
+                            // If the edited agent is currently active, sync KEY_ACTIVE_MODEL
+                            // so AiRepository fallback and InvokeSubagentsTool always see
+                            // the latest modelId — even before the user sends a new message.
+                            if (updatedConfig.id == settings.activeAgentId) {
+                                aiSettingsManager.setActiveAgent(updatedConfig.id, updatedConfig.modelId)
+                            }
                             snackbarHostState.showSnackbar("Agent saved ✓")
                         }
                     },
@@ -423,8 +429,8 @@ private fun AgentEditSheet(
             }
         )
 
-        // Base URL (only for CUSTOM)
-        if (providerType == "CUSTOM") {
+        // Base URL (only for OPENAI-compatible / CUSTOM — Anthropic and Gemini use hardcoded URLs)
+        if (providerType == "OPENAI" || providerType == "CUSTOM") {
             OutlinedTextField(
                 value = baseUrl,
                 onValueChange = { baseUrl = it },
@@ -465,27 +471,47 @@ private fun AgentEditSheet(
             supportingText = { Text("Max output tokens (default: 8192, Anthropic supports up to 16000)") }
         )
 
-        // Enabled toggle
-        if (modelId.isNotBlank()) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text("Enabled", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        if (enabled) "Agent available to AI" else "Agent will be skipped",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(checked = enabled, onCheckedChange = { enabled = it })
+        // Enabled toggle — always shown regardless of modelId
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text("Enabled", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    if (enabled) "Agent available to AI" else "Agent will be skipped",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
+            Switch(checked = enabled, onCheckedChange = { enabled = it })
         }
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+        // Validation errors
+        val nameError    = name.trim().isBlank()
+        val modelIdError = modelId.trim().isBlank()
+        if (nameError || modelIdError) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (nameError) {
+                    Text(
+                        "• Agent name is required",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                if (modelIdError) {
+                    Text(
+                        "• Model ID is required (e.g. gpt-4o, claude-sonnet-4-20250514)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
 
         // Save + Delete row
         Row(
@@ -507,11 +533,12 @@ private fun AgentEditSheet(
             Spacer(Modifier.weight(1f))
             Button(
                 onClick = {
+                    // baseUrl is only relevant for CUSTOM (OpenAI-compat) providers.
+                    // ANTHROPIC and GEMINI providers always use their own hardcoded base URLs
+                    // so we store empty string for them to avoid confusion.
                     val finalBaseUrl = when (providerType) {
-                        "OPENAI"    -> "https://api.openai.com/v1"
-                        "ANTHROPIC" -> "https://api.anthropic.com/v1"
-                        "GEMINI"    -> "https://generativelanguage.googleapis.com/v1beta"
-                        else        -> baseUrl.trim()
+                        "ANTHROPIC", "GEMINI" -> ""
+                        else -> baseUrl.trim() // OPENAI or CUSTOM
                     }
                     onSave(
                         config.copy(
@@ -525,7 +552,8 @@ private fun AgentEditSheet(
                         key.trim()
                     )
                 },
-                enabled = name.isNotBlank()
+                // Both name and modelId are required to save
+                enabled = name.isNotBlank() && modelId.isNotBlank()
             ) {
                 Icon(Icons.Default.Save, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))

@@ -79,19 +79,20 @@ class ToolExecutor @Inject constructor(
                 ErrorType.VALIDATION_ERROR
             )
 
-        // Wire up InvokeSubagentsTool with event emitter for live progress
-        if (tool is InvokeSubagentsTool && onEvent != null) {
-            tool.eventEmitter = onEvent
-            tool.currentToolCallId = toolCallId
-        }
-        
-        // Auto-inject workspace as default working_dir for run_shell
-        val finalArguments = if (toolName == "run_shell" && 
-            workspacePath != null && 
-            arguments["working_dir"] == null) {
-            arguments + ("working_dir" to workspacePath)
-        } else {
-            arguments
+        // FIX 1.6/3.6: Pass eventEmitter and toolCallId via arguments map (per-call context)
+        // instead of mutating mutable singleton fields on InvokeSubagentsTool.
+        // Keys prefixed with "__" to avoid collision with real tool arguments.
+        val finalArguments = buildMap<String, Any?> {
+            putAll(arguments)
+            // Auto-inject workspace as default working_dir for run_shell
+            if (toolName == "run_shell" && workspacePath != null && arguments["working_dir"] == null) {
+                put("working_dir", workspacePath)
+            }
+            // Inject emitter context for invoke_subagents
+            if (toolName == "invoke_subagents") {
+                if (onEvent != null) put("__eventEmitter", onEvent)
+                if (toolCallId != null) put("__toolCallId", toolCallId)
+            }
         }
         
         // Pre-validate the tool call
@@ -359,7 +360,31 @@ data class ToolParameter(
     val type: String,
     val description: String,
     val required: Boolean = true,
-    val default: Any? = null,
+    // FIX 1.7: Removed `default` field — no AI provider serializes it in tool definitions.
+    // It was misleading dead data. Re-add only if a provider explicitly supports it.
     val enum: List<String>? = null,
     val items: String? = null  // For array types: item type (e.g., "string")
 )
+
+// FIX 4.3: Shared extension to convert ToolDefinition → AiToolDefinition.
+// Eliminates identical mapping code duplicated in AiRepository.buildToolDefinitions()
+// and SubagentRunner.runInternal(). Single source of truth for this conversion.
+fun ToolDefinition.toAiToolDefinition(truncateDesc: Boolean = false): com.amaya.intelligence.data.remote.api.AiToolDefinition {
+    fun String.maybeTruncate() = if (truncateDesc && length > 1023) take(1023) + "…" else this
+    return com.amaya.intelligence.data.remote.api.AiToolDefinition(
+        name = name,
+        description = description.maybeTruncate(),
+        parameters = com.amaya.intelligence.data.remote.api.AiToolParameters(
+            type = "object",
+            properties = parameters.associate { param ->
+                param.name to com.amaya.intelligence.data.remote.api.AiToolProperty(
+                    type = param.type,
+                    description = param.description.maybeTruncate(),
+                    enum = param.enum,
+                    items = param.items?.let { com.amaya.intelligence.data.remote.api.AiToolPropertyItems(it) }
+                )
+            },
+            required = parameters.filter { it.required }.map { it.name }
+        )
+    )
+}

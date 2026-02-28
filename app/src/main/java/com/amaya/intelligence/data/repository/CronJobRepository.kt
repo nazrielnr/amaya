@@ -5,7 +5,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
+import com.amaya.intelligence.util.debugLog
+import com.amaya.intelligence.util.errorLog
 import com.amaya.intelligence.data.local.db.dao.CronJobDao
 import com.amaya.intelligence.data.local.db.entity.CronJobEntity
 import com.amaya.intelligence.data.local.db.entity.CronRecurringType
@@ -32,7 +33,7 @@ class CronJobRepository @Inject constructor(
     /** Add a new cron job and schedule its alarm. */
     suspend fun addJob(job: CronJobEntity): Long {
         val id = dao.insertJob(job)
-        Log.d(TAG, "addJob: inserted id=$id, title=${job.title}, trigger=${job.triggerTimeMillis}, active=${job.isActive}")
+        debugLog(TAG) { "addJob: inserted id=$id, title=${job.title}, trigger=${job.triggerTimeMillis}, active=${job.isActive}" }
         if (job.isActive) scheduleAlarm(job.copy(id = id))
         return id
     }
@@ -60,25 +61,25 @@ class CronJobRepository @Inject constructor(
     /** Called by ReminderWorker after firing. Updates trigger for recurring jobs. */
     suspend fun onJobFired(id: Long) {
         val job = dao.getJobById(id) ?: return
-        Log.d(TAG, "onJobFired: id=$id, type=${job.recurringType}, fireCount=${job.fireCount}")
+        debugLog(TAG) { "onJobFired: id=$id, type=${job.recurringType}, fireCount=${job.fireCount}" }
         // Always increment fire count
         dao.incrementFireCount(id)
         when (job.recurringType) {
             CronRecurringType.ONCE -> {
                 dao.setActive(id, false)
-                Log.d(TAG, "onJobFired: ONCE job $id marked inactive")
+                debugLog(TAG) { "onJobFired: ONCE job $id marked inactive" }
             }
             CronRecurringType.DAILY -> {
                 val nextTime = job.triggerTimeMillis + 24 * 60 * 60 * 1000L
                 dao.updateTriggerTime(id, nextTime)
                 scheduleAlarm(job.copy(triggerTimeMillis = nextTime))
-                Log.d(TAG, "onJobFired: DAILY job $id rescheduled to $nextTime")
+                debugLog(TAG) { "onJobFired: DAILY job $id rescheduled to $nextTime" }
             }
             CronRecurringType.WEEKLY -> {
                 val nextTime = job.triggerTimeMillis + 7 * 24 * 60 * 60 * 1000L
                 dao.updateTriggerTime(id, nextTime)
                 scheduleAlarm(job.copy(triggerTimeMillis = nextTime))
-                Log.d(TAG, "onJobFired: WEEKLY job $id rescheduled to $nextTime")
+                debugLog(TAG) { "onJobFired: WEEKLY job $id rescheduled to $nextTime" }
             }
         }
     }
@@ -102,7 +103,7 @@ class CronJobRepository @Inject constructor(
         val intent = makePendingIntent(job) ?: return
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-                Log.w(TAG, "scheduleAlarm: exact alarms not permitted, using inexact for job ${job.id}")
+                debugLog(TAG, "scheduleAlarm: exact alarms not permitted, using inexact for job ${job.id}")
                 alarmManager.set(AlarmManager.RTC_WAKEUP, job.triggerTimeMillis, intent)
             } else {
                 alarmManager.setExactAndAllowWhileIdle(
@@ -110,10 +111,10 @@ class CronJobRepository @Inject constructor(
                     job.triggerTimeMillis,
                     intent
                 )
-                Log.d(TAG, "scheduleAlarm: exact alarm set for job ${job.id} at ${job.triggerTimeMillis} (in ${(job.triggerTimeMillis - System.currentTimeMillis()) / 1000}s)")
+                debugLog(TAG) { "scheduleAlarm: exact alarm set for job ${job.id} at ${job.triggerTimeMillis} (in ${(job.triggerTimeMillis - System.currentTimeMillis()) / 1000}s)" }
             }
         } catch (e: SecurityException) {
-            Log.e(TAG, "scheduleAlarm: SecurityException for job ${job.id}, falling back to inexact", e)
+            errorLog(TAG, "scheduleAlarm: SecurityException for job ${job.id}, falling back to inexact: ${e.message}")
             alarmManager.set(AlarmManager.RTC_WAKEUP, job.triggerTimeMillis, intent)
         }
     }
@@ -132,9 +133,12 @@ class CronJobRepository @Inject constructor(
             putExtra("title", job.title)
             putExtra("prompt", job.prompt)
         }
+        // FIX 1: job.id.toInt() overflows for large IDs (Long > Int.MAX_VALUE).
+        // Use stable hash that preserves uniqueness within Int range.
+        val requestCode = (job.id and 0x7FFFFFFF).toInt()
         return PendingIntent.getBroadcast(
             context,
-            job.id.toInt(),
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

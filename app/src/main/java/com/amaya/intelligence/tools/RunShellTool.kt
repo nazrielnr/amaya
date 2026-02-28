@@ -7,7 +7,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
@@ -125,12 +124,11 @@ class RunShellTool @Inject constructor(
             val env = arguments["env"] as? Map<String, String> ?: emptyMap()
             
             try {
-                // FIX #3: Only use one timeout mechanism (withTimeout via coroutine cancellation).
-                // The inner process.waitFor also has timeout, but the real guard is the coroutine
-                // cancellation which will interrupt blocking IO via thread interrupt.
-                val result = withTimeout(timeoutMs) {
-                    runCommand(command, workingDir, env, timeoutMs)
-                }
+                // FIX 4.6: Removed outer withTimeout() — double timeout was redundant and caused
+                // process to not be destroyed immediately on coroutine cancellation.
+                // runCommand() uses process.waitFor(timeoutMs) + destroyForcibly() internally,
+                // which is the correct mechanism for subprocess timeout handling.
+                val result = runCommand(command, workingDir, env, timeoutMs)
                 result
             } catch (e: TimeoutCancellationException) {
                 ToolResult.Error(

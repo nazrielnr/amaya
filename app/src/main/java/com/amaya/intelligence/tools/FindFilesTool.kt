@@ -200,18 +200,21 @@ class FindFilesTool @Inject constructor(
     }
     
     private fun globToRegex(glob: String): Pattern {
+        // FIX 10: Properly escape all regex metacharacters before translating glob syntax.
+        // Old code passed literal chars like '+', '(', '$' etc. directly into regex, causing
+        // PatternSyntaxException or wrong matches (e.g. "file+.kt" glob matched "fileXXX.kt").
         val regex = buildString {
             append("^")
             var i = 0
             while (i < glob.length) {
                 when (val c = glob[i]) {
-                    '*' -> append(".*")
-                    '?' -> append(".")
-                    '.' -> append("\\.")
-                    '{' -> append("(")
-                    '}' -> append(")")
-                    ',' -> append("|")
-                    else -> append(c)
+                    '*'  -> append(".*")
+                    '?'  -> append(".")
+                    '{'  -> append("(")
+                    '}'  -> append(")")
+                    ','  -> append("|")
+                    // Escape all other regex metacharacters
+                    else -> append(Pattern.quote(c.toString()))
                 }
                 i++
             }

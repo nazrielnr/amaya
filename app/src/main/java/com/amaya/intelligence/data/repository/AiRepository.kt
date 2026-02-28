@@ -5,16 +5,15 @@ import com.amaya.intelligence.data.remote.mcp.McpClientManager
 import com.amaya.intelligence.tools.ConfirmationRequest
 import com.amaya.intelligence.tools.ToolExecutor
 import com.amaya.intelligence.tools.ToolResult
+import com.amaya.intelligence.tools.toAiToolDefinition
 import com.amaya.intelligence.util.debugLog
 import com.amaya.intelligence.util.errorLog
 
+import com.amaya.intelligence.di.ApplicationScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,13 +42,11 @@ class AiRepository @Inject constructor(
     private val mcpToolExecutor: com.amaya.intelligence.data.remote.mcp.McpToolExecutor,
     private val fileIndexRepository: FileIndexRepository,
     private val personaRepository: PersonaRepository,
-    private val mcpClientManager: McpClientManager
+    private val mcpClientManager: McpClientManager,
+    // FIX 5.11: Inject application-scoped coroutine scope — no more manual SupervisorJob leak
+    @ApplicationScope private val repoScope: CoroutineScope
 ) {
-    private val repoJob  = SupervisorJob()
-    private val repoScope = CoroutineScope(repoJob + Dispatchers.IO)
-
-    /** Call this on app shutdown to cancel background coroutines. */
-    fun close() { repoJob.cancel() }
+    // FIX 5.11: Removed manual repoJob/repoScope and close() — lifecycle managed by Hilt ApplicationScope
 
     init {
         // Watch for MCP config changes and refresh tools automatically
@@ -70,41 +67,20 @@ class AiRepository @Inject constructor(
         }
     }
     
+    // FIX 1.4: Removed getProviders() — dead code, no ViewModel/UI calls it (pre-agent era).
+    // FIX 1.5/2.1: Removed getActiveProvider() — it read stale activeProvider DataStore field.
+    //   Provider is now resolved from AgentConfig.providerType inline in chat().
+
     /**
-     * Get list of all providers with their status.
+     * Resolve the AiProvider from an AgentConfig, falling back to DataStore activeProvider.
      */
-    fun getProviders(): List<ProviderInfo> {
-        return listOf(
-            ProviderInfo(
-                type = ProviderType.ANTHROPIC,
-                name = anthropicProvider.name,
-                isConfigured = anthropicProvider.isConfigured(),
-                models = anthropicProvider.supportedModels
-            ),
-            ProviderInfo(
-                type = ProviderType.OPENAI,
-                name = openAiProvider.name,
-                isConfigured = openAiProvider.isConfigured(),
-                models = openAiProvider.supportedModels
-            ),
-            ProviderInfo(
-                type = ProviderType.GEMINI,
-                name = geminiProvider.name,
-                isConfigured = geminiProvider.isConfigured(),
-                models = geminiProvider.supportedModels
-            )
-        )
-    }
-    
-    /**
-     * Get the currently active provider.
-     */
-    fun getActiveProvider(): AiProvider {
-        val settings = settingsManager.getSettings()
-        return when (ProviderType.valueOf(settings.activeProvider)) {
+    private fun resolveProvider(agentConfig: AgentConfig): AiProvider {
+        val type = runCatching { ProviderType.valueOf(agentConfig.providerType) }
+            .getOrElse { ProviderType.OPENAI }
+        return when (type) {
             ProviderType.ANTHROPIC -> anthropicProvider
-            ProviderType.OPENAI -> openAiProvider
-            ProviderType.GEMINI -> geminiProvider
+            ProviderType.OPENAI    -> openAiProvider
+            ProviderType.GEMINI    -> geminiProvider
         }
     }
     
@@ -143,9 +119,26 @@ class AiRepository @Inject constructor(
 
         // Resolve agent config — use activeAgentId from UI (most up-to-date)
         val agentId = activeAgentId ?: settings.activeAgentId
-        val agentConfig = settings.agentConfigs.find { it.id == agentId }
+        // Only use enabled agents — if selected agent is disabled, find first enabled one
+        val agentConfig = settings.agentConfigs.find { it.id == agentId && it.enabled }
+            ?: settings.agentConfigs.firstOrNull { it.enabled }
 
-        val provider = getActiveProvider()
+        // Block chat if no enabled agent exists
+        if (agentConfig == null) {
+            send(AgentEvent.Error("No AI agent configured. Please add and enable an agent in Settings → Agents.", retryable = false))
+            send(AgentEvent.Done)
+            return@channelFlow
+        }
+
+        // Block chat if model ID is blank
+        if (agentConfig.modelId.isBlank() && selectedModel.isNullOrBlank()) {
+            send(AgentEvent.Error("No model ID configured for agent \"${agentConfig.name}\". Please edit the agent in Settings → Agents and add a Model ID.", retryable = false))
+            send(AgentEvent.Done)
+            return@channelFlow
+        }
+
+        // FIX 2.1: Resolve provider from agentConfig (guaranteed non-null here)
+        val provider = resolveProvider(agentConfig)
         // Priority: selectedModel from UI (always up-to-date) > agentConfig.modelId > activeModel in DataStore
         // Never fall through to agentConfig if selectedModel is explicitly set from UI
         val model = when {
@@ -181,12 +174,14 @@ class AiRepository @Inject constructor(
             }
             
             val request = ChatRequest(
-                model      = model,
-                messages   = messages,
+                model        = model,
+                messages     = messages,
                 systemPrompt = systemPrompt,
-                tools      = tools,
-                maxTokens  = agentConfig?.maxTokens ?: 8192,
-                stream     = true
+                tools        = tools,
+                maxTokens    = agentConfig.maxTokens,
+                stream       = true,
+                // Pass resolved agentId so providers use the correct API key
+                agentId      = agentConfig.id
             )
             
             var textBuffer = StringBuilder()
@@ -315,16 +310,9 @@ class AiRepository @Inject constructor(
         val personaFragment = personaRepository.buildPromptFragment()
         val isProMode = personaRepository.getMode() == com.amaya.intelligence.data.repository.PersonaMode.PRO
 
-        val basePrompt = if (isProMode && personaFragment.isNotBlank()) {
-            // Pro mode: MD files define identity/rules — base provides only environment facts
-            """
-            Current date: $dateStr | Time: $timeStr | Timezone: $tz
-            
-            ENVIRONMENT:
-            - Platform: Android (mobile device)
-            - Shell commands available via run_shell tool
-            - Internal and external storage access
-            
+        // FIX 4.5: Extract shared tools section to eliminate ~40 lines of duplication
+        // between Pro mode and Simple mode prompt branches.
+        val sharedToolsSection = """
             TOOLS — MEMORY & REMINDERS:
             - Use update_memory(content, target="daily") to log important events from this session
             - Use update_memory(content, target="long") to persist user preferences/facts permanently
@@ -347,6 +335,19 @@ class AiRepository @Inject constructor(
             
             FALLBACK STRATEGY:
             If a native tool call fails, try using the run_shell tool as an alternative.
+        """.trimIndent()
+
+        val basePrompt = if (isProMode && personaFragment.isNotBlank()) {
+            // Pro mode: MD files define identity/rules — base provides only environment facts
+            """
+            Current date: $dateStr | Time: $timeStr | Timezone: $tz
+            
+            ENVIRONMENT:
+            - Platform: Android (mobile device)
+            - Shell commands available via run_shell tool
+            - Internal and external storage access
+            
+            $sharedToolsSection
             $personaFragment
             $workspaceContext
             """.trimIndent()
@@ -372,28 +373,7 @@ class AiRepository @Inject constructor(
             5. Keep responses concise but informative
             6. When writing code, follow the project's existing style
             
-            TOOLS — MEMORY & REMINDERS:
-            - Use update_memory(content, target="daily") to log important events from this session
-            - Use update_memory(content, target="long") to persist user preferences/facts permanently
-            - Use create_reminder(title, message, datetime, conversation_id=$conversationId) when user asks to be reminded — ALWAYS pass conversation_id so replies come back to this chat
-            
-            TOOLS — TASK PROGRESS (update_todo):
-            - For any multi-step task, call update_todo at the START with merge=false to set your full plan.
-            - Each item needs: id (int, 1-based), status ("pending"/"in_progress"/"completed"), content (imperative label), active_form (present-continuous label shown when collapsed, optional).
-            - As you work, call update_todo with merge=true to update individual item statuses by id.
-            - This shows the user a live progress bar above the chat input — keep it up to date.
-            
-            TOOLS — SUBAGENTS (invoke_subagents):
-            - Use invoke_subagents when a task has INDEPENDENT sub-tasks that can run IN PARALLEL.
-            - Perfect for: reading multiple folders at once, auditing different layers, generating multiple independent files.
-            - Each subagent gets its own task description — include ALL context (file paths, project info, what to look for).
-            - Subagents do NOT see conversation history — be explicit and self-contained in each task.
-            - Max 4 subagents per call. Results returned as a combined summary.
-            - Example: scan 4 different folders simultaneously, each subagent reads its folder and reports findings.
-            - DO NOT use for tasks that depend on each other (A must finish before B starts).
-            
-            FALLBACK STRATEGY:
-            If a native tool call fails, try using the run_shell tool as an alternative.
+            $sharedToolsSection
             Always find a way to complete the task. Never give up on the first failure.
             $personaFragment
             $workspaceContext
@@ -408,31 +388,16 @@ class AiRepository @Inject constructor(
      * Uses cached MCP tools — refresh happens automatically via settingsFlow watcher in init.
      */
     private fun buildToolDefinitions(): List<AiToolDefinition> {
-        val localTools = toolExecutor.getToolDefinitions().map { def ->
-            AiToolDefinition(
-                name = def.name,
-                description = def.description.truncate(1024),
-                parameters = AiToolParameters(
-                    type = "object",
-                    properties = def.parameters.associate { param ->
-                        param.name to AiToolProperty(
-                            type = param.type,
-                            description = param.description.truncate(1024),
-                            enum = param.enum,
-                            items = if (param.items != null) AiToolPropertyItems(param.items) else null
-                        )
-                    },
-                    required = def.parameters.filter { it.required }.map { it.name }
-                )
-            )
-        }
+        // FIX 4.3: Use shared toAiToolDefinition() extension (ToolExecutor.kt) — removes duplicate mapping
+        val localTools = toolExecutor.getToolDefinitions()
+            .map { it.toAiToolDefinition(truncateDesc = true) }
         // MCP tools come from external servers — truncate their descriptions too
         val mcpTools = mcpClientManager.getCachedToolDefinitions().map { tool ->
             tool.copy(
-                description = tool.description.truncate(1024),
+                description = tool.description.let { if (it.length > 1023) it.take(1023) + "…" else it },
                 parameters = tool.parameters.copy(
                     properties = tool.parameters.properties.mapValues { (_, prop) ->
-                        prop.copy(description = prop.description.truncate(1024))
+                        prop.copy(description = prop.description.let { if (it.length > 1023) it.take(1023) + "…" else it })
                     }
                 )
             )
@@ -441,9 +406,6 @@ class AiRepository @Inject constructor(
         return localTools + mcpTools
     }
 
-    /** Truncate string to [maxLen] characters. */
-    private fun String.truncate(maxLen: Int): String =
-        if (length <= maxLen) this else substring(0, maxLen - 1) + "…"
 }
 
 /**
@@ -469,12 +431,4 @@ sealed class AgentEvent {
     ) : AgentEvent()
 }
 
-/**
- * Info about an AI provider.
- */
-data class ProviderInfo(
-    val type: ProviderType,
-    val name: String,
-    val isConfigured: Boolean,
-    val models: List<String>
-)
+// FIX 1.4: ProviderInfo fully removed — was only used by deleted getProviders() function.

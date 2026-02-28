@@ -33,7 +33,9 @@ import javax.inject.Singleton
 class OpenAiProvider @Inject constructor(
     private val httpClient: OkHttpClient,
     private val moshi: Moshi,
-    private val settingsProvider: () -> AiSettings
+    private val settingsProvider: () -> AiSettings,
+    // FIX 2.2 (OpenAI): Inject settingsManager to look up per-agent API key and baseUrl
+    private val settingsManager: AiSettingsManager
 ) : AiProvider {
     
     companion object {
@@ -46,13 +48,25 @@ class OpenAiProvider @Inject constructor(
     override val supportedModels = emptyList<String>()
     
     override fun isConfigured(): Boolean {
+        // FIX 2.2: Check agent key via per-agent storage, not legacy openaiApiKey field
         val settings = settingsProvider()
-        return settings.openaiApiKey.isNotBlank() || settings.openaiBaseUrl != DEFAULT_BASE_URL
+        val agentKey = settingsManager.getAgentApiKey(settings.activeAgentId)
+        val agentConfig = settings.agentConfigs.find { it.id == settings.activeAgentId }
+        return agentKey.isNotBlank() || agentConfig?.baseUrl?.isNotBlank() == true
     }
     
     override suspend fun chat(request: ChatRequest): Flow<ChatResponse> = callbackFlow {
         val settings = settingsProvider()
-        val baseUrl = settings.openaiBaseUrl.ifBlank { DEFAULT_BASE_URL }
+        // FIX: Use agentId from request (resolved by AiRepository) — not settings.activeAgentId
+        val agentId = request.agentId.ifBlank { settings.activeAgentId }
+        val agentConfig = settings.agentConfigs.find { it.id == agentId }
+        val apiKey = settingsManager.getAgentApiKey(agentId)
+        // FIX URL scheme: normalize baseUrl — auto-add http:// if user omitted scheme (e.g. "192.168.1.1:1234")
+        val rawUrl = agentConfig?.baseUrl?.ifBlank { DEFAULT_BASE_URL } ?: DEFAULT_BASE_URL
+        val baseUrl = when {
+            rawUrl.startsWith("http://") || rawUrl.startsWith("https://") -> rawUrl
+            else -> "http://$rawUrl"
+        }.trimEnd('/')
         
         // Build request body
         val openaiRequest = buildOpenAiRequest(request)
@@ -64,8 +78,8 @@ class OpenAiProvider @Inject constructor(
             .post(jsonBody.toRequestBody("application/json".toMediaType()))
         
         // Add auth header if API key is set
-        if (settings.openaiApiKey.isNotBlank()) {
-            httpRequestBuilder.addHeader("Authorization", "Bearer ${settings.openaiApiKey}")
+        if (apiKey.isNotBlank()) {
+            httpRequestBuilder.addHeader("Authorization", "Bearer $apiKey")
         }
         
         val httpRequest = httpRequestBuilder.build()
@@ -144,13 +158,18 @@ class OpenAiProvider @Inject constructor(
                                         toolCallBuilders.clear()
                                     }
                                     "stop" -> {
-                                        trySend(ChatResponse.Done(finishReason = reason))
+                                        // FIX 2.3: Collect usage first, emit a single Done with usage attached
+                                        val usage = chunk.usage?.let {
+                                            TokenUsage(it.promptTokens, it.completionTokens)
+                                        }
+                                        trySend(ChatResponse.Done(finishReason = reason, usage = usage))
+                                        return // skip the generic usage-Done below
                                     }
                                 }
                             }
                         }
                         
-                        // Handle usage in final chunk
+                        // Handle usage in final chunk (only reached if finish_reason != "stop")
                         chunk.usage?.let { usage ->
                             trySend(ChatResponse.Done(
                                 usage = TokenUsage(usage.promptTokens, usage.completionTokens)
@@ -171,14 +190,14 @@ class OpenAiProvider @Inject constructor(
                     
                     // Connection reset with 200 is often just the server closing the stream
                     if (response?.code == 200 && t?.message?.contains("Connection reset", ignoreCase = true) == true) {
-                        android.util.Log.w("OpenAiProvider", "Connection reset after successful response, treating as done")
+                        com.amaya.intelligence.util.debugLog("OpenAiProvider") { "Connection reset after successful response, treating as done" }
                         trySend(ChatResponse.Done())
                         close()
                         return
                     }
                     
                     val responseBody = try { response?.body?.string() } catch (e: Exception) { null }
-                    android.util.Log.e("OpenAiProvider", "Request failed - code: ${response?.code}, body: $responseBody, error: ${t?.message}")
+                    com.amaya.intelligence.util.errorLog("OpenAiProvider", "Request failed - code: ${response?.code}, error: ${t?.message}")
                     val message = responseBody ?: t?.message ?: response?.message ?: "Unknown error"
                     trySend(ChatResponse.Error(message, retryable = true))
                     close()
@@ -320,14 +339,8 @@ class OpenAiProvider @Inject constructor(
         )
     }
     
-    private fun parseJsonArgs(json: String): Map<String, Any?> {
-        return try {
-            val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
-            moshi.adapter<Map<String, Any?>>(type).fromJson(json) ?: emptyMap()
-        } catch (e: Exception) {
-            emptyMap()
-        }
-    }
+    // FIX 4.1: Replaced with shared extension moshi.parseJsonArgs() from AiProvider.kt
+    private fun parseJsonArgs(json: String): Map<String, Any?> = moshi.parseJsonArgs(json)
     
     private class OpenAiToolCallBuilder(
         var id: String = "",

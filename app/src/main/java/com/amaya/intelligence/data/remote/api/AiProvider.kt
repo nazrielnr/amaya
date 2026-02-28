@@ -44,7 +44,10 @@ data class ChatRequest(
     val tools: List<AiToolDefinition> = emptyList(),
     val maxTokens: Int = 8192,
     val temperature: Float = 0.7f,
-    val stream: Boolean = true
+    val stream: Boolean = true,
+    // FIX: Pass resolved agentId explicitly so providers look up the correct API key,
+    // not settings.activeAgentId which may be stale when multiple agents exist.
+    val agentId: String = ""
 )
 
 /**
@@ -159,3 +162,12 @@ data class AiToolProperty(
 data class AiToolPropertyItems(
     val type: String = "string"
 )
+
+// FIX 4.1: Shared parseJsonArgs extension — eliminates duplication across AnthropicProvider,
+// OpenAiProvider (and Gemini inline logic). Single source of truth for JSON arg parsing.
+fun com.squareup.moshi.Moshi.parseJsonArgs(json: String): Map<String, Any?> = try {
+    val type = com.squareup.moshi.Types.newParameterizedType(
+        Map::class.java, String::class.java, Any::class.java
+    )
+    adapter<Map<String, Any?>>(type).fromJson(json) ?: emptyMap()
+} catch (_: Exception) { emptyMap() }

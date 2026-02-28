@@ -12,12 +12,16 @@ import com.amaya.intelligence.data.remote.api.MessageRole
 import com.amaya.intelligence.data.repository.AgentEvent
 import com.amaya.intelligence.data.repository.AiRepository
 import com.amaya.intelligence.data.repository.CronJobRepository
-import com.amaya.intelligence.data.repository.PersonaRepository
 import com.amaya.intelligence.tools.ConfirmationRequest
 import com.amaya.intelligence.tools.TodoItem
 import com.amaya.intelligence.tools.TodoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
@@ -28,7 +32,7 @@ class ChatViewModel @Inject constructor(
     private val conversationDao: ConversationDao,
     private val aiSettingsManager: AiSettingsManager,
     private val cronJobRepository: CronJobRepository,
-    private val personaRepository: PersonaRepository,
+    // FIX 5.10: personaRepository removed — only used by hasTodayMemory (dead StateFlow, see FIX 1.8)
     private val todoRepository: TodoRepository
 ) : ViewModel() {
 
@@ -40,11 +44,9 @@ class ChatViewModel @Inject constructor(
     val todoItems: StateFlow<List<TodoItem>> = todoRepository.items
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    /** Whether there is a memory log entry for today. */
-    val hasTodayMemory: StateFlow<Boolean> = flow {
-        emit(personaRepository.hasTodayLog())
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
-    
+    // FIX 1.8: Removed hasTodayMemory StateFlow — no Composable collects it, and
+    // SharingStarted.Eagerly was wasting resources keeping it alive permanently.
+
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
     
@@ -70,32 +72,42 @@ class ChatViewModel @Inject constructor(
     }
     
     init {
-        // Observe settings reactively — sync agent list and resolve active agent from enabled agents only.
+        // Observe settings reactively — sync agent list only.
+        // IMPORTANT: Do NOT override activeAgentId/selectedModel from DataStore here.
+        // setSelectedAgent() already writes to DataStore AND updates _uiState immediately,
+        // so re-reading from DataStore here would cause a race condition that reverts UI selection.
+        // Agent/model selection is only overridden when the currently-selected agent becomes disabled.
         viewModelScope.launch {
             aiSettingsManager.settingsFlow.collect { settings ->
                 val enabledAgents = settings.agentConfigs.filter { it.enabled }
-                // Resolve active agent: prefer current selection if still enabled, else first enabled
-                val resolvedAgent = enabledAgents.find { it.id == settings.activeAgentId }
-                    ?: enabledAgents.firstOrNull()
 
                 _uiState.update { current ->
-                    // If current selected agent is still enabled, keep it
-                    val currentAgentStillEnabled = enabledAgents.any { it.id == current.activeAgentId }
-                    val newActiveAgentId = when {
-                        current.activeAgentId.isNotBlank() && currentAgentStillEnabled -> current.activeAgentId
-                        else -> resolvedAgent?.id ?: ""
+                    val currentAgent = enabledAgents.find { it.id == current.activeAgentId }
+
+                    if (currentAgent != null) {
+                        // Current agent still enabled — sync agentConfigs AND update selectedModel
+                        // in case user edited the model ID in Settings → Agents.
+                        // Only override selectedModel if it matches the OLD modelId stored in agentConfigs,
+                        // meaning the user hasn't manually picked a different model from the dropdown.
+                        val oldAgentModel = current.agentConfigs
+                            .find { it.id == current.activeAgentId }?.modelId ?: ""
+                        val userPickedDifferentModel = current.selectedModel != oldAgentModel
+                        current.copy(
+                            agentConfigs  = settings.agentConfigs,
+                            // If user manually selected a different model from dropdown, keep it.
+                            // Otherwise always follow the agent config's modelId (picks up edits).
+                            selectedModel = if (userPickedDifferentModel) current.selectedModel
+                                           else currentAgent.modelId
+                        )
+                    } else {
+                        // Current agent was disabled or not yet set — fall back to first enabled
+                        val fallback = enabledAgents.firstOrNull()
+                        current.copy(
+                            agentConfigs  = settings.agentConfigs,
+                            activeAgentId = fallback?.id ?: "",
+                            selectedModel = fallback?.modelId ?: ""
+                        )
                     }
-                    val newSelectedModel = when {
-                        // Keep current model if agent is still enabled and model matches
-                        current.selectedModel.isNotBlank() && currentAgentStillEnabled -> current.selectedModel
-                        // Use resolved agent's model
-                        else -> resolvedAgent?.modelId ?: ""
-                    }
-                    current.copy(
-                        agentConfigs  = settings.agentConfigs, // keep all for settings screen
-                        activeAgentId = newActiveAgentId,
-                        selectedModel = newSelectedModel
-                    )
                 }
             }
         }
@@ -208,9 +220,6 @@ class ChatViewModel @Inject constructor(
                                     messages[lastIndex] = last.copy(content = updatedContent)
                                 }
                             }
-                            // Hide "Thinking.." indicator only when actual text content is visible
-                            // NOTE: For reasoning models (future), we may want to keep this visible
-                            // and render <think> tags separately. For now, hide when content.isNotEmpty().
                             val shouldHideThinking = updatedContent.isNotEmpty()
                             state.copy(messages = messages, isLoading = !shouldHideThinking)
                         }
@@ -326,7 +335,6 @@ class ChatViewModel @Inject constructor(
                     }
 
                     is AgentEvent.Done -> {
-                        // Capture current todo items and attach to last assistant message
                         val currentTodos = todoRepository.items.value
                         if (currentTodos.isNotEmpty()) {
                             _uiState.update { state ->
@@ -365,13 +373,16 @@ class ChatViewModel @Inject constructor(
     }
     
     fun selectModel(model: String) {
+        // Only update in-memory uiState — AiRepository reads selectedModel directly from here.
+        // No DataStore write needed: settingsFlow.collect only uses modelId from AgentConfig,
+        // not activeModel key. Writing to DataStore here was redundant and caused a re-collect
+        // that could race with the UI state update.
         _uiState.update { it.copy(selectedModel = model) }
-        // Persist to DataStore so AiRepository always gets the latest model
-        viewModelScope.launch { aiSettingsManager.setActiveModel(model) }
     }
     
     fun clearConversation() {
-        saveCurrentConversation()
+        // FIX 3.8: Don't save before clearing — the save would immediately be irrelevant,
+        // and it could persist a half-finished conversation unnecessarily.
         currentConversationId = null
         todoRepository.clear()
         _uiState.update {
@@ -503,7 +514,11 @@ class ChatViewModel @Inject constructor(
     
     private fun saveCurrentConversation() {
         val messages = _uiState.value.messages
+        // FIX 3.8: Don't save if empty or only has blank user messages (e.g. stopped before AI responded)
         if (messages.isEmpty()) return
+        val hasContent = messages.any { it.role == MessageRole.ASSISTANT && it.content.isNotBlank() }
+            || messages.any { it.role == MessageRole.USER && it.content.isNotBlank() }
+        if (!hasContent) return
         
         viewModelScope.launch {
             try {
@@ -600,7 +615,8 @@ class ChatViewModel @Inject constructor(
         _uiState.update { it.copy(workspacePath = path) }
     }
 
-    fun setSelectedModel(model: String) = selectModel(model)
+    // FIX 1.9: Removed setSelectedModel() — it was an identical alias for selectModel().
+    // All callers should use selectModel() directly.
 
     fun setSelectedAgent(agent: com.amaya.intelligence.data.remote.api.AgentConfig) {
         _uiState.update { it.copy(selectedModel = agent.modelId, activeAgentId = agent.id) }

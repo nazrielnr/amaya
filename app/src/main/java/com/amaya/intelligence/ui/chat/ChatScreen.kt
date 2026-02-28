@@ -67,7 +67,8 @@ fun ChatScreen(
     // Use global count from AppViewModel (passed in) if available; else fall back to local
     val localReminderCount by viewModel.activeReminderCount.collectAsState()
     val effectiveReminderCount = if (activeReminderCount >= 0) activeReminderCount else localReminderCount
-    val hasTodayMemory by viewModel.hasTodayMemory.collectAsState()
+    // FIX 1.8: hasTodayMemory removed entirely — was only used to show a dot indicator
+    // on the session info button. Removed rather than kept as dead UI state.
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
@@ -542,7 +543,7 @@ fun ChatScreen(
                                         text = {
                                             Column {
                                                 Text("No active agents", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                                                Text("Enable agents in Settings - AI Agents", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                                Text("Enable agents in Settings → AI Agents", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                                             }
                                         },
                                         onClick = { showModelSelector = false }, enabled = false
@@ -556,6 +557,8 @@ fun ChatScreen(
                                     agentConfigs.forEach { agent ->
                                         val isSelected = agent.id == activeAgentId ||
                                             (activeAgentId.isBlank() && agent == agentConfigs.firstOrNull())
+                                        // Warn if model ID is missing
+                                        val missingModel = agent.modelId.isBlank()
                                         DropdownMenuItem(
                                             text = {
                                                 Column {
@@ -563,16 +566,25 @@ fun ChatScreen(
                                                         style = MaterialTheme.typography.bodyMedium,
                                                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                                         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-                                                    if (agent.modelId.isNotBlank()) {
+                                                    if (missingModel) {
+                                                        Text("⚠ No model ID — edit in Settings",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.error)
+                                                    } else {
                                                         Text(agent.modelId, style = MaterialTheme.typography.labelSmall,
                                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                                                     }
                                                 }
                                             },
                                             leadingIcon = {
-                                                Icon(if (isSelected) Icons.Default.CheckCircle else Icons.Default.SmartToy,
+                                                Icon(
+                                                    if (missingModel) Icons.Default.Warning
+                                                    else if (isSelected) Icons.Default.CheckCircle
+                                                    else Icons.Default.SmartToy,
                                                     null, modifier = Modifier.size(16.dp),
-                                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                                                    tint = if (missingModel) MaterialTheme.colorScheme.error
+                                                           else if (isSelected) MaterialTheme.colorScheme.primary
+                                                           else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
                                             },
                                             onClick = { viewModel.setSelectedAgent(agent); showModelSelector = false }
                                         )
@@ -591,7 +603,6 @@ fun ChatScreen(
                             totalTokens         = uiState.totalInputTokens + uiState.totalOutputTokens,
                             activeModel         = selectedModel,
                             activeReminderCount = activeReminderCount,
-                            hasTodayMemory      = hasTodayMemory,
                             onClick             = { showSessionInfo = true }
                         )
                     },
@@ -671,7 +682,6 @@ fun ChatScreen(
             totalTokens = uiState.totalInputTokens + uiState.totalOutputTokens,
             activeModel = selectedModel,
             activeReminderCount = activeReminderCount,
-            hasTodayMemory = hasTodayMemory,
             onDismiss = { showSessionInfo = false }
         )
     }
@@ -688,7 +698,8 @@ fun SessionInfoButton(
     totalTokens: Int,
     activeModel: String,
     activeReminderCount: Int,
-    hasTodayMemory: Boolean,
+    // FIX 1.8: hasTodayMemory removed — PersonaRepository.hasTodayLog() was the only source
+    // and personaRepository was removed from ChatViewModel to eliminate unused dependency.
     onClick: () -> Unit
 ) {
     val hasAlert = activeReminderCount > 0
@@ -724,7 +735,6 @@ fun SessionInfoButton(
         }
         // Badge for active reminders
         if (hasAlert) {
-            androidx.compose.ui.platform.LocalDensity
             Surface(
                 shape = androidx.compose.foundation.shape.CircleShape,
                 color = MaterialTheme.colorScheme.error,
@@ -743,7 +753,7 @@ fun SessionInfoSheet(
     totalTokens: Int,
     activeModel: String,
     activeReminderCount: Int,
-    hasTodayMemory: Boolean,
+    // FIX 1.8: hasTodayMemory removed
     onDismiss: () -> Unit
 ) {
     // Estimated context window
@@ -806,13 +816,7 @@ fun SessionInfoSheet(
             )
 
             // Today's Memory
-            SessionInfoRow(
-                icon = Icons.Default.Psychology,
-                label = "Memory today",
-                value = if (hasTodayMemory) "Entries recorded" else "No entries yet",
-                valueColor = if (hasTodayMemory) MaterialTheme.colorScheme.tertiary
-                             else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-            )
+            // FIX 1.8: Memory today row removed — hasTodayMemory source (PersonaRepository) removed from ViewModel
         }
     }
 }
@@ -1226,7 +1230,7 @@ fun ToolCallCard(execution: ToolExecution) {
         execution.name.contains("delete",   ignoreCase = true) -> Icons.Default.Delete
         execution.name.contains("create",   ignoreCase = true) -> Icons.Default.CreateNewFolder
         execution.name.contains("transfer", ignoreCase = true) -> Icons.Default.ContentCopy
-        execution.name.startsWith("mcp__")                     -> Icons.Default.Extension
+        execution.name.startsWith(com.amaya.intelligence.data.remote.mcp.McpClientManager.TOOL_PREFIX) -> Icons.Default.Extension
         else                                                    -> Icons.Default.Terminal
     }
 
@@ -1860,7 +1864,7 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
             }
         }
         // ── MCP tools ──────────────────────────────────────────────────────
-        else -> if (name.startsWith("mcp__")) {
+        else -> if (name.startsWith(com.amaya.intelligence.data.remote.mcp.McpClientManager.TOOL_PREFIX)) {
             val parts = name.split("__")
             val server = parts.getOrNull(1) ?: ""
             val tool   = parts.getOrNull(2) ?: name

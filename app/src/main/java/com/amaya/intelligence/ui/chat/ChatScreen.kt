@@ -67,7 +67,7 @@ fun ChatScreen(
     // Use global count from AppViewModel (passed in) if available; else fall back to local
     val localReminderCount by viewModel.activeReminderCount.collectAsState()
     val effectiveReminderCount = if (activeReminderCount >= 0) activeReminderCount else localReminderCount
-    // FIX 1.8: hasTodayMemory removed entirely — was only used to show a dot indicator
+    // FIX 1.8: hasTodayMemory removed entirely � was only used to show a dot indicator
     // on the session info button. Removed rather than kept as dead UI state.
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -90,59 +90,13 @@ fun ChatScreen(
     val displayMessages = remember(uiState.messages) {
         uiState.messages.filter { it.content.isNotBlank() || it.toolExecutions.isNotEmpty() }
     }
-
-    // --- Auto-scroll logic ---
-    // "At bottom" = last item visible AND fully scrolled (no more content below)
-    val isAtBottom by remember {
-        derivedStateOf {
-            val layoutInfo = listState.layoutInfo
-            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()
-            val totalItems = layoutInfo.totalItemsCount
-            // Consider "at bottom" if last item is visible and not cut off significantly
-            lastVisible != null &&
-                lastVisible.index >= totalItems - 1 &&
-                lastVisible.offset + lastVisible.size <= layoutInfo.viewportEndOffset + 8
-        }
-    }
-
-    // userAutoScroll = user has NOT manually scrolled away from bottom
-    // Resets to true when: new user message sent OR user scrolls back to bottom
-    var userAutoScroll by remember { mutableStateOf(true) }
-
-    // Detect manual upward scroll: if user is scrolling and not at bottom → disable auto-scroll
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (listState.isScrollInProgress && !isAtBottom) {
-            userAutoScroll = false
-        }
-    }
-
-    // Re-enable auto-scroll when user scrolls back to bottom
-    LaunchedEffect(isAtBottom) {
-        if (isAtBottom) userAutoScroll = true
-    }
-
-    // Auto-scroll to bottom when new user message is sent (always)
+    // Auto-scroll: only when user sends a new message
     val userMsgCount = remember(displayMessages) { displayMessages.count { it.role == MessageRole.USER } }
     LaunchedEffect(userMsgCount) {
-        if (displayMessages.isNotEmpty()) {
-            userAutoScroll = true
-            listState.animateScrollToItem(displayMessages.size - 1)
+        if (userMsgCount > 0 && displayMessages.isNotEmpty()) {
+            listState.animateScrollToItem((displayMessages.size - 1).coerceAtLeast(0))
         }
     }
-
-    // Auto-scroll during streaming: follow text if userAutoScroll is active
-    val totalMsgSize = remember(displayMessages) { displayMessages.sumOf { it.content.length } }
-    LaunchedEffect(totalMsgSize, uiState.isLoading) {
-        if (userAutoScroll && displayMessages.isNotEmpty()) {
-            // Scroll to last item (covers loading indicator + last message)
-            val target = if (uiState.isLoading)
-                displayMessages.size  // loading indicator is appended after messages
-            else
-                displayMessages.size - 1
-            listState.animateScrollToItem(target)
-        }
-    }
-
 
     confirmationRequest?.let { request ->
         ConfirmationDialog(
@@ -304,7 +258,7 @@ fun ChatScreen(
                                 decorationBox = { inner ->
                                     if (searchQuery.isEmpty()) {
                                         Text(
-                                            "Search conversations…",
+                                            "Search conversations�",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -512,12 +466,11 @@ fun ChatScreen(
                     state               = listState,
                     modifier            = Modifier
                         .fillMaxSize()
-                        .imePadding(),  // Auto-adjust for keyboard
+                        .imePadding(),
                     contentPadding      = PaddingValues(
                         start  = 16.dp,
                         end    = 16.dp,
                         top    = headerDp + with(density) { todoBarHeight.toDp() } + 8.dp,
-                        // Dynamic: matches actual input bar height so last message is never hidden
                         bottom = with(density) { inputBarHeight.toDp() } + 8.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -532,8 +485,13 @@ fun ChatScreen(
                     }
                 }
 
-                // Scroll-to-bottom FAB — appears when user scrolled away from bottom
-                if (!isAtBottom) {
+                // Scroll-to-bottom FAB � appears when user scrolled away from bottom
+                val showFab = remember(listState.layoutInfo) {
+                    val info = listState.layoutInfo
+                    val last = info.visibleItemsInfo.lastOrNull()
+                    last != null && last.index < info.totalItemsCount - 1
+                }
+                if (showFab) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -547,11 +505,7 @@ fun ChatScreen(
                         SmallFloatingActionButton(
                             onClick = {
                                 scope.launch {
-                                    userAutoScroll = true
-                                    listState.animateScrollToItem(
-                                        if (uiState.isLoading) displayMessages.size
-                                        else (displayMessages.size - 1).coerceAtLeast(0)
-                                    )
+                                    listState.animateScrollToItem((displayMessages.size - 1).coerceAtLeast(0))
                                 }
                             },
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -571,7 +525,7 @@ fun ChatScreen(
                 }
             }
 
-            // -- 2. Gradient scrim — covers status bar area --------------------
+            // -- 2. Gradient scrim � covers status bar area --------------------
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -632,7 +586,7 @@ fun ChatScreen(
                                         text = {
                                             Column {
                                                 Text("No active agents", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                                                Text("Enable agents in Settings → AI Agents", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                                Text("Enable agents in Settings ? AI Agents", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                                             }
                                         },
                                         onClick = { showModelSelector = false }, enabled = false
@@ -656,7 +610,7 @@ fun ChatScreen(
                                                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                                         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
                                                     if (missingModel) {
-                                                        Text("⚠ No model ID — edit in Settings",
+                                                        Text("? No model ID � edit in Settings",
                                                             style = MaterialTheme.typography.labelSmall,
                                                             color = MaterialTheme.colorScheme.error)
                                                     } else {
@@ -788,7 +742,7 @@ fun SessionInfoButton(
     totalTokens: Int,
     activeModel: String,
     activeReminderCount: Int,
-    // FIX 1.8: hasTodayMemory removed — PersonaRepository.hasTodayLog() was the only source
+    // FIX 1.8: hasTodayMemory removed � PersonaRepository.hasTodayLog() was the only source
     // and personaRepository was removed from ChatViewModel to eliminate unused dependency.
     onClick: () -> Unit
 ) {
@@ -811,7 +765,7 @@ fun SessionInfoButton(
         activeModel.contains("mistral", ignoreCase = true)       -> "32K"
         activeModel.contains("deepseek", ignoreCase = true)      -> "64K"
         activeModel.contains("llama", ignoreCase = true)         -> "128K"
-        else                                                     -> "—"
+        else                                                     -> "�"
     }
 
     Box(modifier = Modifier.padding(end = 8.dp)) {
@@ -858,7 +812,7 @@ fun SessionInfoSheet(
         activeModel.contains("mistral", ignoreCase = true)       -> "32K"
         activeModel.contains("deepseek", ignoreCase = true)      -> "64K"
         activeModel.contains("llama", ignoreCase = true)         -> "128K"
-        else                                                     -> "—"
+        else                                                     -> "�"
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -906,7 +860,7 @@ fun SessionInfoSheet(
             )
 
             // Today's Memory
-            // FIX 1.8: Memory today row removed — hasTodayMemory source (PersonaRepository) removed from ViewModel
+            // FIX 1.8: Memory today row removed � hasTodayMemory source (PersonaRepository) removed from ViewModel
         }
     }
 }
@@ -946,7 +900,7 @@ private fun formatTokenCount(count: Int): String = when {
 }
 
 // -----------------------------------------------------------------------------
-//  TodoBar — collapsible task list shown below TopAppBar
+//  TodoBar � collapsible task list shown below TopAppBar
 // -----------------------------------------------------------------------------
 
 @Composable
@@ -971,7 +925,7 @@ fun TodoBar(
         ?: items.lastOrNull()?.id
         ?: 1
 
-    // -- Shimmer — centered gradient for symmetrical fade ----
+    // -- Shimmer � centered gradient for symmetrical fade ----
     val transition = rememberInfiniteTransition(label = "todo_shimmer")
     val shimmerOffset by transition.animateFloat(
         initialValue = -400f,
@@ -1007,7 +961,7 @@ fun TodoBar(
         modifier = modifier
             .fillMaxWidth()
             .drawBehind {
-                // Gradient scrim: solid top → transparent bottom (same as header)
+                // Gradient scrim: solid top ? transparent bottom (same as header)
                 drawRect(
                     brush = Brush.verticalGradient(
                         colorStops = arrayOf(
@@ -1050,7 +1004,7 @@ fun TodoBar(
 
                 Spacer(Modifier.width(10.dp))
 
-                // -- Label — shimmer if running, muted if not -----------------
+                // -- Label � shimmer if running, muted if not -----------------
                 if (isRunning) {
                     // Shimmer text: warna solid onSurface, lalu SrcAtop overlay shimmerBrush
                     Text(
@@ -1162,7 +1116,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
 
         // -- Label -----------------------------------------------------------
         if (isActive) {
-            // Shimmer: solid onSurface + SrcAtop shimmerBrush — persis teknik Thinking..
+            // Shimmer: solid onSurface + SrcAtop shimmerBrush � persis teknik Thinking..
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
@@ -1192,7 +1146,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
             )
         }
 
-        // -- Step number — right aligned ------------------------------------
+        // -- Step number � right aligned ------------------------------------
         Text(
             text = "${item.id}",
             style = MaterialTheme.typography.labelSmall,
@@ -1206,15 +1160,12 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
 fun MessageBubble(message: UiMessage) {
     val isUser = message.role == MessageRole.USER
     if (isUser) {
-        // -- User bubble: measure actual text width, then shrink-wrap --
-        val density = LocalDensity.current
+        // -- User bubble: shrink-wrap using wrapContentWidth + widthIn max constraint --
+        // No 2-pass measurement (avoids scroll jitter during streaming recompositions)
         val screenWidth = LocalConfiguration.current.screenWidthDp
-        val maxBubbleWidthDp = (screenWidth * 0.7f).dp
+        val maxBubbleWidthDp = (screenWidth * 0.75f).dp
         val hPad = 14.dp
         val vPad = 10.dp
-
-        // Actual rendered content width — measured via onTextLayout
-        var measuredWidth by remember(message.content) { mutableStateOf<Int?>(null) }
 
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -1223,28 +1174,13 @@ fun MessageBubble(message: UiMessage) {
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
                 shape = RoundedCornerShape(20.dp, 20.dp, 4.dp, 20.dp),
-                modifier = if (measuredWidth != null) {
-                    // Second pass: exact width
-                    Modifier.width(with(density) { measuredWidth!!.toDp() } + hPad * 2)
-                } else {
-                    // First pass: max constraint
-                    Modifier.widthIn(max = maxBubbleWidthDp)
-                }
+                modifier = Modifier.widthIn(max = maxBubbleWidthDp)
             ) {
                 Text(
                     message.content,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.padding(horizontal = hPad, vertical = vPad),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp, lineHeight = 24.sp),
-                    onTextLayout = { result ->
-                        val maxLineW = (0 until result.lineCount).maxOf {
-                            result.getLineRight(it) - result.getLineLeft(it)
-                        }
-                        val rounded = kotlin.math.ceil(maxLineW).toInt()
-                        if (measuredWidth == null || measuredWidth != rounded) {
-                            measuredWidth = rounded
-                        }
-                    }
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp, lineHeight = 24.sp)
                 )
             }
         }
@@ -1356,7 +1292,7 @@ fun ToolCallCard(execution: ToolExecution) {
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
 
-            // HEADER ROW — always visible, fixed size
+            // HEADER ROW � always visible, fixed size
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1512,7 +1448,7 @@ private fun SubagentChildCard(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
 
-            // HEADER ROW — always visible, fixed size
+            // HEADER ROW � always visible, fixed size
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1753,7 +1689,7 @@ private fun ToolResultPreview(
                             }
                             if (lines.size > 12) {
                                 Spacer(Modifier.height(4.dp))
-                                Text("  ⋯  ${lines.size - 12} more lines",
+                                Text("  ?  ${lines.size - 12} more lines",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = metaColor, fontFamily = FontFamily.Monospace)
                             }
@@ -1790,7 +1726,7 @@ private fun ToolResultPreview(
                 Spacer(Modifier.height(6.dp))
                 Surface(shape = RoundedCornerShape(8.dp), color = codeBlockBg,
                     modifier = Modifier.fillMaxWidth()) {
-                    Text(result.trim().let { if (it.length > 1500) it.take(1500) + "\n⋯" else it },
+                    Text(result.trim().let { if (it.length > 1500) it.take(1500) + "\n?" else it },
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontFamily = FontFamily.Monospace, lineHeight = 18.sp, fontSize = 11.sp),
                         color = codeTextColor,
@@ -1819,7 +1755,7 @@ private fun ToolResultPreview(
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                if (lines.size > 10) Text("  ⋯  ${lines.size - 10} more",
+                if (lines.size > 10) Text("  ?  ${lines.size - 10} more",
                     style = MaterialTheme.typography.labelSmall, color = metaColor)
             }
         }
@@ -1843,7 +1779,7 @@ private fun ToolResultPreview(
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                if (lines.size > 8) Text("  ⋯  ${lines.size - 8} more",
+                if (lines.size > 8) Text("  ?  ${lines.size - 8} more",
                     style = MaterialTheme.typography.labelSmall, color = metaColor)
             }
         }
@@ -1856,7 +1792,7 @@ private fun ToolResultPreview(
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(title, style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                Text("$datetime  ·  $repeat", style = MaterialTheme.typography.labelSmall, color = metaColor)
+                Text("$datetime  �  $repeat", style = MaterialTheme.typography.labelSmall, color = metaColor)
             }
         }
 
@@ -1883,7 +1819,7 @@ private fun ToolResultPreview(
         else -> {
             Surface(shape = RoundedCornerShape(8.dp), color = codeBlockBg,
                 modifier = Modifier.fillMaxWidth()) {
-                Text(result.trim().let { if (it.length > 1500) it.take(1500) + "\n⋯" else it },
+                Text(result.trim().let { if (it.length > 1500) it.take(1500) + "\n?" else it },
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontFamily = FontFamily.Monospace, lineHeight = 18.sp, fontSize = 11.sp),
                     color = codeTextColor,
@@ -1897,12 +1833,12 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
     // Helper: extract just the filename from a full path
     fun fileName(key: String) = args?.get(key)?.toString()?.substringAfterLast("/")?.take(30) ?: ""
     fun filePath(key: String) = args?.get(key)?.toString()?.let {
-        if (it.length > 28) "…" + it.takeLast(26) else it
+        if (it.length > 28) "�" + it.takeLast(26) else it
     } ?: ""
 
     @Suppress("UNCHECKED_CAST")
     return when (name) {
-        // ── File tools ─────────────────────────────────────────────────────
+        // -- File tools -----------------------------------------------------
         "read_file"  -> {
             val paths = args?.get("paths") as? List<*>
             val infoOnly = args?.get("info_only") as? Boolean ?: false
@@ -1923,7 +1859,7 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
             val src  = fileName("source")
             val dst  = fileName("destination")
             val mode = args?.get("mode")?.toString() ?: "copy"
-            if (mode == "move") "Move  $src → $dst" else "Copy  $src → $dst"
+            if (mode == "move") "Move  $src ? $dst" else "Copy  $src ? $dst"
         }
         "create_directory"  -> "Mkdir  ${fileName("path")}/"
         "list_files"        -> "List  ${filePath("path")}"
@@ -1937,9 +1873,9 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
             }
         }
         "undo_change"       -> "Undo  ${fileName("path")}"
-        // ── Shell ───────────────────────────────────────────────────────────
+        // -- Shell -----------------------------------------------------------
         "run_shell"         -> "$  ${args?.get("command")?.toString()?.take(32) ?: ""}"
-        // ── AI tools ───────────────────────────────────────────────────────
+        // -- AI tools -------------------------------------------------------
         "update_memory"     -> "Memory  ${args?.get("target")?.toString() ?: "daily"}"
         "create_reminder"   -> "Remind  ${args?.get("title")?.toString()?.take(20) ?: ""}"
         "invoke_subagents"  -> {
@@ -1948,12 +1884,12 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
             if (subagents.isNullOrEmpty()) {
                 "Subagents"
             } else {
-                // Show ALL task names — MarqueeText handles overflow via auto-scroll
+                // Show ALL task names � MarqueeText handles overflow via auto-scroll
                 val names = subagents.mapNotNull { it["task_name"]?.toString() }
-                names.joinToString("  ·  ")
+                names.joinToString("  �  ")
             }
         }
-        // ── MCP tools ──────────────────────────────────────────────────────
+        // -- MCP tools ------------------------------------------------------
         else -> if (name.startsWith(com.amaya.intelligence.data.remote.mcp.McpClientManager.TOOL_PREFIX)) {
             val parts = name.split("__")
             val server = parts.getOrNull(1) ?: ""

@@ -150,8 +150,9 @@ class ToolExecutor @Inject constructor(
                 )
             }
             
-            // Retry execution after confirmation
-            return tool.execute(finalArguments)
+            // Retry execution after confirmation — inject __confirmed=true so tools
+            // (e.g. RunShellTool) skip re-validation and don't block the command again.
+            return tool.execute(finalArguments + mapOf("__confirmed" to true))
         }
         
         return result

@@ -75,7 +75,10 @@ fun MarkdownText(
     text: String,
     color: Color,
     modifier: Modifier = Modifier,
-    compact: Boolean = false
+    compact: Boolean = false,
+    // fontSize for paragraph/list body text (default 16sp to match user bubble)
+    fontSize: androidx.compose.ui.unit.TextUnit = 16.sp,
+    lineHeight: androidx.compose.ui.unit.TextUnit = 24.sp
 ) {
     val blocks = remember(text) { parseBlocks(text) }
     val scheme   = MaterialTheme.colorScheme
@@ -116,7 +119,7 @@ fun MarkdownText(
 
                 is MdBlock.Paragraph -> {
                     val style = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp)
-                                else typo.bodyMedium
+                                else typo.bodyMedium.copy(fontSize = fontSize, lineHeight = lineHeight)
                     InlineText(
                         text    = block.text,
                         color   = color,
@@ -171,42 +174,46 @@ fun MarkdownText(
                 }
 
                 is MdBlock.UnorderedList -> {
+                    val bodyStyle = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp)
+                                   else typo.bodyMedium.copy(fontSize = fontSize, lineHeight = lineHeight)
                     Column(verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp)) {
                         block.items.forEach { item ->
                             Row(modifier = Modifier.padding(start = (item.indent * 12).dp)) {
                                 Text(
                                     "\u2022",
-                                    style = if (compact) typo.bodySmall.copy(fontSize = 11.sp) else typo.bodyMedium,
+                                    style = bodyStyle,
                                     color = color.copy(alpha = 0.6f),
                                     modifier = Modifier.width(if (compact) 12.dp else 16.dp)
                                 )
                                 InlineText(text = item.text, color = color,
-                                    style = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp) else typo.bodyMedium,
-                                    compact = compact)
+                                    style = bodyStyle, compact = compact)
                             }
                         }
                     }
                 }
 
                 is MdBlock.OrderedList -> {
+                    val bodyStyle = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp)
+                                   else typo.bodyMedium.copy(fontSize = fontSize, lineHeight = lineHeight)
                     Column(verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp)) {
                         block.items.forEachIndexed { idx, item ->
                             Row(modifier = Modifier.padding(start = (item.indent * 12).dp)) {
                                 Text(
                                     "${idx + 1}.",
-                                    style = if (compact) typo.bodySmall.copy(fontSize = 11.sp) else typo.bodyMedium,
+                                    style = bodyStyle,
                                     color = color.copy(alpha = 0.6f),
                                     modifier = Modifier.width(if (compact) 18.dp else 24.dp)
                                 )
                                 InlineText(text = item.text, color = color,
-                                    style = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp) else typo.bodyMedium,
-                                    compact = compact)
+                                    style = bodyStyle, compact = compact)
                             }
                         }
                     }
                 }
 
                 is MdBlock.TaskList -> {
+                    val bodyStyle = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp)
+                                   else typo.bodyMedium.copy(fontSize = fontSize, lineHeight = lineHeight)
                     Column(verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp)) {
                         block.items.forEach { item ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -218,8 +225,7 @@ fun MarkdownText(
                                 )
                                 Spacer(Modifier.width(if (compact) 4.dp else 6.dp))
                                 InlineText(text = item.text, color = if (item.checked) color.copy(alpha = 0.5f) else color,
-                                    style = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp) else typo.bodyMedium,
-                                    compact = compact)
+                                    style = bodyStyle, compact = compact)
                             }
                         }
                     }
@@ -235,7 +241,7 @@ fun MarkdownText(
                         Spacer(Modifier.width(if (compact) 6.dp else 10.dp))
                         InlineText(text = block.text, color = color.copy(alpha = 0.7f),
                             style = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp)
-                                    else typo.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                                    else typo.bodyMedium.copy(fontSize = fontSize, lineHeight = lineHeight, fontStyle = FontStyle.Italic),
                             compact = compact)
                     }
                 }

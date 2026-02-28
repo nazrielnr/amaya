@@ -74,12 +74,12 @@ class RunShellTool @Inject constructor(
         - Complex text search (grep with regex)
         - Build tools (gradle, make)
         
-        Examples:
-        - git status
-        - git add .
-        - git commit -m "message"
-        - grep -r "pattern" /path
-        - gradle build
+        TIMEOUT RULES (IMPORTANT):
+        - Default timeout: ${DEFAULT_TIMEOUT_MS / 1000}s. Max: ${MAX_TIMEOUT_MS / 1000}s.
+        - If a command might take longer (e.g. gradle build, git clone), set timeout_ms explicitly.
+        - Example: timeout_ms=120000 for a 2-minute build.
+        - If timeout is exceeded, the command is cancelled and you will get a TIMEOUT error.
+          Do NOT retry the same command — either increase timeout_ms or break the task into smaller steps.
         
         DO NOT use for basic file operations - use the native tools instead:
         - list_files instead of ls
@@ -87,31 +87,44 @@ class RunShellTool @Inject constructor(
         - write_file instead of echo/cat >
         
         Arguments:
-        - command (string, required): The shell command to run
+        - command (string, required): The shell command to run. Must not be empty.
         - working_dir (string, optional): Working directory for the command
-        - timeout_ms (int, optional): Timeout in milliseconds (default: 30000, max: 300000)
+        - timeout_ms (int, optional): Timeout in milliseconds (default: ${DEFAULT_TIMEOUT_MS}, max: ${MAX_TIMEOUT_MS})
         - env (object, optional): Environment variables to set
     """.trimIndent()
     
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult = 
         withContext(Dispatchers.IO) {
             
-            val command = arguments["command"] as? String
-                ?: return@withContext ToolResult.Error(
-                    "Missing required argument: command",
+            val command = (arguments["command"] as? String)?.trim()
+            if (command.isNullOrBlank()) {
+                return@withContext ToolResult.Error(
+                    "Missing or empty 'command' argument. You must provide a non-empty shell command to run. " +
+                    "Do not call run_shell with an empty command string.",
                     ErrorType.VALIDATION_ERROR
                 )
-            
-            // Validate command
+            }
+
+            // ToolExecutor already handles RequiresConfirmation at the outer layer
+            // (via commandValidator.validateToolCall → dialog → user confirms → tool.execute called again).
+            // We must NOT re-validate here after confirmation, or the command will be blocked again.
+            // Only block on hard DENIED (blacklist patterns) — never re-prompt for RequiresConfirmation.
+            val alreadyConfirmed = arguments["__confirmed"] as? Boolean == true
             when (val validation = commandValidator.validateCommand(command)) {
                 is ValidationResult.Denied -> return@withContext ToolResult.Error(
-                    validation.reason,
+                    "Command blocked by security policy: ${validation.reason}",
                     ErrorType.SECURITY_VIOLATION
                 )
-                is ValidationResult.RequiresConfirmation -> return@withContext ToolResult.RequiresConfirmation(
-                    validation.reason,
-                    "Command: $command"
-                )
+                is ValidationResult.RequiresConfirmation -> {
+                    if (!alreadyConfirmed) {
+                        // First call — bubble up to ToolExecutor for user confirmation dialog
+                        return@withContext ToolResult.RequiresConfirmation(
+                            validation.reason,
+                            "Command: $command"
+                        )
+                    }
+                    // alreadyConfirmed = true → user already approved, proceed with execution
+                }
                 is ValidationResult.Allowed -> { /* proceed */ }
             }
             
@@ -209,8 +222,14 @@ class RunShellTool @Inject constructor(
 
             if (!completed) {
                 process.destroyForcibly()
+                val timeoutSec = timeoutMs / 1000
+                val maxSec = MAX_TIMEOUT_MS / 1000
                 return@withContext ToolResult.Error(
-                    "Command timed out after ${timeoutMs}ms",
+                    "TIMEOUT: Command was cancelled after ${timeoutSec}s (timeout_ms=${timeoutMs}). " +
+                    "The process has been forcefully terminated. " +
+                    "To fix: increase timeout_ms (max ${maxSec}s = ${MAX_TIMEOUT_MS}ms), " +
+                    "or break the command into smaller steps. " +
+                    "Output captured before timeout:\n${output.toString().takeLast(2000)}",
                     ErrorType.TIMEOUT
                 )
             }

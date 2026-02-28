@@ -90,11 +90,51 @@ fun ChatScreen(
     val displayMessages = remember(uiState.messages) {
         uiState.messages.filter { it.content.isNotBlank() || it.toolExecutions.isNotEmpty() }
     }
-    // Auto-scroll: only when user sends a new message
-    val userMsgCount = remember(displayMessages) { displayMessages.count { it.role == MessageRole.USER } }
-    LaunchedEffect(userMsgCount) {
-        if (userMsgCount > 0 && displayMessages.isNotEmpty()) {
-            listState.animateScrollToItem((displayMessages.size - 1).coerceAtLeast(0))
+    // ── Auto-scroll ─────────────────────────────────────────────────────
+    var shouldAutoScroll by remember { mutableStateOf(true) }
+
+    // Disable auto-scroll when user scrolls away from bottom
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val info = listState.layoutInfo
+            val last = info.visibleItemsInfo.lastOrNull()
+            last != null && last.index < info.totalItemsCount - 1
+        }.collect { scrolledAway ->
+            if (scrolledAway) shouldAutoScroll = false
+        }
+    }
+
+    // Scroll to bottom on NEW_MESSAGE / NEW_TOOL
+    LaunchedEffect(Unit) {
+        viewModel.scrollEvent.collect { reason ->
+            when (reason) {
+                ChatViewModel.ScrollReason.NEW_MESSAGE -> {
+                    shouldAutoScroll = true
+                    delay(150)
+                    val total = listState.layoutInfo.totalItemsCount
+                    if (total > 0) listState.scrollToItem(total - 1)
+                }
+                ChatViewModel.ScrollReason.NEW_TOOL -> {
+                    if (shouldAutoScroll) {
+                        delay(150)
+                        val total = listState.layoutInfo.totalItemsCount
+                        if (total > 0) listState.scrollToItem(total - 1)
+                    }
+                }
+            }
+        }
+    }
+
+    // Streaming: keep latest text visible
+    LaunchedEffect(uiState.isStreaming) {
+        if (!uiState.isStreaming) return@LaunchedEffect
+        delay(300)
+        while (true) {
+            if (shouldAutoScroll) {
+                val total = listState.layoutInfo.totalItemsCount
+                if (total > 0) listState.scrollToItem(total - 1, Int.MAX_VALUE)
+            }
+            delay(300)
         }
     }
 
@@ -485,11 +525,14 @@ fun ChatScreen(
                     }
                 }
 
-                // Scroll-to-bottom FAB � appears when user scrolled away from bottom
-                val showFab = remember(listState.layoutInfo) {
-                    val info = listState.layoutInfo
-                    val last = info.visibleItemsInfo.lastOrNull()
-                    last != null && last.index < info.totalItemsCount - 1
+                // Scroll-to-bottom FAB: derivedStateOf prevents recomposition
+                // on every scroll frame — only recomposes when visibility changes.
+                val showFab by remember {
+                    derivedStateOf {
+                        val info = listState.layoutInfo
+                        val last = info.visibleItemsInfo.lastOrNull()
+                        last != null && last.index < info.totalItemsCount - 1
+                    }
                 }
                 if (showFab) {
                     Box(

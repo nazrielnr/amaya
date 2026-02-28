@@ -49,6 +49,15 @@ class ChatViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    // Scroll events emitted from ViewModel — UI collects and scrolls only if at bottom.
+    // SharedFlow with replay=0: each event fires once, no replay on recomposition.
+    // Reasons: NEW_MESSAGE = new user/AI message bubble, NEW_TOOL = tool call card added.
+    enum class ScrollReason { NEW_MESSAGE, NEW_TOOL }
+    private val _scrollEvent = kotlinx.coroutines.flow.MutableSharedFlow<ScrollReason>(
+        extraBufferCapacity = 8
+    )
+    val scrollEvent: kotlinx.coroutines.flow.SharedFlow<ScrollReason> = _scrollEvent
     
     val conversations: StateFlow<List<ConversationEntity>> = conversationDao
         .getRecentConversations(20)
@@ -122,10 +131,12 @@ class ChatViewModel @Inject constructor(
                 content = content
             )
             
+            _scrollEvent.tryEmit(ScrollReason.NEW_MESSAGE)
             _uiState.update {
                 it.copy(
                     messages = it.messages + userMessage,
                     isLoading = true,
+                    isStreaming = true,
                     error = null
                 )
             }
@@ -181,6 +192,7 @@ class ChatViewModel @Inject constructor(
                 content = ""
             )
             
+            _scrollEvent.tryEmit(ScrollReason.NEW_MESSAGE)
             _uiState.update {
                 it.copy(messages = it.messages + assistantMessage)
             }
@@ -226,6 +238,7 @@ class ChatViewModel @Inject constructor(
                     }
                     
                     is AgentEvent.ToolCallStart -> {
+                        _scrollEvent.tryEmit(ScrollReason.NEW_TOOL)
                         val toolExecution = ToolExecution(
                             toolCallId = event.toolCallId,
                             name = event.name,
@@ -283,7 +296,7 @@ class ChatViewModel @Inject constructor(
                     
                     is AgentEvent.Error -> {
                         _uiState.update { state ->
-                            state.copy(error = event.message, isLoading = false)
+                            state.copy(error = event.message, isLoading = false, isStreaming = false)
                         }
                     }
                     
@@ -343,10 +356,10 @@ class ChatViewModel @Inject constructor(
                                 if (lastIndex >= 0 && messages[lastIndex].role == MessageRole.ASSISTANT) {
                                     messages[lastIndex] = messages[lastIndex].copy(todoItems = currentTodos)
                                 }
-                                state.copy(messages = messages, isLoading = false)
+                                state.copy(messages = messages, isLoading = false, isStreaming = false)
                             }
                         } else {
-                            _uiState.update { it.copy(isLoading = false) }
+                            _uiState.update { it.copy(isLoading = false, isStreaming = false) }
                         }
                         saveCurrentConversation()
                     }
@@ -368,7 +381,7 @@ class ChatViewModel @Inject constructor(
         _confirmationRequest.value = null
         currentChatJob?.cancel()
         currentChatJob = null
-        _uiState.update { it.copy(isLoading = false) }
+        _uiState.update { it.copy(isLoading = false, isStreaming = false) }
         saveCurrentConversation()
     }
     
@@ -391,6 +404,7 @@ class ChatViewModel @Inject constructor(
                 totalInputTokens = 0,
                 totalOutputTokens = 0,
                 isLoading = false,
+                isStreaming = false,
                 error = null
             )
         }
@@ -639,6 +653,7 @@ class ChatViewModel @Inject constructor(
 data class ChatUiState(
     val messages:         List<UiMessage> = emptyList(),
     val isLoading:        Boolean         = false,
+    val isStreaming:      Boolean         = false,
     val error:            String?         = null,
     val selectedModel:    String          = "",
     val activeProjectId:  Long?           = null,

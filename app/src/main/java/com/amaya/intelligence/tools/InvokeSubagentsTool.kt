@@ -1,5 +1,6 @@
 package com.amaya.intelligence.tools
 
+import com.amaya.intelligence.data.remote.api.AgentConfig
 import com.amaya.intelligence.data.remote.api.AiProvider
 import com.amaya.intelligence.data.remote.api.AiSettingsManager
 import com.amaya.intelligence.data.remote.api.AnthropicProvider
@@ -73,19 +74,21 @@ class InvokeSubagentsTool @Inject constructor(
                     )
                 }
             }
-            val subagents = rawList.mapIndexed { idx, map ->
-                SubagentTask(
-                    index    = idx,
-                    taskName = map["task_name"] as? String ?: "Subagent ${idx + 1}",
-                    task     = map["task"] as String  // safe: already validated non-null above
-                )
-            }
-
-            // FIX 1.6/3.6: Read emitter and parentId from per-call arguments map (injected by ToolExecutor)
-            // instead of mutable singleton fields. Safe for concurrent chat sessions.
+            // FIX 1.6/3.6: Read emitter, parentId, agentConfig from per-call arguments map
+            // (injected by ToolExecutor) instead of mutable singleton fields.
             @Suppress("UNCHECKED_CAST")
             val emitter = arguments["__eventEmitter"] as? (suspend (Any) -> Unit)
             val parentId = arguments["__toolCallId"] as? String ?: "subagents_${System.currentTimeMillis()}"
+            val agentConfig = arguments["__agentConfig"] as? com.amaya.intelligence.data.remote.api.AgentConfig
+
+            val subagents = rawList.mapIndexed { idx, map ->
+                SubagentTask(
+                    index       = idx,
+                    taskName    = map["task_name"] as? String ?: "Subagent ${idx + 1}",
+                    task        = map["task"] as String,  // safe: already validated non-null above
+                    agentConfig = agentConfig             // pass resolved config to SubagentRunner
+                )
+            }
 
             // Emit RUNNING state for all subagents immediately
             subagents.forEach { sub ->
@@ -144,7 +147,8 @@ data class SubagentTask(
     val index: Int,
     val taskName: String,
     val task: String,
-    val workspacePath: String? = null  // FIX 2.11: workspace for tool execution context
+    val workspacePath: String? = null,  // FIX 2.11: workspace for tool execution context
+    val agentConfig: com.amaya.intelligence.data.remote.api.AgentConfig? = null  // resolved by main chat loop
 )
 
 data class SubagentResult(
@@ -205,12 +209,16 @@ class SubagentRunner @Inject constructor(
 
     private suspend fun runInternal(task: SubagentTask, isRetry: Boolean): SubagentResult {
         val toolExecutor = toolExecutorProvider.get()
-        val settings = settingsManager.getSettings()
 
-        // FIX #9: Resolve provider and model from the ACTIVE AGENT config, not raw DataStore
-        // activeProvider/activeModel fields which may be stale or mismatched.
-        val activeAgent = settings.agentConfigs.find { it.id == settings.activeAgentId && it.enabled }
-            ?: settings.agentConfigs.firstOrNull { it.enabled }
+        // FIX: Use agentConfig injected via task.agentConfig (passed from AiRepository through
+        // ToolExecutor.__agentConfig) — this is the SAME config already resolved by the main
+        // chat loop, so subagents always use the same provider/model/apiKey as the parent.
+        // Fall back to DataStore only if no agentConfig was passed (e.g. called from subagent tools).
+        val activeAgent: AgentConfig? = task.agentConfig ?: run {
+            val settings = settingsManager.getSettings()
+            settings.agentConfigs.find { it.id == settings.activeAgentId && it.enabled }
+                ?: settings.agentConfigs.firstOrNull { it.enabled }
+        }
         val providerType = activeAgent?.let {
             runCatching { ProviderType.valueOf(it.providerType) }.getOrNull()
         } ?: ProviderType.OPENAI
@@ -220,8 +228,7 @@ class SubagentRunner @Inject constructor(
             ProviderType.OPENAI    -> openAiProvider
             ProviderType.GEMINI    -> geminiProvider
         }
-        val model = activeAgent?.modelId?.ifBlank { null }
-            ?: settings.activeModel.ifBlank { null }
+        val model: String = activeAgent?.modelId?.ifBlank { null }
             ?: provider.supportedModels.firstOrNull()
             ?: ""
 
@@ -255,7 +262,10 @@ class SubagentRunner @Inject constructor(
                 messages     = messages,
                 systemPrompt = systemPrompt,
                 tools        = tools,
-                stream       = true
+                stream       = true,
+                // Pass agentId so provider uses the correct baseUrl and apiKey
+                // (same agent as the main chat loop, not stale DataStore activeAgentId)
+                agentId      = activeAgent?.id ?: ""
             )
 
             var textBuffer  = StringBuilder()

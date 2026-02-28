@@ -17,13 +17,14 @@ class McpToolExecutor @Inject constructor(
         workspacePath: String?,
         toolCallId: String? = null,
         onEvent: (suspend (Any) -> Unit)? = null,
-        onConfirmationRequired: suspend (ConfirmationRequest) -> Boolean
+        onConfirmationRequired: suspend (ConfirmationRequest) -> Boolean,
+        agentConfig: com.amaya.intelligence.data.remote.api.AgentConfig? = null
     ): ToolResult {
         // FIX 9: Use McpClientManager.TOOL_PREFIX constant — no hardcoded "mcp__" string here
         return if (toolName.startsWith(McpClientManager.TOOL_PREFIX)) {
             mcpClientManager.callTool(toolName, arguments)
         } else {
-            toolExecutor.execute(toolName, arguments, workspacePath, toolCallId, onEvent, onConfirmationRequired)
+            toolExecutor.execute(toolName, arguments, workspacePath, toolCallId, onEvent, onConfirmationRequired, agentConfig)
         }
     }
 }

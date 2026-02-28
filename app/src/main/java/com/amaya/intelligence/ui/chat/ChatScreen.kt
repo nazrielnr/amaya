@@ -863,14 +863,7 @@ fun TodoBar(items: List<TodoItem>) {
         ?: items.lastOrNull()?.id
         ?: 1
 
-    // -- Shimmer — identical technique to LoadingIndicator / Thinking.. ----
-    // Key: teks HARUS warna solid (onSurface), shimmer di-overlay via SrcAtop.
-    // baseShimmer = warna redup (teks saat tidak kena sorot)
-    // peakShimmer = warna terang bergerak
-    val isDark = isSystemInDarkTheme()
-    val baseShimmer = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
-    val peakShimmer = if (isDark) Color.White       else Color.Black
-
+    // -- Shimmer — flow: hitam → transparan → hitam (light) | putih → transparan → putih (dark) ----
     val transition = rememberInfiniteTransition(label = "todo_shimmer")
     val shimmerOffset by transition.animateFloat(
         initialValue = -400f,
@@ -882,8 +875,13 @@ fun TodoBar(items: List<TodoItem>) {
         label = "todo_shimmer_x"
     )
 
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
     val shimmerBrush = Brush.linearGradient(
-        colors = listOf(baseShimmer, peakShimmer, peakShimmer, baseShimmer),
+        colors = listOf(
+            onSurfaceColor,                      // Start: solid
+            onSurfaceColor.copy(alpha = 0.2f),   // Mid: transparent
+            onSurfaceColor                       // End: solid
+        ),
         start  = Offset(shimmerOffset, 0f),
         end    = Offset(shimmerOffset + 300f, 0f)
     )
@@ -1205,12 +1203,13 @@ fun ToolCallCard(execution: ToolExecution) {
         animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing), RepeatMode.Restart),
         label = "shimmer_x"
     )
+    // Shimmer flow: hitam → transparan → hitam (light mode) | putih → transparan → putih (dark mode)
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
     val shimmerBrush = Brush.linearGradient(
         colors = listOf(
-            if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
-            if (isDark) Color.White       else Color.Black,
-            if (isDark) Color.White       else Color.Black,
-            if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
+            onSurfaceColor,                      // Start: solid color
+            onSurfaceColor.copy(alpha = 0.2f),   // Mid: transparent
+            onSurfaceColor                       // End: solid color
         ),
         start = Offset(shimmerOffset, 0f),
         end   = Offset(shimmerOffset + 400f, 0f)
@@ -2099,14 +2098,15 @@ fun LoadingIndicator() {
         label = "translate"
     )
 
-    // Shimmer: same technique as TodoBar — dark: grey?White, light: grey?Black
+    // Shimmer: flow hitam → transparan → hitam (light) | putih → transparan → putih (dark)
     // MUST use solid onSurface color + CompositingStrategy.Offscreen + BlendMode.SrcAtop
-    val isDark = isSystemInDarkTheme()
-    val baseShimmer = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
-    val peakShimmer = if (isDark) Color.White else Color.Black
-
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
     val shimmerBrush = Brush.linearGradient(
-        colors = listOf(baseShimmer, peakShimmer, peakShimmer, baseShimmer),
+        colors = listOf(
+            onSurfaceColor,                      // Start: solid
+            onSurfaceColor.copy(alpha = 0.2f),   // Mid: transparent
+            onSurfaceColor                       // End: solid
+        ),
         start  = Offset(translateAnim, 0f),
         end    = Offset(translateAnim + 400f, 0f)
     )

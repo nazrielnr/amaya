@@ -181,11 +181,12 @@ class AiRepository @Inject constructor(
             }
             
             val request = ChatRequest(
-                model = model,
-                messages = messages,
+                model      = model,
+                messages   = messages,
                 systemPrompt = systemPrompt,
-                tools = tools,
-                stream = true
+                tools      = tools,
+                maxTokens  = agentConfig?.maxTokens ?: 8192,
+                stream     = true
             )
             
             var textBuffer = StringBuilder()

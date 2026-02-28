@@ -320,6 +320,7 @@ private fun AgentEditSheet(
     var modelId      by remember(config.id) { mutableStateOf(config.modelId) }
     var key          by remember(config.id) { mutableStateOf(apiKey) }
     var enabled      by remember(config.id) { mutableStateOf(config.enabled) }
+    var maxTokensStr by remember(config.id) { mutableStateOf(config.maxTokens.toString()) }
     var showKey      by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -448,6 +449,22 @@ private fun AgentEditSheet(
             leadingIcon = { Icon(Icons.Default.Psychology, null, modifier = Modifier.size(18.dp)) }
         )
 
+        // Max Tokens
+        OutlinedTextField(
+            value = maxTokensStr,
+            onValueChange = { v -> if (v.all { it.isDigit() }) maxTokensStr = v },
+            label = { Text("Max Tokens") },
+            placeholder = { Text("8192") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+            ),
+            leadingIcon = { Icon(Icons.Default.Tune, null, modifier = Modifier.size(18.dp)) },
+            supportingText = { Text("Max output tokens (default: 8192, Anthropic supports up to 16000)") }
+        )
+
         // Enabled toggle
         if (modelId.isNotBlank()) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -502,7 +519,8 @@ private fun AgentEditSheet(
                             providerType = providerType,
                             baseUrl      = finalBaseUrl,
                             modelId      = modelId.trim(),
-                            enabled      = enabled
+                            enabled      = enabled,
+                            maxTokens    = maxTokensStr.toIntOrNull()?.coerceIn(256, 64000) ?: 8192
                         ),
                         key.trim()
                     )

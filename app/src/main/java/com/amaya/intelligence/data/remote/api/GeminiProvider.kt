@@ -116,7 +116,7 @@ class GeminiProvider @Inject constructor(
                                         jsonBuffer.clear()
                                         
                                         if (json.isNotEmpty() && json.startsWith("{")) {
-                                            processGeminiChunk(json)?.let { response ->
+                                            processGeminiChunk(json).forEach { response ->
                                                 trySend(response)
                                             }
                                         }
@@ -179,44 +179,40 @@ class GeminiProvider @Inject constructor(
         }
     }.flowOn(Dispatchers.IO)
     
-    private fun processGeminiChunk(json: String): ChatResponse? {
+    // Returns ALL ChatResponse items from a single Gemini chunk (not just the first).
+    // Previous bug: early `return` inside forEach caused only first part to be emitted.
+    private fun processGeminiChunk(json: String): List<ChatResponse> {
         return try {
             val chunk = moshi.adapter(GeminiResponse::class.java).fromJson(json)
+            val responses = mutableListOf<ChatResponse>()
 
-            // Collect thoughtSignature from parts (it comes separately from text and functionCall)
+            // Collect thoughtSignature first (comes separately from text/functionCall)
             var thoughtSignature: String? = null
             chunk?.candidates?.firstOrNull()?.content?.parts?.forEach { part ->
-                if (part.thoughtSignature != null) {
-                    thoughtSignature = part.thoughtSignature
-                }
+                if (part.thoughtSignature != null) thoughtSignature = part.thoughtSignature
             }
 
             chunk?.candidates?.firstOrNull()?.content?.parts?.forEach { part ->
-                // Skip empty text parts that only contain thoughtSignature
                 part.text?.let { text ->
                     if (text.isNotEmpty()) {
-                        return ChatResponse.TextDelta(text)
+                        responses.add(ChatResponse.TextDelta(text))
                     }
                 }
-
                 part.functionCall?.let { functionCall ->
-                    val metadata = if (thoughtSignature != null) {
+                    val metadata = if (thoughtSignature != null)
                         mapOf("thoughtSignature" to thoughtSignature!!)
-                    } else {
-                        emptyMap()
-                    }
-                    return ChatResponse.ToolCall(
-                        id = "call_${java.util.UUID.randomUUID()}",
-                        name = functionCall.name,
+                    else emptyMap()
+                    responses.add(ChatResponse.ToolCall(
+                        id        = "call_${java.util.UUID.randomUUID()}",
+                        name      = functionCall.name,
                         arguments = functionCall.args ?: emptyMap(),
-                        metadata = metadata
-                    )
+                        metadata  = metadata
+                    ))
                 }
             }
-
-            null
+            responses
         } catch (e: Exception) {
-            null
+            emptyList()
         }
     }
     
@@ -386,7 +382,7 @@ data class GeminiPropertySchema(
 
 @JsonClass(generateAdapter = true)
 data class GeminiGenerationConfig(
-    @Json(name = "maxOutputTokens") val maxOutputTokens: Int = 4096,
+    @Json(name = "maxOutputTokens") val maxOutputTokens: Int = 8192,
     val temperature: Float = 0.7f
 )
 

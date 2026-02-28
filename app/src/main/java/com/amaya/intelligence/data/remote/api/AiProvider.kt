@@ -42,7 +42,7 @@ data class ChatRequest(
     val messages: List<ChatMessage>,
     val systemPrompt: String? = null,
     val tools: List<AiToolDefinition> = emptyList(),
-    val maxTokens: Int = 4096,
+    val maxTokens: Int = 8192,
     val temperature: Float = 0.7f,
     val stream: Boolean = true
 )

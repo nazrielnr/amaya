@@ -28,12 +28,13 @@ import javax.inject.Singleton
  * API key is stored encrypted separately, keyed by [id].
  */
 data class AgentConfig(
-    val id:           String = java.util.UUID.randomUUID().toString(),
-    val name:         String = "",
-    val providerType: String = "CUSTOM",
-    val baseUrl:      String = "",
-    val modelId:      String = "",
-    val enabled:      Boolean = true
+    val id:           String  = java.util.UUID.randomUUID().toString(),
+    val name:         String  = "",
+    val providerType: String  = "CUSTOM",
+    val baseUrl:      String  = "",
+    val modelId:      String  = "",
+    val enabled:      Boolean = true,
+    val maxTokens:    Int     = 8192
 )
 
 private val Context.dataStore by preferencesDataStore(name = "ai_settings")
@@ -197,7 +198,8 @@ class AiSettingsManager @Inject constructor(
                     providerType = obj.optString("providerType", "CUSTOM"),
                     baseUrl      = obj.optString("baseUrl", ""),
                     modelId      = obj.optString("modelId", ""),
-                    enabled      = obj.optBoolean("enabled", true)
+                    enabled      = obj.optBoolean("enabled", true),
+                    maxTokens    = obj.optInt("maxTokens", 8192)
                 )
             }
         }
@@ -213,6 +215,7 @@ class AiSettingsManager @Inject constructor(
                     put("baseUrl",      c.baseUrl)
                     put("modelId",      c.modelId)
                     put("enabled",      c.enabled)
+                    put("maxTokens",    c.maxTokens)
                 })
             }
         }.toString()

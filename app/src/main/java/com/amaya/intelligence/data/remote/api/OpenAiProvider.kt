@@ -348,7 +348,7 @@ data class OpenAiRequest(
     val model: String,
     val messages: List<OpenAiMessage>,
     val tools: List<OpenAiToolDef>? = null,
-    @Json(name = "max_tokens") val maxTokens: Int = 4096,
+    @Json(name = "max_tokens") val maxTokens: Int = 8192,
     val temperature: Float = 0.7f,
     val stream: Boolean = false,
     @Json(name = "stream_options") val streamOptions: OpenAiStreamOptions? = null

@@ -313,7 +313,7 @@ data class AnthropicRequest(
     val messages: List<AnthropicMessage>,
     val system: String? = null,
     val tools: List<AnthropicTool>? = null,
-    @Json(name = "max_tokens") val maxTokens: Int = 4096,
+    @Json(name = "max_tokens") val maxTokens: Int = 8192,
     val stream: Boolean = false
 )
 

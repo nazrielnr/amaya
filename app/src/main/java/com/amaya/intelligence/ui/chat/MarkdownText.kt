@@ -2,6 +2,7 @@
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -73,171 +74,220 @@ private val BQ_RE = Regex("^>\\s?(.*)")
 fun MarkdownText(
     text: String,
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
     val blocks = remember(text) { parseBlocks(text) }
-    val scheme = MaterialTheme.colorScheme
-    val typography = MaterialTheme.typography
+    val scheme   = MaterialTheme.colorScheme
+    val typo     = MaterialTheme.typography
+    val spacing  = if (compact) 4.dp else 12.dp
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(spacing)) {
         blocks.forEach { block ->
             when (block) {
-                // ── Heading ──────────────────────────────────────
+
                 is MdBlock.Heading -> {
-                    val style = when (block.level) {
-                        1 -> typography.headlineLarge
-                        2 -> typography.headlineMedium
-                        3 -> typography.headlineSmall
-                        4 -> typography.titleLarge
-                        5 -> typography.titleMedium
-                        else -> typography.titleSmall
+                    val style = if (compact) when (block.level) {
+                        1    -> typo.labelLarge.copy(fontSize = 12.sp, lineHeight = 16.sp)
+                        2    -> typo.labelMedium.copy(fontSize = 11.sp, lineHeight = 15.sp)
+                        else -> typo.labelSmall.copy(fontSize = 10.sp, lineHeight = 14.sp)
+                    } else when (block.level) {
+                        1    -> typo.headlineLarge
+                        2    -> typo.headlineMedium
+                        3    -> typo.headlineSmall
+                        4    -> typo.titleLarge
+                        5    -> typo.titleMedium
+                        else -> typo.titleSmall
                     }
                     InlineText(
-                        text = block.text,
-                        color = color,
-                        style = style.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.padding(top = if (block.level <= 2) 8.dp else 4.dp)
+                        text     = block.text,
+                        color    = color,
+                        style    = style.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(top = if (!compact && block.level <= 2) 8.dp else 2.dp),
+                        compact  = compact
                     )
-                    if (block.level <= 2) {
+                    if (!compact && block.level <= 2) {
                         HorizontalDivider(
-                            color = scheme.outlineVariant.copy(alpha = 0.4f),
-                            thickness = 1.dp,
-                            modifier = Modifier.padding(bottom = 4.dp)
+                            color     = scheme.outlineVariant.copy(alpha = 0.4f),
+                            thickness = 0.5.dp
                         )
                     }
                 }
 
-                // ── Paragraph ────────────────────────────────────
                 is MdBlock.Paragraph -> {
+                    val style = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp)
+                                else typo.bodyMedium
                     InlineText(
-                        text = block.text,
-                        color = color,
-                        style = typography.bodyMedium.copy(fontSize = 16.sp, lineHeight = 24.sp)
+                        text    = block.text,
+                        color   = color,
+                        style   = style,
+                        compact = compact
                     )
                 }
 
-                // ── Code block ───────────────────────────────────
                 is MdBlock.CodeBlock -> {
-                    CodeBlockCard(language = block.lang, code = block.code)
+                    val isLight   = !isSystemInDarkTheme()
+                    val bgColor   = if (isLight) Color(0xFFF2F2F7) else Color(0xFF1C1C1E)
+                    val codeColor = if (isLight) Color(0xFF3A3A3C) else Color(0xFFD1D1D6)
+                    Surface(shape = RoundedCornerShape(if (compact) 6.dp else 8.dp), color = bgColor,
+                        modifier = Modifier.fillMaxWidth()) {
+                        Column {
+                            if (block.lang.isNotBlank() && !compact) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().background(bgColor).padding(horizontal = 12.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(block.lang, style = typo.labelSmall, color = codeColor.copy(alpha = 0.6f),
+                                        fontFamily = FontFamily.Monospace)
+                                    var copied by remember { mutableStateOf(false) }
+                                    val clipboard = LocalClipboardManager.current
+                                    val scope = rememberCoroutineScope()
+                                    IconButton(onClick = {
+                                        clipboard.setText(AnnotatedString(block.code))
+                                        copied = true
+                                        scope.launch { delay(2000); copied = false }
+                                    }, modifier = Modifier.size(28.dp)) {
+                                        Icon(if (copied) Icons.Default.Done else Icons.Default.ContentCopy, null,
+                                            modifier = Modifier.size(14.dp), tint = codeColor.copy(alpha = 0.6f))
+                                    }
+                                }
+                                HorizontalDivider(color = codeColor.copy(alpha = 0.12f))
+                            }
+                            val codeFontSize = if (compact) 10.sp else 12.sp
+                            val codeLineHeight = if (compact) 14.sp else 18.sp
+                            Text(
+                                block.code,
+                                style = typo.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize   = codeFontSize,
+                                    lineHeight = codeLineHeight
+                                ),
+                                color    = codeColor,
+                                modifier = Modifier.padding(if (compact) 8.dp else 12.dp)
+                            )
+                        }
+                    }
                 }
 
-                // ── Unordered list ───────────────────────────────
                 is MdBlock.UnorderedList -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        block.items.forEach { entry ->
-                            Row(modifier = Modifier.padding(start = (entry.indent * 16).dp)) {
-                                val bullet = if (entry.indent == 0) "•" else "◦"
+                    Column(verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp)) {
+                        block.items.forEach { item ->
+                            Row(modifier = Modifier.padding(start = (item.indent * 12).dp)) {
                                 Text(
-                                    bullet,
+                                    "\u2022",
+                                    style = if (compact) typo.bodySmall.copy(fontSize = 11.sp) else typo.bodyMedium,
                                     color = color.copy(alpha = 0.6f),
-                                    modifier = Modifier.width(16.dp),
-                                    style = typography.bodyMedium.copy(fontSize = 16.sp)
+                                    modifier = Modifier.width(if (compact) 12.dp else 16.dp)
                                 )
-                                InlineText(entry.text, color, typography.bodyMedium.copy(fontSize = 16.sp, lineHeight = 24.sp))
+                                InlineText(text = item.text, color = color,
+                                    style = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp) else typo.bodyMedium,
+                                    compact = compact)
                             }
                         }
                     }
                 }
 
-                // ── Ordered list ─────────────────────────────────
                 is MdBlock.OrderedList -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        block.items.forEachIndexed { i, entry ->
-                            Row(modifier = Modifier.padding(start = (entry.indent * 16).dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp)) {
+                        block.items.forEachIndexed { idx, item ->
+                            Row(modifier = Modifier.padding(start = (item.indent * 12).dp)) {
                                 Text(
-                                    "${i + 1}.",
+                                    "${idx + 1}.",
+                                    style = if (compact) typo.bodySmall.copy(fontSize = 11.sp) else typo.bodyMedium,
                                     color = color.copy(alpha = 0.6f),
-                                    modifier = Modifier.width(24.dp),
-                                    style = typography.bodyMedium.copy(fontSize = 16.sp),
-                                    fontWeight = FontWeight.Medium
+                                    modifier = Modifier.width(if (compact) 18.dp else 24.dp)
                                 )
-                                InlineText(entry.text, color, typography.bodyMedium.copy(fontSize = 16.sp, lineHeight = 24.sp))
+                                InlineText(text = item.text, color = color,
+                                    style = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp) else typo.bodyMedium,
+                                    compact = compact)
                             }
                         }
                     }
                 }
 
-                // ── Task list ────────────────────────────────────
                 is MdBlock.TaskList -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        block.items.forEach { entry ->
+                    Column(verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp)) {
+                        block.items.forEach { item ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = if (entry.checked) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = if (entry.checked) scheme.primary else color.copy(alpha = 0.5f)
+                                    if (item.checked) Icons.Default.CheckBox else Icons.Default.CheckBoxOutlineBlank,
+                                    null,
+                                    modifier = Modifier.size(if (compact) 14.dp else 18.dp),
+                                    tint = if (item.checked) scheme.primary else color.copy(alpha = 0.4f)
                                 )
-                                Spacer(Modifier.width(6.dp))
-                                InlineText(
-                                    text = entry.text,
-                                    color = if (entry.checked) color.copy(alpha = 0.5f) else color,
-                                    style = typography.bodyLarge.copy(
-                                        lineHeight = 24.sp,
-                                        textDecoration = if (entry.checked) TextDecoration.LineThrough else null
-                                    )
-                                )
+                                Spacer(Modifier.width(if (compact) 4.dp else 6.dp))
+                                InlineText(text = item.text, color = if (item.checked) color.copy(alpha = 0.5f) else color,
+                                    style = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp) else typo.bodyMedium,
+                                    compact = compact)
                             }
                         }
                     }
                 }
 
-                // ── Blockquote ───────────────────────────────────
                 is MdBlock.BlockQuote -> {
-                    val accentColor = scheme.primary
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .drawBehind {
-                                drawLine(
-                                    color = accentColor,
-                                    start = Offset(0f, 0f),
-                                    end = Offset(0f, size.height),
-                                    strokeWidth = 3.dp.toPx()
-                                )
-                            }
-                            .padding(start = 12.dp, top = 4.dp, bottom = 4.dp)
-                    ) {
-                        InlineText(
-                            text = block.text,
-                            color = color.copy(alpha = 0.75f),
-                            style = typography.bodyMedium.copy(
-                                fontSize = 16.sp,
-                                fontStyle = FontStyle.Italic,
-                                lineHeight = 24.sp
-                            )
+                    Row {
+                        Box(modifier = Modifier
+                            .width(if (compact) 2.dp else 3.dp)
+                            .fillMaxHeight()
+                            .background(scheme.primary.copy(alpha = 0.5f), RoundedCornerShape(2.dp))
                         )
+                        Spacer(Modifier.width(if (compact) 6.dp else 10.dp))
+                        InlineText(text = block.text, color = color.copy(alpha = 0.7f),
+                            style = if (compact) typo.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp)
+                                    else typo.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                            compact = compact)
                     }
                 }
 
-                // ── Table ────────────────────────────────────────
                 is MdBlock.Table -> {
-                    TableCard(block.headers, block.rows, color, scheme)
+                    if (!compact) {
+                        // Full table only in normal mode
+                        Surface(shape = RoundedCornerShape(8.dp),
+                            color = scheme.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
+                            Column {
+                                Row(modifier = Modifier.fillMaxWidth().background(scheme.surfaceContainerHigh).padding(horizontal = 8.dp, vertical = 6.dp)) {
+                                    block.headers.forEach { h ->
+                                        Text(h, modifier = Modifier.weight(1f), style = typo.labelSmall,
+                                            color = color, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                block.rows.forEach { row ->
+                                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.3f))
+                                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                        row.forEach { cell ->
+                                            InlineText(cell, color = color, style = typo.bodySmall,
+                                                modifier = Modifier.weight(1f), compact = false)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Compact: just show as plain text
+                        val flat = (listOf(block.headers) + block.rows).joinToString("\n") { it.joinToString(" | ") }
+                        Text(flat, style = typo.bodySmall.copy(fontSize = 10.sp, fontFamily = FontFamily.Monospace),
+                            color = color.copy(alpha = 0.8f))
+                    }
                 }
 
-                // ── Horizontal rule ──────────────────────────────
                 is MdBlock.HorizontalRule -> {
-                    HorizontalDivider(
-                        color = scheme.outlineVariant,
-                        thickness = 1.dp,
-                        modifier = Modifier.padding(vertical = 6.dp)
-                    )
+                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.4f))
                 }
+
+                else -> {}
             }
         }
     }
 }
-
-// ═══════════════════════════════════════════════════════════════════
-//  Inline text renderer  (AnnotatedString)
-// ═══════════════════════════════════════════════════════════════════
 
 @Composable
 private fun InlineText(
     text: String,
     color: Color,
     style: TextStyle,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
     val scheme = MaterialTheme.colorScheme
     val uriHandler = LocalUriHandler.current

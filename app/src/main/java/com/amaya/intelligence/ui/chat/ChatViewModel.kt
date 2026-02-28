@@ -200,13 +200,19 @@ class ChatViewModel @Inject constructor(
                         _uiState.update { state ->
                             val messages = state.messages.toMutableList()
                             val lastIndex = messages.lastIndex
+                            var updatedContent = ""
                             if (lastIndex >= 0) {
                                 val last = messages[lastIndex]
                                 if (last.role == MessageRole.ASSISTANT) {
-                                    messages[lastIndex] = last.copy(content = last.content + event.text)
+                                    updatedContent = last.content + event.text
+                                    messages[lastIndex] = last.copy(content = updatedContent)
                                 }
                             }
-                            state.copy(messages = messages)
+                            // Hide "Thinking.." indicator only when actual text content is visible
+                            // NOTE: For reasoning models (future), we may want to keep this visible
+                            // and render <think> tags separately. For now, hide when content.isNotEmpty().
+                            val shouldHideThinking = updatedContent.isNotEmpty()
+                            state.copy(messages = messages, isLoading = !shouldHideThinking)
                         }
                     }
                     

@@ -23,7 +23,6 @@ class ToolExecutor @Inject constructor(
     private val createDirectoryTool: CreateDirectoryTool,
     private val deleteFileTool: DeleteFileTool,
     private val runShellTool: RunShellTool,
-    private val transferFileTool: TransferFileTool,  // replaces copy_file + move_file
     private val editFileTool: EditFileTool,           // now includes apply_diff
     private val findFilesTool: FindFilesTool,         // now includes search_files
     private val undoChangeTool: UndoChangeTool,
@@ -45,7 +44,6 @@ class ToolExecutor @Inject constructor(
             createDirectoryTool.name to createDirectoryTool,
             deleteFileTool.name     to deleteFileTool,
             runShellTool.name       to runShellTool,
-            transferFileTool.name   to transferFileTool,
             editFileTool.name       to editFileTool,
             findFilesTool.name      to findFilesTool,
             undoChangeTool.name     to undoChangeTool,
@@ -71,7 +69,8 @@ class ToolExecutor @Inject constructor(
         workspacePath: String? = null,
         toolCallId: String? = null,
         onEvent: (suspend (Any) -> Unit)? = null,
-        onConfirmationRequired: suspend (ConfirmationRequest) -> Boolean = { false }
+        onConfirmationRequired: suspend (ConfirmationRequest) -> Boolean = { false },
+        agentConfig: com.amaya.intelligence.data.remote.api.AgentConfig? = null
     ): ToolResult {
         val tool = tools[toolName]
             ?: return ToolResult.Error(
@@ -92,6 +91,9 @@ class ToolExecutor @Inject constructor(
             if (toolName == "invoke_subagents") {
                 if (onEvent != null) put("__eventEmitter", onEvent)
                 if (toolCallId != null) put("__toolCallId", toolCallId)
+                // Pass resolved agentConfig so SubagentRunner uses the SAME provider/model
+                // as the main chat — not a stale DataStore snapshot.
+                if (agentConfig != null) put("__agentConfig", agentConfig)
             }
         }
         
@@ -189,14 +191,16 @@ class ToolExecutor @Inject constructor(
             ),
             ToolDefinition(
                 name = "write_file",
-                description = "Write content to a file with atomic operations and automatic backup. Always creates a backup before writing.",
+                description = "Write content to a file with atomic operations and automatic backup. " +
+                    "Automatically creates parent directories if they don't exist (create_dirs=true by default). " +
+                    "Always creates a backup before writing. Use append=true to add content without overwriting.",
                 parameters = listOf(
-                    ToolParameter("path", "string", "Absolute path to the file", required = true),
+                    ToolParameter("path", "string", "Absolute path to the file. Parent directories are created automatically if missing.", required = true),
                     ToolParameter("content", "string", "Content to write", required = true),
                     ToolParameter("create_backup", "boolean", "Create backup before write (default: true)", required = false),
                     ToolParameter("validate_syntax", "boolean", "Validate code syntax (default: true for code files)", required = false),
-                    ToolParameter("create_dirs", "boolean", "Create parent directories if needed (default: true)", required = false),
-                    ToolParameter("append", "boolean", "Append instead of overwrite (default: false)", required = false)
+                    ToolParameter("create_dirs", "boolean", "Create parent directories if they don't exist (default: true)", required = false),
+                    ToolParameter("append", "boolean", "Append to existing content instead of overwrite (default: false)", required = false)
                 )
             ),
             ToolDefinition(
@@ -226,16 +230,6 @@ class ToolExecutor @Inject constructor(
                     ToolParameter("command", "string", "The shell command to run", required = true),
                     ToolParameter("working_dir", "string", "Working directory for the command", required = false),
                     ToolParameter("timeout_ms", "integer", "Timeout in milliseconds (default: 30000, max: 300000)", required = false)
-                )
-            ),
-            ToolDefinition(
-                name = "transfer_file",
-                description = "Copy or move/rename a file or directory. mode='copy' duplicates, mode='move' relocates/renames.",
-                parameters = listOf(
-                    ToolParameter("source", "string", "Absolute path to source file/directory", required = true),
-                    ToolParameter("destination", "string", "Absolute path to destination", required = true),
-                    ToolParameter("mode", "string", "Operation: 'copy' or 'move' (default: copy)", required = false, enum = listOf("copy", "move")),
-                    ToolParameter("overwrite", "boolean", "Overwrite if destination exists (default: false)", required = false)
                 )
             ),
             ToolDefinition(

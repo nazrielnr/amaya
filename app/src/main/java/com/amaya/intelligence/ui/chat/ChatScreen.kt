@@ -78,6 +78,9 @@ fun ChatScreen(
     // Track TodoBar height for dynamic padding (prevent chat overlap)
     var todoBarHeight by remember { mutableStateOf(0) }
 
+    // Track input bar height for accurate bottom padding (avoids overlap with ChatInput)
+    var inputBarHeight by remember { mutableStateOf(0) }
+
     // Only show enabled agents in dropdown
     val agentConfigs   = uiState.agentConfigs.filter { it.enabled }
     val activeAgentId  = uiState.activeAgentId
@@ -88,10 +91,56 @@ fun ChatScreen(
         uiState.messages.filter { it.content.isNotBlank() || it.toolExecutions.isNotEmpty() }
     }
 
-    // Auto-scroll to latest message at bottom when user sends
+    // --- Auto-scroll logic ---
+    // "At bottom" = last item visible AND fully scrolled (no more content below)
+    val isAtBottom by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()
+            val totalItems = layoutInfo.totalItemsCount
+            // Consider "at bottom" if last item is visible and not cut off significantly
+            lastVisible != null &&
+                lastVisible.index >= totalItems - 1 &&
+                lastVisible.offset + lastVisible.size <= layoutInfo.viewportEndOffset + 8
+        }
+    }
+
+    // userAutoScroll = user has NOT manually scrolled away from bottom
+    // Resets to true when: new user message sent OR user scrolls back to bottom
+    var userAutoScroll by remember { mutableStateOf(true) }
+
+    // Detect manual upward scroll: if user is scrolling and not at bottom → disable auto-scroll
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress && !isAtBottom) {
+            userAutoScroll = false
+        }
+    }
+
+    // Re-enable auto-scroll when user scrolls back to bottom
+    LaunchedEffect(isAtBottom) {
+        if (isAtBottom) userAutoScroll = true
+    }
+
+    // Auto-scroll to bottom when new user message is sent (always)
     val userMsgCount = remember(displayMessages) { displayMessages.count { it.role == MessageRole.USER } }
-    LaunchedEffect(userMsgCount) { 
-        if (displayMessages.isNotEmpty()) listState.scrollToItem(displayMessages.size - 1) 
+    LaunchedEffect(userMsgCount) {
+        if (displayMessages.isNotEmpty()) {
+            userAutoScroll = true
+            listState.animateScrollToItem(displayMessages.size - 1)
+        }
+    }
+
+    // Auto-scroll during streaming: follow text if userAutoScroll is active
+    val totalMsgSize = remember(displayMessages) { displayMessages.sumOf { it.content.length } }
+    LaunchedEffect(totalMsgSize, uiState.isLoading) {
+        if (userAutoScroll && displayMessages.isNotEmpty()) {
+            // Scroll to last item (covers loading indicator + last message)
+            val target = if (uiState.isLoading)
+                displayMessages.size  // loading indicator is appended after messages
+            else
+                displayMessages.size - 1
+            listState.animateScrollToItem(target)
+        }
     }
 
 
@@ -457,6 +506,7 @@ fun ChatScreen(
                     )
                 }
             } else {
+                val density = LocalDensity.current
                 // Normal LazyColumn: latest message at bottom
                 LazyColumn(
                     state               = listState,
@@ -466,8 +516,9 @@ fun ChatScreen(
                     contentPadding      = PaddingValues(
                         start  = 16.dp,
                         end    = 16.dp,
-                        top    = headerDp + with(LocalDensity.current) { todoBarHeight.toDp() } + 8.dp,  // header + todoBar + gap
-                        bottom = 96.dp     // Increased padding for better visibility (no navBar, imePadding handles it)
+                        top    = headerDp + with(density) { todoBarHeight.toDp() } + 8.dp,
+                        // Dynamic: matches actual input bar height so last message is never hidden
+                        bottom = with(density) { inputBarHeight.toDp() } + 8.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -477,6 +528,44 @@ fun ChatScreen(
                     if (uiState.isLoading) {
                         item(key = "loading") {
                             LoadingIndicator()
+                        }
+                    }
+                }
+
+                // Scroll-to-bottom FAB — appears when user scrolled away from bottom
+                if (!isAtBottom) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .imePadding()
+                            .padding(
+                                bottom = with(density) { inputBarHeight.toDp() } + 12.dp,
+                                end = 16.dp
+                            ),
+                        contentAlignment = Alignment.BottomEnd
+                    ) {
+                        SmallFloatingActionButton(
+                            onClick = {
+                                scope.launch {
+                                    userAutoScroll = true
+                                    listState.animateScrollToItem(
+                                        if (uiState.isLoading) displayMessages.size
+                                        else (displayMessages.size - 1).coerceAtLeast(0)
+                                    )
+                                }
+                            },
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            elevation = FloatingActionButtonDefaults.elevation(
+                                defaultElevation = 2.dp,
+                                pressedElevation = 4.dp
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Scroll to bottom",
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
                 }
@@ -632,6 +721,7 @@ fun ChatScreen(
                     .fillMaxWidth()
                     .align(Alignment.BottomStart)
                     .imePadding()
+                    .onSizeChanged { inputBarHeight = it.height }
                     .drawBehind {
                         drawRect(
                             brush = Brush.verticalGradient(

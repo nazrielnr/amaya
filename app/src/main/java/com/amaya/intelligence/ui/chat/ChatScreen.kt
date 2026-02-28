@@ -6,11 +6,11 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -31,6 +31,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontFamily
@@ -47,6 +48,7 @@ import com.amaya.intelligence.data.remote.api.MessageRole
 import com.amaya.intelligence.tools.ConfirmationRequest
 import com.amaya.intelligence.tools.TodoItem
 import com.amaya.intelligence.tools.TodoStatus
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 
@@ -81,10 +83,11 @@ fun ChatScreen(
         uiState.messages.filter { it.content.isNotBlank() || it.toolExecutions.isNotEmpty() }
     }
 
-    // reverseLayout=true: index 0 = latest message at visual bottom
-    // Scroll to 0 when user sends — latest always visible just below header
+    // Auto-scroll to latest message at bottom when user sends
     val userMsgCount = remember(displayMessages) { displayMessages.count { it.role == MessageRole.USER } }
-    LaunchedEffect(userMsgCount) { if (displayMessages.isNotEmpty()) listState.scrollToItem(0) }
+    LaunchedEffect(userMsgCount) { 
+        if (displayMessages.isNotEmpty()) listState.scrollToItem(displayMessages.size - 1) 
+    }
 
 
     confirmationRequest?.let { request ->
@@ -117,7 +120,7 @@ fun ChatScreen(
                         .fillMaxSize()
                         .statusBarsPadding()
                 ) {
-                    // ── Header ──────────────────────────────────────────────
+                    // -- Header ----------------------------------------------
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -144,7 +147,7 @@ fun ChatScreen(
                         }
                     }
 
-                    // ── Action buttons ──────────────────────────────────────
+                    // -- Action buttons --------------------------------------
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -216,7 +219,7 @@ fun ChatScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // ── Search bar ──────────────────────────────────────────
+                    // -- Search bar ------------------------------------------
                     Surface(
                         shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -273,7 +276,7 @@ fun ChatScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // ── Section label ───────────────────────────────────────
+                    // -- Section label ---------------------------------------
                     if (conversations.isNotEmpty()) {
                         Text(
                             "Recent",
@@ -283,7 +286,7 @@ fun ChatScreen(
                         )
                     }
 
-                    // ── Conversation list ────────────────────────────────────
+                    // -- Conversation list ------------------------------------
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
@@ -368,13 +371,13 @@ fun ChatScreen(
                         }
                     }
 
-                    // ── Divider ─────────────────────────────────────────────
+                    // -- Divider ---------------------------------------------
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
-                    // ── Footer: Settings ────────────────────────────────────
+                    // -- Footer: Settings ------------------------------------
                     Surface(
                         onClick = {
                             onNavigateToSettings()
@@ -433,7 +436,7 @@ fun ChatScreen(
 
         Box(modifier = Modifier.fillMaxSize()) {
 
-            // ── 1. Content ────────────────────────────────────────────────────
+            // -- 1. Content ----------------------------------------------------
             if (uiState.messages.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -449,32 +452,30 @@ fun ChatScreen(
                     )
                 }
             } else {
-                // reverseLayout=true: latest msg at visual bottom (index 0 rendered last = bottom)
-                // contentPadding.bottom = headerDp so latest msg sits just below header
-                // contentPadding.top = bottomDp so AI response has space above input bar
-                val reversedMessages = remember(displayMessages) { displayMessages.reversed() }
+                // Normal LazyColumn: latest message at bottom
                 LazyColumn(
                     state               = listState,
                     modifier            = Modifier.fillMaxSize(),
-                    reverseLayout       = true,
                     contentPadding      = PaddingValues(
                         start  = 16.dp,
                         end    = 16.dp,
-                        top    = bottomDp + 8.dp,   // space above input bar (visual top)
-                        bottom = headerDp + 8.dp    // space below header (visual bottom)
+                        top    = headerDp + 8.dp,    // space below header
+                        bottom = bottomDp + 8.dp     // space above input bar
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (uiState.isLoading) {
-                        item(key = "loading") { LoadingIndicator() }
-                    }
-                    items(reversedMessages, key = { it.id }) { message ->
+                    items(displayMessages, key = { it.id }) { message ->
                         MessageBubble(message = message)
+                    }
+                    if (uiState.isLoading) {
+                        item(key = "loading") {
+                            LoadingIndicator()
+                        }
                     }
                 }
             }
 
-            // ── 2. Gradient scrim — covers status bar area ────────────────────
+            // -- 2. Gradient scrim — covers status bar area --------------------
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -493,7 +494,7 @@ fun ChatScreen(
                     }
             )
 
-            // ── 3. Floating header ────────────────────────────────────────────
+            // -- 3. Floating header --------------------------------------------
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -603,7 +604,7 @@ fun ChatScreen(
                 ) { TodoBar(items = todoItems) }
             }
 
-            // ── 4. Floating bottom input ──────────────────────────────────────
+            // -- 4. Floating bottom input --------------------------------------
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -653,7 +654,7 @@ fun ChatScreen(
     }
 
 
-    // ─── Session Info bottom sheet ───
+    // --- Session Info bottom sheet ---
     if (showSessionInfo) {
         SessionInfoSheet(
             totalTokens = uiState.totalInputTokens + uiState.totalOutputTokens,
@@ -666,9 +667,9 @@ fun ChatScreen(
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 //  Session Info Button (replaces WorkspaceTokenChip)
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -839,9 +840,9 @@ private fun formatTokenCount(count: Int): String = when {
     else               -> count.toString()
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 //  TodoBar — collapsible task list shown below TopAppBar
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 @Composable
 fun TodoBar(items: List<TodoItem>) {
@@ -862,7 +863,7 @@ fun TodoBar(items: List<TodoItem>) {
         ?: items.lastOrNull()?.id
         ?: 1
 
-    // ── Shimmer — identical technique to LoadingIndicator / Thinking.. ────
+    // -- Shimmer — identical technique to LoadingIndicator / Thinking.. ----
     // Key: teks HARUS warna solid (onSurface), shimmer di-overlay via SrcAtop.
     // baseShimmer = warna redup (teks saat tidak kena sorot)
     // peakShimmer = warna terang bergerak
@@ -893,7 +894,7 @@ fun TodoBar(items: List<TodoItem>) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column {
-            // ── Collapsed row ────────────────────────────────────────────────
+            // -- Collapsed row ------------------------------------------------
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -901,7 +902,7 @@ fun TodoBar(items: List<TodoItem>) {
                     .padding(horizontal = 16.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // ── Step number pill ─────────────────────────────────────────
+                // -- Step number pill -----------------------------------------
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -924,7 +925,7 @@ fun TodoBar(items: List<TodoItem>) {
 
                 Spacer(Modifier.width(10.dp))
 
-                // ── Label — shimmer if running, muted if not ─────────────────
+                // -- Label — shimmer if running, muted if not -----------------
                 if (isRunning) {
                     // Shimmer text: warna solid onSurface, lalu SrcAtop overlay shimmerBrush
                     Text(
@@ -936,7 +937,7 @@ fun TodoBar(items: List<TodoItem>) {
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .weight(1f)
-                            .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                             .drawWithContent {
                                 drawContent()
                                 drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop)
@@ -955,7 +956,7 @@ fun TodoBar(items: List<TodoItem>) {
 
                 Spacer(Modifier.width(10.dp))
 
-                // ── Progress fraction ─────────────────────────────────────────
+                // -- Progress fraction -----------------------------------------
                 Text(
                     text = "$completed/$total",
                     style = MaterialTheme.typography.labelSmall,
@@ -965,7 +966,7 @@ fun TodoBar(items: List<TodoItem>) {
 
                 Spacer(Modifier.width(6.dp))
 
-                // ── Chevron ───────────────────────────────────────────────────
+                // -- Chevron ---------------------------------------------------
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
@@ -974,7 +975,7 @@ fun TodoBar(items: List<TodoItem>) {
                 )
             }
 
-            // ── Expanded list ─────────────────────────────────────────────────
+            // -- Expanded list -------------------------------------------------
             AnimatedVisibility(
                 visible = expanded,
                 enter = expandVertically(animationSpec = tween(220, easing = FastOutSlowInEasing)) + fadeIn(tween(180)),
@@ -1020,7 +1021,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
             .fillMaxWidth()
             .padding(vertical = 5.dp)
     ) {
-        // ── Status icon ────────────────────────────────────────────────────
+        // -- Status icon ----------------------------------------------------
         Icon(
             imageVector = when (item.status) {
                 TodoStatus.COMPLETED   -> Icons.Default.CheckCircle
@@ -1034,7 +1035,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
 
         Spacer(Modifier.width(10.dp))
 
-        // ── Label ───────────────────────────────────────────────────────────
+        // -- Label -----------------------------------------------------------
         if (isActive) {
             // Shimmer: solid onSurface + SrcAtop shimmerBrush — persis teknik Thinking..
             Text(
@@ -1046,7 +1047,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .weight(1f)
-                    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                     .drawWithContent {
                         drawContent()
                         drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop)
@@ -1066,7 +1067,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
             )
         }
 
-        // ── Step number — right aligned ────────────────────────────────────
+        // -- Step number — right aligned ------------------------------------
         Text(
             text = "${item.id}",
             style = MaterialTheme.typography.labelSmall,
@@ -1080,7 +1081,7 @@ private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
 fun MessageBubble(message: UiMessage) {
     val isUser = message.role == MessageRole.USER
     if (isUser) {
-        // ── User bubble: measure actual text width, then shrink-wrap ──
+        // -- User bubble: measure actual text width, then shrink-wrap --
         val density = LocalDensity.current
         val screenWidth = LocalConfiguration.current.screenWidthDp
         val maxBubbleWidthDp = (screenWidth * 0.7f).dp
@@ -1123,7 +1124,7 @@ fun MessageBubble(message: UiMessage) {
             }
         }
     } else {
-        // ── AI message: full-width markdown, no bubble ──
+        // -- AI message: full-width markdown, no bubble --
         Column(modifier = Modifier.fillMaxWidth()) {
             if (message.content.isNotBlank()) {
                 MarkdownText(
@@ -1138,14 +1139,9 @@ fun MessageBubble(message: UiMessage) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    message.toolExecutions.forEach { execution ->
+                    message.toolExecutions.filter { it.name != "update_todo" }.forEach { execution ->
                         key(execution.toolCallId) {
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = fadeIn(tween(500)) + expandVertically()
-                            ) {
-                                ToolCallCard(execution)
-                            }
+                            ToolCallCard(execution)
                         }
                     }
                 }
@@ -1153,88 +1149,388 @@ fun MessageBubble(message: UiMessage) {
         }
     } // close else
 }
-
 @Composable
 fun ToolCallCard(execution: ToolExecution) {
-    val isExit0 = execution.result?.trim() == "exit 0"
-    val isExit1 = execution.result?.trim() == "exit 1"
+    var expanded by remember(execution.toolCallId) { mutableStateOf(false) }
+    val isDark = isSystemInDarkTheme()
 
-    if (isExit0 || isExit1) {
-        val bg = if (isExit0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
-        val fg = if (isExit0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
-        Surface(
-            color = bg,
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.padding(vertical = 4.dp, horizontal = 4.dp)
-        ) {
-            Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.BuildCircle, null, modifier = Modifier.size(14.dp), tint = fg)
-                Spacer(Modifier.width(6.dp))
-                Text(execution.result!!.trim(), style = MaterialTheme.typography.labelSmall, color = fg, fontWeight = FontWeight.SemiBold)
-            }
-        }
-        return
+    val iosGreen = Color(0xFF34C759)
+    val iosBlue  = Color(0xFF007AFF)
+    val iosRed   = MaterialTheme.colorScheme.error
+
+    val isSubagent = execution.name == "invoke_subagents"
+    val canExpand  = (execution.status == ToolStatus.SUCCESS || execution.status == ToolStatus.ERROR) &&
+        (execution.result != null || execution.children.isNotEmpty())
+    val showChildren = isSubagent && execution.children.isNotEmpty() &&
+        (execution.status == ToolStatus.RUNNING || expanded)
+
+    val bgColor = when (execution.status) {
+        ToolStatus.ERROR   -> if (isDark) iosRed.copy(alpha = 0.10f)  else iosRed.copy(alpha = 0.06f)
+        ToolStatus.SUCCESS -> MaterialTheme.colorScheme.surfaceContainerLow
+        ToolStatus.RUNNING -> if (isDark) iosBlue.copy(alpha = 0.08f) else iosBlue.copy(alpha = 0.04f)
+        ToolStatus.PENDING -> MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f)
     }
-
-    var expanded by remember { mutableStateOf(false) }
     val statusColor = when (execution.status) {
-        ToolStatus.PENDING -> MaterialTheme.colorScheme.outline
-        ToolStatus.RUNNING -> MaterialTheme.colorScheme.primary
-        ToolStatus.SUCCESS -> Color(0xFF4CAF50)
-        ToolStatus.ERROR -> MaterialTheme.colorScheme.error
+        ToolStatus.PENDING -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+        ToolStatus.RUNNING -> iosBlue
+        ToolStatus.SUCCESS -> iosGreen
+        ToolStatus.ERROR   -> iosRed
     }
-    val containerColor = if (execution.status == ToolStatus.ERROR) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
-    val contentColor = if (execution.status == ToolStatus.ERROR) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val statusIcon = when (execution.status) {
+        ToolStatus.PENDING -> Icons.Default.RadioButtonUnchecked
+        ToolStatus.RUNNING -> Icons.Default.Autorenew
+        ToolStatus.SUCCESS -> Icons.Default.CheckCircle
+        ToolStatus.ERROR   -> Icons.Default.Cancel
+    }
+    val toolIcon = when {
+        execution.name == "invoke_subagents"                   -> Icons.Default.AccountTree
+        execution.name == "update_memory"                      -> Icons.Default.Psychology
+        execution.name == "create_reminder"                    -> Icons.Default.Alarm
+        execution.name == "undo_change"                        -> Icons.Default.Undo
+        execution.name.contains("read",     ignoreCase = true) -> Icons.Default.Description
+        execution.name.contains("write",    ignoreCase = true) -> Icons.Default.Edit
+        execution.name.contains("list",     ignoreCase = true) -> Icons.Default.FolderOpen
+        execution.name.contains("find",     ignoreCase = true) -> Icons.Default.FindInPage
+        execution.name.contains("shell",    ignoreCase = true) -> Icons.Default.Terminal
+        execution.name.contains("delete",   ignoreCase = true) -> Icons.Default.Delete
+        execution.name.contains("create",   ignoreCase = true) -> Icons.Default.CreateNewFolder
+        execution.name.contains("transfer", ignoreCase = true) -> Icons.Default.ContentCopy
+        execution.name.startsWith("mcp__")                     -> Icons.Default.Extension
+        else                                                    -> Icons.Default.Terminal
+    }
 
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp).clip(MaterialTheme.shapes.small),
-        shape = MaterialTheme.shapes.small,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    val shimmerTransition = rememberInfiniteTransition(label = "tool_shimmer")
+    val shimmerOffset by shimmerTransition.animateFloat(
+        initialValue  = -500f, targetValue = 800f,
+        animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing), RepeatMode.Restart),
+        label = "shimmer_x"
+    )
+    val shimmerBrush = Brush.linearGradient(
+        colors = listOf(
+            if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
+            if (isDark) Color.White       else Color.Black,
+            if (isDark) Color.White       else Color.Black,
+            if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
+        ),
+        start = Offset(shimmerOffset, 0f),
+        end   = Offset(shimmerOffset + 400f, 0f)
+    )
+
+    // STICKY HEADER PATTERN: Surface wraps Column, header always visible, expandable content below
+    Surface(
+        shape    = RoundedCornerShape(14.dp),
+        color    = bgColor,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+
+            // HEADER ROW — always visible, fixed size
             Row(
-                modifier = Modifier.fillMaxWidth().clickable { if (execution.result != null) expanded = !expanded },
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (canExpand) Modifier.clickable { expanded = !expanded } else Modifier)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.BuildCircle, null, modifier = Modifier.size(16.dp), tint = contentColor)
-                Spacer(Modifier.width(8.dp))
+                Icon(toolIcon, null, modifier = Modifier.size(15.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+
+                val toolLabel = formatToolName(execution.name, execution.arguments)
                 Text(
-                    formatToolName(execution.name, execution.arguments),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = contentColor,
-                    modifier = Modifier.weight(1f)
+                    text       = toolLabel,
+                    style      = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color      = MaterialTheme.colorScheme.onSurface,
+                    maxLines   = 1,
+                    overflow   = TextOverflow.Ellipsis,
+                    modifier   = Modifier
+                        .weight(1f)
+                        .then(
+                            if (execution.status == ToolStatus.RUNNING)
+                                Modifier
+                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                    .drawWithContent { drawContent(); drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop) }
+                            else Modifier
+                        )
                 )
-                if (execution.result != null) {
-                    Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(18.dp), tint = contentColor)
-                }
-                if (execution.status == ToolStatus.RUNNING) {
-                    Spacer(Modifier.width(8.dp))
-                    CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 1.5.dp, color = MaterialTheme.colorScheme.primary)
+
+                Icon(statusIcon, null, modifier = Modifier.size(14.dp), tint = statusColor)
+
+                if (canExpand) {
+                    Icon(
+                        if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        null, modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
                 }
             }
-            AnimatedVisibility(visible = expanded) {
-                execution.result?.let { result ->
-                    Column(modifier = Modifier.padding(top = 8.dp)) {
-                        HorizontalDivider(color = contentColor.copy(alpha = 0.2f), modifier = Modifier.padding(bottom = 8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
-                            Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(14.dp), tint = statusColor.copy(alpha = 0.8f))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Execution Result", style = MaterialTheme.typography.labelSmall, color = contentColor)
-                        }
-                        Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                result.take(3000),
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
-                                lineHeight = 18.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(16.dp)
+
+            // EXPANDABLE CONTENT - AnimatedVisibility for smooth expand/collapse
+            AnimatedVisibility(
+                visible = showChildren,
+                enter = expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)),
+                exit = shrinkVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium))
+            ) {
+                Column(
+                    modifier            = Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    execution.children.forEach { child ->
+                        key(child.index) {
+                            SubagentChildCard(
+                                child        = child,
+                                isDark       = isDark,
+                                iosGreen     = iosGreen,
+                                iosBlue      = iosBlue,
+                                iosRed       = iosRed,
+                                shimmerBrush = shimmerBrush
                             )
                         }
-                        if (result.length > 3000) {
-                            Text("... (${result.length - 3000} more chars)", style = MaterialTheme.typography.labelSmall, color = contentColor, modifier = Modifier.padding(top = 8.dp))
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = expanded && !isSubagent && execution.result != null,
+                enter = expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)) + fadeIn(tween(200)),
+                exit = shrinkVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)) + fadeOut(tween(150))
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 10.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
+                    ) {
+                        ToolResultPreview(
+                            toolName  = execution.name,
+                            arguments = execution.arguments,
+                            result    = execution.result ?: "",
+                            isDark    = isDark
+                        )
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = expanded && isSubagent && execution.children.isEmpty() && execution.result != null,
+                enter = expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)) + fadeIn(tween(200)),
+                exit = shrinkVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)) + fadeOut(tween(150))
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 10.dp)
+                    )
+                    Surface(
+                        shape    = RoundedCornerShape(8.dp),
+                        color    = if (isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
+                    ) {
+                        MarkdownText(
+                            text     = (execution.result ?: "").take(3000),
+                            color    = MaterialTheme.colorScheme.onSurface,
+                            compact  = true,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubagentChildCard(
+    child: SubagentExecution,
+    isDark: Boolean,
+    iosGreen: Color,
+    iosBlue: Color,
+    iosRed: Color,
+    shimmerBrush: Brush
+) {
+    var expanded by remember(child.index) { mutableStateOf(false) }
+
+    val statusColor = when (child.status) {
+        ToolStatus.PENDING -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+        ToolStatus.RUNNING -> iosBlue
+        ToolStatus.SUCCESS -> iosGreen
+        ToolStatus.ERROR   -> iosRed
+    }
+    val bgColor = when (child.status) {
+        ToolStatus.SUCCESS -> if (isDark) iosGreen.copy(alpha = 0.07f) else iosGreen.copy(alpha = 0.04f)
+        ToolStatus.ERROR   -> if (isDark) iosRed.copy(alpha = 0.10f)  else iosRed.copy(alpha = 0.06f)
+        ToolStatus.RUNNING -> if (isDark) iosBlue.copy(alpha = 0.10f) else iosBlue.copy(alpha = 0.05f)
+        ToolStatus.PENDING -> if (isDark) Color(0xFF2C2C2E)           else MaterialTheme.colorScheme.surfaceContainerLowest
+    }
+    val canExpand = child.result != null &&
+        (child.status == ToolStatus.SUCCESS || child.status == ToolStatus.ERROR)
+
+    // STICKY HEADER PATTERN: Surface + Column, header fixed, content expandable with AnimatedVisibility
+    Surface(
+        shape    = RoundedCornerShape(10.dp),
+        color    = bgColor,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+
+            // HEADER ROW — always visible, fixed size
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (canExpand) Modifier.clickable { expanded = !expanded } else Modifier)
+                    .padding(horizontal = 10.dp, vertical = 9.dp),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape    = CircleShape,
+                    color    = statusColor.copy(alpha = 0.15f),
+                    modifier = Modifier.size(22.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (child.status == ToolStatus.RUNNING) {
+                            CircularProgressIndicator(
+                                modifier    = Modifier.size(12.dp),
+                                strokeWidth = 1.5.dp,
+                                color       = iosBlue
+                            )
+                        } else {
+                            Text(
+                                text       = "${child.index + 1}",
+                                style      = MaterialTheme.typography.labelSmall,
+                                fontSize   = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color      = statusColor
+                            )
+                        }
+                    }
+                }
+
+                val taskScrollState = rememberScrollState()
+                LaunchedEffect(child.index) {
+                    delay(600)
+                    while (true) {
+                        if (taskScrollState.maxValue > 0) {
+                            taskScrollState.animateScrollTo(
+                                taskScrollState.maxValue,
+                                animationSpec = tween((taskScrollState.maxValue * 6).coerceIn(2000, 8000), easing = LinearEasing)
+                            )
+                            delay(1000)
+                            taskScrollState.animateScrollTo(0, animationSpec = tween(300))
+                            delay(800)
+                        } else {
+                            delay(500)
+                        }
+                    }
+                }
+                Text(
+                    text       = child.taskName,
+                    style      = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    color      = if (child.status == ToolStatus.PENDING)
+                                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                 else MaterialTheme.colorScheme.onSurface,
+                    maxLines   = 1,
+                    softWrap   = false,
+                    modifier   = Modifier
+                        .weight(1f)
+                        .horizontalScroll(taskScrollState, enabled = false)
+                        .then(
+                            if (child.status == ToolStatus.RUNNING)
+                                Modifier
+                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                    .drawWithContent { drawContent(); drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop) }
+                            else Modifier
+                        )
+                )
+
+                when (child.status) {
+                    ToolStatus.SUCCESS -> Surface(
+                        shape = RoundedCornerShape(20.dp), color = iosGreen.copy(alpha = 0.15f)
+                    ) {
+                        Text("Done", style = MaterialTheme.typography.labelSmall,
+                            color = iosGreen, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                    }
+                    ToolStatus.ERROR -> Surface(
+                        shape = RoundedCornerShape(20.dp), color = iosRed.copy(alpha = 0.15f)
+                    ) {
+                        Text("Failed", style = MaterialTheme.typography.labelSmall,
+                            color = iosRed, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                    }
+                    ToolStatus.RUNNING -> Text(
+                        "Running\u2026", style = MaterialTheme.typography.labelSmall,
+                        color = iosBlue, fontWeight = FontWeight.Medium
+                    )
+                    ToolStatus.PENDING -> Text(
+                        "Pending", style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    )
+                }
+
+                if (canExpand) {
+                    Icon(
+                        if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        null, modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    )
+                }
+            }
+
+            // EXPANDABLE CONTENT - AnimatedVisibility for smooth expand/collapse
+            AnimatedVisibility(
+                visible = expanded && child.result != null,
+                enter = expandVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)) + fadeIn(tween(200)),
+                exit = shrinkVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)) + fadeOut(tween(150))
+            ) {
+                var showFull by remember(child.index) { mutableStateOf(false) }
+                val truncateAt    = 2000
+                val isTruncatable = (child.result?.length ?: 0) > truncateAt
+                val displayText   = if (showFull || !isTruncatable) child.result ?: ""
+                                    else child.result!!.take(truncateAt)
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp)
+                ) {
+                    HorizontalDivider(
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Surface(
+                        shape    = RoundedCornerShape(8.dp),
+                        color    = if (isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            MarkdownText(
+                                text     = displayText,
+                                color    = MaterialTheme.colorScheme.onSurface,
+                                compact  = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (isTruncatable) {
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    text       = if (showFull) "Show less"
+                                                 else "\u2026 Show ${(child.result?.length ?: 0) - truncateAt} more chars",
+                                    style      = MaterialTheme.typography.labelSmall,
+                                    color      = iosBlue,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier   = Modifier
+                                        .clickable { showFull = !showFull }
+                                        .padding(vertical = 2.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -1243,16 +1539,299 @@ fun ToolCallCard(execution: ToolExecution) {
     }
 }
 
-private fun formatToolName(name: String, args: Map<String, Any?>?): String {
-    val readable = name.split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
-    val preview = when (name) {
-        "list_files", "read_file", "get_file_info" -> args?.get("path")?.toString()?.let { val short = if (it.length > 35) "..." + it.takeLast(32) else it; " - $short" } ?: ""
-        "find_files" -> " - ${args?.get("pattern")}"
-        "search_files" -> " - \"${args?.get("query")?.toString()?.take(25)}\""
-        "run_shell" -> " - ${args?.get("command")?.toString()?.take(35)}"
-        else -> ""
+@Composable
+private fun ToolResultPreview(
+    toolName: String,
+    arguments: Map<String, Any?>,
+    result: String,
+    isDark: Boolean
+) {
+    val codeBlockBg   = if (isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
+    val codeTextColor = if (isDark) Color(0xFFD1D1D6) else Color(0xFF3A3A3C)
+    val metaColor     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+
+    @Suppress("UNCHECKED_CAST")
+    val args = arguments
+
+    when (toolName) {
+        "read_file" -> {
+            val infoOnly = args["info_only"] as? Boolean ?: false
+            val paths    = args["paths"] as? List<*>
+            when {
+                infoOnly || (paths == null && result.trim().startsWith("Path:")) -> {
+                    result.lines().filter { it.contains(":") }.forEach { line ->
+                        val idx = line.indexOf(":")
+                        val k = line.substring(0, idx).trim()
+                        val v = line.substring(idx + 1).trim()
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                            Text(k, style = MaterialTheme.typography.labelSmall,
+                                color = metaColor, modifier = Modifier.width(90.dp))
+                            Text(v, style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontFamily = FontFamily.Monospace)
+                        }
+                    }
+                }
+                paths != null -> {
+                    val sections = result.split(Regex("(?=^=== )"), limit = 50)
+                    sections.filter { it.isNotBlank() }.forEach { section ->
+                        val lines = section.lines()
+                        val name  = lines.firstOrNull()?.removePrefix("===")?.removeSuffix("===")?.trim() ?: ""
+                        val count = lines.drop(1).count { it.isNotBlank() }
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Description, null,
+                                modifier = Modifier.size(12.dp), tint = metaColor)
+                            Spacer(Modifier.width(6.dp))
+                            Text(name, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f))
+                            Text("$count lines", style = MaterialTheme.typography.labelSmall,
+                                color = metaColor, fontFamily = FontFamily.Monospace)
+                        }
+                    }
+                }
+                else -> {
+                    val path  = args["path"]?.toString() ?: ""
+                    val lines = result.lines()
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text(path.substringAfterLast("/"),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f))
+                        Text("${lines.size} lines", style = MaterialTheme.typography.labelSmall,
+                            color = metaColor, fontFamily = FontFamily.Monospace)
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Surface(shape = RoundedCornerShape(8.dp), color = codeBlockBg,
+                        modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            lines.take(12).forEachIndexed { idx, line ->
+                                Row {
+                                    Text("${idx + 1}".padStart(3), fontFamily = FontFamily.Monospace,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 11.sp, color = metaColor,
+                                        modifier = Modifier.width(28.dp))
+                                    Text(line, fontFamily = FontFamily.Monospace,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 11.sp, color = codeTextColor,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                            if (lines.size > 12) {
+                                Spacer(Modifier.height(4.dp))
+                                Text("  ⋯  ${lines.size - 12} more lines",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = metaColor, fontFamily = FontFamily.Monospace)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        "write_file", "edit_file" -> {
+            val path     = args["path"]?.toString() ?: ""
+            val filename = path.substringAfterLast("/")
+            val lines    = result.lines()
+            val backupLine = lines.firstOrNull { it.contains("Backup") || it.contains(".bak") }
+            val sizeLine   = lines.firstOrNull { it.contains("KB") || it.contains("MB") || it.contains("chars") }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(filename, style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                sizeLine?.let { Text(it.trim(), style = MaterialTheme.typography.labelSmall, color = metaColor) }
+                backupLine?.let { Text(it.trim(), style = MaterialTheme.typography.labelSmall, color = metaColor) }
+            }
+        }
+
+        "run_shell" -> {
+            val command = args["command"]?.toString() ?: ""
+            Column {
+                Surface(shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    Text("$ $command", style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                }
+                Spacer(Modifier.height(6.dp))
+                Surface(shape = RoundedCornerShape(8.dp), color = codeBlockBg,
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text(result.trim().let { if (it.length > 1500) it.take(1500) + "\n⋯" else it },
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = FontFamily.Monospace, lineHeight = 18.sp, fontSize = 11.sp),
+                        color = codeTextColor,
+                        modifier = Modifier.padding(10.dp).horizontalScroll(rememberScrollState()))
+                }
+            }
+        }
+
+        "find_files" -> {
+            val lines    = result.lines().filter { it.isNotBlank() }
+            val isSearch = args["content"] != null
+            Column {
+                Text("${lines.size} ${if (isSearch) "matches" else "files"}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = metaColor, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(6.dp))
+                lines.take(10).forEach { line ->
+                    Row(modifier = Modifier.padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (isSearch) Icons.Default.Search else Icons.Default.Description,
+                            null, modifier = Modifier.size(11.dp), tint = metaColor)
+                        Spacer(Modifier.width(6.dp))
+                        Text(line.trim(), style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace, fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                if (lines.size > 10) Text("  ⋯  ${lines.size - 10} more",
+                    style = MaterialTheme.typography.labelSmall, color = metaColor)
+            }
+        }
+
+        "list_files" -> {
+            val lines = result.lines().filter { it.isNotBlank() }
+            Column {
+                Text("${lines.size} items", style = MaterialTheme.typography.labelSmall,
+                    color = metaColor, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(6.dp))
+                lines.take(8).forEach { line ->
+                    val isDir = line.trim().endsWith("/")
+                    Row(modifier = Modifier.padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (isDir) Icons.Default.Folder else Icons.Default.Description,
+                            null, modifier = Modifier.size(12.dp),
+                            tint = if (isDir) Color(0xFF007AFF) else metaColor)
+                        Spacer(Modifier.width(6.dp))
+                        Text(line.trim(), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                if (lines.size > 8) Text("  ⋯  ${lines.size - 8} more",
+                    style = MaterialTheme.typography.labelSmall, color = metaColor)
+            }
+        }
+
+
+        "create_reminder" -> {
+            val title    = args["title"]?.toString() ?: ""
+            val datetime = args["datetime"]?.toString() ?: ""
+            val repeat   = args["repeat"]?.toString() ?: "once"
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                Text("$datetime  ·  $repeat", style = MaterialTheme.typography.labelSmall, color = metaColor)
+            }
+        }
+
+        "update_memory" -> {
+            val content = args["content"]?.toString() ?: ""
+            val target  = args["target"]?.toString() ?: "daily"
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Psychology, null,
+                        modifier = Modifier.size(13.dp), tint = metaColor)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Saved to $target", style = MaterialTheme.typography.labelSmall, color = metaColor)
+                }
+                Surface(shape = RoundedCornerShape(6.dp), color = codeBlockBg,
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text(content.take(200), style = MaterialTheme.typography.bodySmall,
+                        color = codeTextColor.copy(alpha = 0.8f),
+                        fontStyle = FontStyle.Italic,
+                        modifier = Modifier.padding(8.dp))
+                }
+            }
+        }
+
+        else -> {
+            Surface(shape = RoundedCornerShape(8.dp), color = codeBlockBg,
+                modifier = Modifier.fillMaxWidth()) {
+                Text(result.trim().let { if (it.length > 1500) it.take(1500) + "\n⋯" else it },
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = FontFamily.Monospace, lineHeight = 18.sp, fontSize = 11.sp),
+                    color = codeTextColor,
+                    modifier = Modifier.padding(10.dp).horizontalScroll(rememberScrollState()))
+            }
+        }
     }
-    return readable + preview
+}
+
+private fun formatToolName(name: String, args: Map<String, Any?>?): String {
+    // Helper: extract just the filename from a full path
+    fun fileName(key: String) = args?.get(key)?.toString()?.substringAfterLast("/")?.take(30) ?: ""
+    fun filePath(key: String) = args?.get(key)?.toString()?.let {
+        if (it.length > 28) "…" + it.takeLast(26) else it
+    } ?: ""
+
+    @Suppress("UNCHECKED_CAST")
+    return when (name) {
+        // ── File tools ─────────────────────────────────────────────────────
+        "read_file"  -> {
+            val paths = args?.get("paths") as? List<*>
+            val infoOnly = args?.get("info_only") as? Boolean ?: false
+            when {
+                paths != null      -> "Read  ${paths.size} files"
+                infoOnly           -> "Stat  ${fileName("path")}"
+                else               -> "Read  ${fileName("path")}"
+            }
+        }
+        "write_file"        -> "Write  ${fileName("path")}"
+        "edit_file"         -> {
+            val hasDiff = args?.get("diff") != null
+            if (hasDiff) "Patch  ${fileName("path")}"
+            else         "Edit  ${fileName("path")}"
+        }
+        "delete_file"       -> "Delete  ${fileName("path")}"
+        "transfer_file"     -> {
+            val src  = fileName("source")
+            val dst  = fileName("destination")
+            val mode = args?.get("mode")?.toString() ?: "copy"
+            if (mode == "move") "Move  $src → $dst" else "Copy  $src → $dst"
+        }
+        "create_directory"  -> "Mkdir  ${fileName("path")}/"
+        "list_files"        -> "List  ${filePath("path")}"
+        "find_files"        -> {
+            val content = args?.get("content")?.toString()
+            val pattern = args?.get("pattern")?.toString()
+            when {
+                content != null -> "Search  \"${content.take(22)}\""
+                pattern != null -> "Find  $pattern"
+                else            -> "Find  files"
+            }
+        }
+        "undo_change"       -> "Undo  ${fileName("path")}"
+        // ── Shell ───────────────────────────────────────────────────────────
+        "run_shell"         -> "$  ${args?.get("command")?.toString()?.take(32) ?: ""}"
+        // ── AI tools ───────────────────────────────────────────────────────
+        "update_memory"     -> "Memory  ${args?.get("target")?.toString() ?: "daily"}"
+        "create_reminder"   -> "Remind  ${args?.get("title")?.toString()?.take(20) ?: ""}"
+        "invoke_subagents"  -> {
+            @Suppress("UNCHECKED_CAST")
+            val subagents = args?.get("subagents") as? List<Map<String, Any?>>
+            if (subagents.isNullOrEmpty()) {
+                "Subagents"
+            } else {
+                // Show ALL task names — MarqueeText handles overflow via auto-scroll
+                val names = subagents.mapNotNull { it["task_name"]?.toString() }
+                names.joinToString("  ·  ")
+            }
+        }
+        // ── MCP tools ──────────────────────────────────────────────────────
+        else -> if (name.startsWith("mcp__")) {
+            val parts = name.split("__")
+            val server = parts.getOrNull(1) ?: ""
+            val tool   = parts.getOrNull(2) ?: name
+            "[$server]  $tool"
+        } else {
+            // Fallback: Title Case from snake_case
+            name.split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+        }
+    }
 }
 
 @Composable
@@ -1520,37 +2099,30 @@ fun LoadingIndicator() {
         label = "translate"
     )
 
-    // Use Theme-aware colors instead of checking system theme
-    val baseTextColor = MaterialTheme.colorScheme.onSurface 
-    
-    // Base shimmer is dim, moving shimmer is bright and colorful
-    val baseShimmer = baseTextColor.copy(alpha = 0.3f)
-    val movingShimmer = MaterialTheme.colorScheme.primary
+    // Shimmer: same technique as TodoBar — dark: grey?White, light: grey?Black
+    // MUST use solid onSurface color + CompositingStrategy.Offscreen + BlendMode.SrcAtop
+    val isDark = isSystemInDarkTheme()
+    val baseShimmer = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
+    val peakShimmer = if (isDark) Color.White else Color.Black
 
     val shimmerBrush = Brush.linearGradient(
-        colors = listOf(
-            baseShimmer,
-            movingShimmer,
-            baseShimmer
-        ),
-        start = Offset(translateAnim, 0f),
-        end = Offset(translateAnim + 400f, 0f)
+        colors = listOf(baseShimmer, peakShimmer, peakShimmer, baseShimmer),
+        start  = Offset(translateAnim, 0f),
+        end    = Offset(translateAnim + 400f, 0f)
     )
 
     Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
         Text(
             "Thinking..",
-            style = MaterialTheme.typography.bodyLarge.copy(color = baseTextColor),
-            fontStyle = FontStyle.Italic,
+            style      = MaterialTheme.typography.bodyLarge,
+            fontStyle  = FontStyle.Italic,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier
-                .graphicsLayer(alpha = 0.99f) // Allows blend modes to work correctly
+            color      = MaterialTheme.colorScheme.onSurface, // MUST be solid, not alpha
+            modifier   = Modifier
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                 .drawWithContent {
                     drawContent()
-                    drawRect(
-                        brush = shimmerBrush,
-                        blendMode = BlendMode.SrcIn
-                    )
+                    drawRect(brush = shimmerBrush, blendMode = BlendMode.SrcAtop)
                 }
         )
     }
@@ -1589,3 +2161,4 @@ fun ConfirmationDialog(request: ConfirmationRequest, onConfirm: () -> Unit, onDi
         shape = MaterialTheme.shapes.extraLarge
     )
 }
+

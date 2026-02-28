@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -72,6 +73,9 @@ fun ChatScreen(
 
     var showModelSelector by remember { mutableStateOf(false) }
     var showSessionInfo by remember { mutableStateOf(false) }
+    
+    // Track TodoBar height for dynamic padding (prevent chat overlap)
+    var todoBarHeight by remember { mutableStateOf(0) }
 
     // Only show enabled agents in dropdown
     val agentConfigs   = uiState.agentConfigs.filter { it.enabled }
@@ -459,7 +463,7 @@ fun ChatScreen(
                     contentPadding      = PaddingValues(
                         start  = 16.dp,
                         end    = 16.dp,
-                        top    = headerDp + 8.dp,    // space below header
+                        top    = headerDp + with(LocalDensity.current) { todoBarHeight.toDp() } + 8.dp,  // header + todoBar + gap
                         bottom = bottomDp + 8.dp     // space above input bar
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -601,7 +605,12 @@ fun ChatScreen(
                     visible = todoItems.isNotEmpty(),
                     enter   = expandVertically(tween(250)) + fadeIn(tween(250)),
                     exit    = shrinkVertically(tween(200)) + fadeOut(tween(200))
-                ) { TodoBar(items = todoItems) }
+                ) { 
+                    TodoBar(
+                        items = todoItems,
+                        modifier = Modifier.onSizeChanged { todoBarHeight = it.height }
+                    )
+                }
             }
 
             // -- 4. Floating bottom input --------------------------------------
@@ -845,7 +854,10 @@ private fun formatTokenCount(count: Int): String = when {
 // -----------------------------------------------------------------------------
 
 @Composable
-fun TodoBar(items: List<TodoItem>) {
+fun TodoBar(
+    items: List<TodoItem>,
+    modifier: Modifier = Modifier
+) {
     var expanded by remember { mutableStateOf(false) }
 
     val completed  = items.count { it.status == TodoStatus.COMPLETED }
@@ -892,10 +904,23 @@ fun TodoBar(items: List<TodoItem>) {
         end    = Offset(shimmerOffset + gradientWidth / 2, 0f)
     )
 
-    // Surface background — sedikit berbeda dari surface biasa agar terlihat sebagai banner
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.fillMaxWidth()
+    // Glassmorphism effect - matches header gradient scrim
+    val bgColor = MaterialTheme.colorScheme.surface
+    
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .drawBehind {
+                // Gradient scrim: solid top → transparent bottom (same as header)
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.0f to bgColor.copy(alpha = 0.98f),  // Top: nearly solid
+                            1.0f to bgColor.copy(alpha = 0.85f)   // Bottom: more transparent
+                        )
+                    )
+                )
+            }
     ) {
         Column {
             // -- Collapsed row ------------------------------------------------

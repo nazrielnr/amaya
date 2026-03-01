@@ -91,14 +91,11 @@ class OpenAiProvider @Inject constructor(
             val listener = object : EventSourceListener() {
                 private val toolCallBuilders = mutableMapOf<Int, OpenAiToolCallBuilder>()
                 private var receivedDone = false
-                private var lastCreatedToolCallIndex = 0
-                // Queue-based approach: track which builders have received their args yet
-                // argsReceivedCount[idx] = true means this builder already got its args chunk
+                // Queue-based approach: track which builders have received their args yet.
+                // Server may send args sequentially (tool0-header, tool0-args, tool1-header, tool1-args)
+                // or out-of-order (tool0-header, tool1-header, tool0-args, tool1-args).
+                // argsReceived[idx] = true means this builder already got its args chunk.
                 private val argsReceived = mutableSetOf<Int>()
-                // nextArgsTargetIndex: the next builder that hasn't received args yet
-                // This handles server sending args sequentially: tool0-header, tool0-args, tool1-header, tool1-args
-                // OR: tool0-header, tool1-header, tool0-args, tool1-args
-                private var nextArgsTargetIndex = 0
                 
                 override fun onEvent(
                     eventSource: EventSource,
@@ -106,17 +103,14 @@ class OpenAiProvider @Inject constructor(
                     type: String?,
                     data: String
                 ) {
-                    android.util.Log.v("OpenAiProvider", "SSE data: ${data.take(200)}")
                     if (data == "[DONE]") {
                         receivedDone = true
                         // Emit any pending tool calls that weren't flushed by finish_reason
                         // This handles local models that send [DONE] without finish_reason
                         if (toolCallBuilders.isNotEmpty()) {
-                            android.util.Log.d("OpenAiProvider", "[DONE] flushing ${toolCallBuilders.size} pending tool calls")
                             toolCallBuilders.keys.sorted().forEach { idx ->
                                 val builder = toolCallBuilders[idx] ?: return@forEach
                                 val rawArgs = builder.argumentsBuilder.toString()
-                                android.util.Log.d("OpenAiProvider", "[DONE] flush[$idx] name=${builder.name} rawArgs=$rawArgs")
                                 if (builder.isComplete()) {
                                     trySend(ChatResponse.ToolCall(
                                         id = builder.id,
@@ -155,14 +149,11 @@ class OpenAiProvider @Inject constructor(
                                         id = toolCall.id!!,
                                         name = toolCall.function?.name ?: ""
                                     )
-                                    lastCreatedToolCallIndex = index
-                                    android.util.Log.d("OpenAiProvider", "new builder[$index]: id=${toolCall.id} name=${toolCall.function?.name}")
                                     
                                     // Handle args in same chunk as header
                                     if (hasArgs) {
                                         toolCallBuilders[index]?.argumentsBuilder?.append(toolCall.function!!.arguments!!)
                                         argsReceived.add(index)
-                                        android.util.Log.v("OpenAiProvider", "args[$index] in header += ${toolCall.function?.arguments?.take(50)}")
                                     }
                                 } else if (hasArgs) {
                                     // Continuation args chunk — server often sends index=0 for ALL args
@@ -170,16 +161,13 @@ class OpenAiProvider @Inject constructor(
                                     // and use queue: find first builder without args yet.
                                     val targetIndex = toolCallBuilders.keys.sorted()
                                         .firstOrNull { it !in argsReceived }
-                                        ?: lastCreatedToolCallIndex
+                                        ?: toolCallBuilders.keys.maxOrNull() ?: 0
                                     
                                     val args = toolCall.function!!.arguments!!
                                     val targetBuilder = toolCallBuilders[targetIndex]
                                     if (targetBuilder != null) {
                                         targetBuilder.argumentsBuilder.append(args)
                                         argsReceived.add(targetIndex)
-                                        android.util.Log.v("OpenAiProvider", "args[$targetIndex] (rawIdx=$rawIndex) += ${args.take(80)}")
-                                    } else {
-                                        android.util.Log.w("OpenAiProvider", "no builder for targetIndex=$targetIndex rawIndex=$rawIndex")
                                     }
                                 }
                             }
@@ -193,7 +181,6 @@ class OpenAiProvider @Inject constructor(
                                         toolCallBuilders.keys.sorted().forEach { idx ->
                                             val builder = toolCallBuilders[idx] ?: return@forEach
                                             val rawArgs = builder.argumentsBuilder.toString()
-                                            android.util.Log.d("OpenAiProvider", "flush[$idx] name=${builder.name} rawArgs=$rawArgs")
                                             if (builder.isComplete()) {
                                                 trySend(ChatResponse.ToolCall(
                                                     id = builder.id,
@@ -239,7 +226,6 @@ class OpenAiProvider @Inject constructor(
                     
                     // Flush any pending tool calls before checking error
                     if (toolCallBuilders.isNotEmpty()) {
-                        android.util.Log.d("OpenAiProvider", "onFailure: flushing ${toolCallBuilders.size} pending tool calls before error")
                         toolCallBuilders.keys.sorted().forEach { idx ->
                             val builder = toolCallBuilders[idx] ?: return@forEach
                             if (builder.isComplete()) {
@@ -266,7 +252,6 @@ class OpenAiProvider @Inject constructor(
                         errorMsg.contains("closed", ignoreCase = true)
                     
                     if (isNormalClose) {
-                        android.util.Log.d("OpenAiProvider", "onFailure: treating as normal close (${t?.message})")
                         trySend(ChatResponse.Done())
                         close()
                         return

@@ -109,15 +109,12 @@ class WriteFileTool @Inject constructor(
         
         var backupFile: File? = null
         
-        Log.d(TAG, "execute: path=$pathStr len=${content.length} ext=${File(pathStr).extension} backup=$createBackup validate=$validateSyntax append=$append")
-        
         try {
             // 1. Create parent directories if needed
             val parent = file.parentFile
             if (parent != null && !parent.exists()) {
                 if (createDirs) {
-                    val ok = parent.mkdirs()
-                    Log.d(TAG, "mkdirs: $parent → $ok")
+                    parent.mkdirs()
                 } else {
                     return@withContext ToolResult.Error(
                         "Parent directory does not exist: $parent",
@@ -129,13 +126,11 @@ class WriteFileTool @Inject constructor(
             // 2. Create backup of existing file
             if (createBackup && file.exists()) {
                 backupFile = createBackupFile(file)
-                Log.d(TAG, "backup: ${backupFile?.absolutePath}")
             }
             
             // 3. Check if this is a document format
             val ext = file.extension.lowercase()
             if (ext in DOCUMENT_EXTENSIONS) {
-                Log.d(TAG, "document write: ext=$ext")
                 return@withContext writeDocument(file, content, ext, append, backupFile)
             }
             
@@ -167,7 +162,6 @@ class WriteFileTool @Inject constructor(
             }
             
             val operation = if (append) "appended to" else "written to"
-            Log.d(TAG, "SUCCESS: $operation $pathStr")
             ToolResult.Success(
                 output = "Successfully $operation: $pathStr (${content.length} chars)" +
                         (if (backupFile != null) "\nBackup created: ${backupFile!!.name}" else ""),
@@ -184,7 +178,6 @@ class WriteFileTool @Inject constructor(
             if (backupFile != null && backupFile!!.exists()) {
                 try {
                     backupFile!!.copyTo(file, overwrite = true)
-                    Log.d(TAG, "rollback: restored from backup")
                 } catch (restoreError: Exception) {
                     Log.e(TAG, "rollback FAILED: ${restoreError.message}")
                     return@withContext ToolResult.Error(
@@ -219,17 +212,12 @@ class WriteFileTool @Inject constructor(
     }
     
     private fun atomicWrite(targetFile: File, content: String) {
-        Log.d(TAG, "atomicWrite: target=${targetFile.absolutePath} size=${content.length}")
-        
         // Strategy 1: temp file in same directory → atomic rename (preferred)
         val parentDir = targetFile.parentFile
         val tempInSameDir = if (parentDir != null) {
             try {
-                File.createTempFile(".write_", ".tmp", parentDir).also {
-                    Log.d(TAG, "atomicWrite: temp created in same dir: ${it.absolutePath}")
-                }
+                File.createTempFile(".write_", ".tmp", parentDir)
             } catch (e: Exception) {
-                Log.w(TAG, "atomicWrite: cannot create temp in same dir, falling back to cacheDir: ${e.message}")
                 null
             }
         } else null
@@ -238,21 +226,17 @@ class WriteFileTool @Inject constructor(
         
         try {
             tempFile.writeText(content, Charsets.UTF_8)
-            Log.d(TAG, "atomicWrite: wrote ${content.length} chars to temp ${tempFile.absolutePath}")
             
             // Try rename first (atomic, same filesystem)
             if (tempFile.renameTo(targetFile)) {
-                Log.d(TAG, "atomicWrite: rename success")
                 return
             }
             
             // Rename failed (cross-filesystem or permission) → copy
-            Log.w(TAG, "atomicWrite: rename failed, trying copyTo")
             tempFile.copyTo(targetFile, overwrite = true)
-            Log.d(TAG, "atomicWrite: copy success")
             tempFile.delete()
         } catch (e: Exception) {
-            Log.e(TAG, "atomicWrite: FAILED: ${e.javaClass.simpleName}: ${e.message}")
+            Log.e(TAG, "atomicWrite failed: ${e.javaClass.simpleName}: ${e.message}")
             runCatching { tempFile.delete() }
             throw e
         }
@@ -424,7 +408,6 @@ class WriteFileTool @Inject constructor(
         backupFile: File?
     ): ToolResult {
         return try {
-            Log.d(TAG, "writeDocument: ext=$ext file=${file.absolutePath} exists=${file.exists()} parentWritable=${file.parentFile?.canWrite()}")
             when (ext) {
                 "docx" -> writeDocx(file, content, append)
                 "xlsx" -> writeXlsx(file, content, append)
@@ -437,7 +420,6 @@ class WriteFileTool @Inject constructor(
                     ErrorType.VALIDATION_ERROR
                 )
             }
-            Log.d(TAG, "writeDocument: SUCCESS ext=$ext size=${file.length()}")
             
             if (backupFile != null) {
                 cleanupOldBackups(file)
@@ -455,11 +437,10 @@ class WriteFileTool @Inject constructor(
                 )
             )
         } catch (e: Exception) {
-            Log.e(TAG, "writeDocument: FAILED ext=$ext: ${e.javaClass.simpleName}: ${e.message}", e)
+            Log.e(TAG, "writeDocument failed: ext=$ext: ${e.javaClass.simpleName}: ${e.message}", e)
             // Rollback from backup if available
             if (backupFile != null && backupFile.exists()) {
                 runCatching { backupFile.copyTo(file, overwrite = true) }
-                Log.d(TAG, "writeDocument: rolled back from backup")
             }
             ToolResult.Error(
                 "Failed to write document (${e.javaClass.simpleName}): ${e.message}",
@@ -470,7 +451,6 @@ class WriteFileTool @Inject constructor(
     
     // ── DOCX Write ──────────────────────────────────────────────────────────────
     private fun writeDocx(file: File, content: String, append: Boolean) {
-        Log.d(TAG, "writeDocx: start paragraphs=${content.lines().size}")
         val paragraphs = content.lines()
         
         // Create minimal DOCX structure
@@ -519,13 +499,11 @@ class WriteFileTool @Inject constructor(
                 zip.write(documentXml.toByteArray())
                 zip.closeEntry()
             }
-            Log.d(TAG, "writeDocx: ZIP written to temp ${tempFile.absolutePath} size=${tempFile.length()}")
             // Move temp to final target
             if (!tempFile.renameTo(file)) {
                 tempFile.copyTo(file, overwrite = true)
                 tempFile.delete()
             }
-            Log.d(TAG, "writeDocx: done file=${file.absolutePath} size=${file.length()}")
         } catch (e: Exception) {
             runCatching { tempFile.delete() }
             throw e

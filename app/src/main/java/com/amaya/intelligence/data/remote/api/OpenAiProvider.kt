@@ -258,7 +258,7 @@ class OpenAiProvider @Inject constructor(
                     }
                     
                     val responseBody = try { response?.body?.string() } catch (e: Exception) { null }
-                    android.util.Log.e("OpenAiProvider", "Request FAILED - code: ${response?.code}, error: ${t?.message}")
+                    android.util.Log.e("OpenAiProvider", "Request FAILED - code: ${response?.code}, t=${t?.message}, body=$responseBody")
                     val message = responseBody ?: t?.message ?: response?.message ?: "Unknown error"
                     trySend(ChatResponse.Error(message, retryable = true))
                     close()
@@ -320,6 +320,16 @@ class OpenAiProvider @Inject constructor(
     private fun buildOpenAiRequest(request: ChatRequest): OpenAiRequest {
         val messages = mutableListOf<OpenAiMessage>()
         
+        // Detect if model supports role="tool" for tool results.
+        // Some providers (StepFun, older models) only support role="user"/"assistant"/"system".
+        // Models that don't support role="tool": stepfun, moonshot, baichuan, yi, etc.
+        val modelLower = request.model.lowercase()
+        val useToolRole = !modelLower.contains("stepfun") &&
+            !modelLower.contains("step-") &&
+            !modelLower.contains("moonshot") &&
+            !modelLower.contains("baichuan") &&
+            !modelLower.contains("yi-")
+        
         // Add system prompt
         request.systemPrompt?.let { systemPrompt ->
             messages.add(OpenAiMessage(
@@ -348,13 +358,23 @@ class OpenAiProvider @Inject constructor(
                             )
                         )
                     }
-                    if (aiToolCalls != null) {
-                        // Tool call message: content must be null or empty string
-                        // Some local models get confused if content is non-null alongside tool_calls
+                    if (aiToolCalls != null && useToolRole) {
+                        // Standard OpenAI format: assistant with tool_calls array
                         messages.add(OpenAiMessage(
                             role = "assistant",
                             content = null,
                             toolCalls = aiToolCalls
+                        ))
+                    } else if (aiToolCalls != null && !useToolRole) {
+                        // Fallback for models that don't support tool_calls format
+                        // Represent tool calls as plain text in assistant message
+                        val toolCallText = aiToolCalls.joinToString("\n") { tc ->
+                            "<tool_call name=\"${tc.function.name}\">\n${tc.function.arguments}\n</tool_call>"
+                        }
+                        messages.add(OpenAiMessage(
+                            role = "assistant",
+                            content = if (msg.content.isNullOrBlank()) toolCallText 
+                                      else "${msg.content}\n\n$toolCallText"
                         ))
                     } else {
                         // Regular text message
@@ -367,11 +387,23 @@ class OpenAiProvider @Inject constructor(
                 }
                 MessageRole.TOOL -> {
                     msg.toolResult?.let { result ->
-                        messages.add(OpenAiMessage(
-                            role = "tool",
-                            content = result.content,
-                            toolCallId = result.toolCallId
-                        ))
+                        // Standard OpenAI tool result format
+                        // Some providers (StepFun via OpenRouter) reject role="tool"
+                        // Detect by model name and use appropriate format
+                        if (useToolRole) {
+                            messages.add(OpenAiMessage(
+                                role = "tool",
+                                content = result.content,
+                                toolCallId = result.toolCallId
+                            ))
+                        } else {
+                            // Fallback for providers that don't support role="tool"
+                            // Wrap as assistant+user pair to maintain context
+                            messages.add(OpenAiMessage(
+                                role = "user",
+                                content = "<tool_result tool=\"${result.toolCallId}\">\n${result.content}\n</tool_result>"
+                            ))
+                        }
                     }
                 }
                 MessageRole.SYSTEM -> { /* Already handled above */ }

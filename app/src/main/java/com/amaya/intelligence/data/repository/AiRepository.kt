@@ -220,6 +220,24 @@ class AiRepository @Inject constructor(
                 }
             }
             
+            // If no native tool calls received, try to parse tool calls from text response.
+            // This handles models that don't support native function calling (e.g. StepFun)
+            // and instead emit <tool_call> XML or JSON blocks in their text output.
+            if (!hasToolCalls && textBuffer.isNotEmpty()) {
+                val parsed = parseToolCallsFromText(textBuffer.toString())
+                if (parsed.isNotEmpty()) {
+                    hasToolCalls = true
+                    // Remove tool call markup from displayed text
+                    val cleanText = stripToolCallMarkup(textBuffer.toString())
+                    // If clean text differs, we need to signal UI to replace text
+                    // For now we just proceed — text already streamed, tool calls will execute
+                    parsed.forEach { tc ->
+                        send(AgentEvent.ToolCallStart(tc.id, tc.name, tc.arguments))
+                        toolCalls.add(tc)
+                    }
+                }
+            }
+            
             if (!hasToolCalls) {
                 // No tool calls, we're done
                 continueLoop = false
@@ -388,6 +406,113 @@ class AiRepository @Inject constructor(
         return basePrompt
     }
     
+    /**
+     * Parse tool calls from plain text response.
+     * Handles models that don't support native function calling.
+     *
+     * Supported formats:
+     * 1. XML: <tool_call name="write_file">{"path": "...", "content": "..."}</tool_call>
+     * 2. XML: <tool_call>{"name": "write_file", "arguments": {...}}</tool_call>
+     * 3. JSON block: {"tool": "write_file", "arguments": {...}}
+     *
+     * Only parses if the tool name exists in the known tool registry.
+     * This prevents false positives from AI examples or explanations.
+     */
+    private fun parseToolCallsFromText(text: String): List<ToolCallMessage> {
+        val results = mutableListOf<ToolCallMessage>()
+        val knownTools = toolExecutor.getToolDefinitions().map { it.name }.toSet()
+        var callIndex = 0
+        
+        // Format 1: <tool_call name="tool_name">JSON</tool_call>
+        val xmlWithAttr = Regex(
+            """<tool_call\s+name="([^"]+)"\s*>(.*?)</tool_call>""",
+            setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+        )
+        xmlWithAttr.findAll(text).forEach { match ->
+            val name = match.groupValues[1].trim()
+            val body = match.groupValues[2].trim()
+            if (name in knownTools) {
+                val args = parseJsonToMap(body)
+                results.add(ToolCallMessage(
+                    id = "text_tc_${callIndex++}",
+                    name = name,
+                    arguments = args
+                ))
+            }
+        }
+        
+        // Format 2: <tool_call>{"name": "tool_name", "arguments": {...}}</tool_call>
+        // Only if format 1 found nothing to avoid double-parsing
+        if (results.isEmpty()) {
+            val xmlNoAttr = Regex(
+                """<tool_call>(.*?)</tool_call>""",
+                setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+            )
+            xmlNoAttr.findAll(text).forEach { match ->
+                val body = match.groupValues[1].trim()
+                val parsed = parseJsonToMap(body)
+                val name = (parsed["name"] as? String)?.trim() ?: return@forEach
+                if (name in knownTools) {
+                    @Suppress("UNCHECKED_CAST")
+                    val args = (parsed["arguments"] as? Map<String, Any?>) ?: parsed
+                    results.add(ToolCallMessage(
+                        id = "text_tc_${callIndex++}",
+                        name = name,
+                        arguments = args
+                    ))
+                }
+            }
+        }
+        
+        // Format 3: {"tool": "tool_name", "arguments": {...}} as standalone JSON block
+        // Only as last resort — very conservative matching to avoid false positives
+        if (results.isEmpty()) {
+            val jsonBlock = Regex(
+                """\{\s*"tool"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{.*?\})\s*\}""",
+                setOf(RegexOption.DOT_MATCHES_ALL)
+            )
+            jsonBlock.findAll(text).forEach { match ->
+                val name = match.groupValues[1].trim()
+                val argsJson = match.groupValues[2].trim()
+                if (name in knownTools) {
+                    val args = parseJsonToMap(argsJson)
+                    results.add(ToolCallMessage(
+                        id = "text_tc_${callIndex++}",
+                        name = name,
+                        arguments = args
+                    ))
+                }
+            }
+        }
+        
+        return results
+    }
+    
+    /**
+     * Strip tool call markup from text so it doesn't render in the chat UI.
+     */
+    private fun stripToolCallMarkup(text: String): String {
+        return text
+            .replace(Regex("""<tool_call[^>]*>.*?</tool_call>""", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
+            .replace(Regex("""\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{.*?\}\s*\}""", setOf(RegexOption.DOT_MATCHES_ALL)), "")
+            .trim()
+    }
+    
+    /**
+     * Safely parse JSON string to Map<String, Any?>.
+     * Returns empty map on failure instead of throwing.
+     */
+    private fun parseJsonToMap(json: String): Map<String, Any?> {
+        return try {
+            @Suppress("UNCHECKED_CAST")
+            com.squareup.moshi.Moshi.Builder().build()
+                .adapter(Map::class.java)
+                .fromJson(json) as? Map<String, Any?> ?: emptyMap()
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
     /**
      * Build tool definitions for AI.
      * Uses cached MCP tools — refresh happens automatically via settingsFlow watcher in init.

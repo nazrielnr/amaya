@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -74,9 +76,9 @@ fun ChatScreen(
 
     var showModelSelector by remember { mutableStateOf(false) }
     var showSessionInfo by remember { mutableStateOf(false) }
+    var showTodoSheet  by remember { mutableStateOf(false) }
     
-    // Track TodoBar height for dynamic padding (prevent chat overlap)
-    var todoBarHeight by remember { mutableStateOf(0) }
+    // todoBarHeight removed — TodoBar replaced by TodoPill in TopAppBar
 
     // Track input bar height for accurate bottom padding (avoids overlap with ChatInput)
     var inputBarHeight by remember { mutableStateOf(0) }
@@ -510,7 +512,7 @@ fun ChatScreen(
                     contentPadding      = PaddingValues(
                         start  = 16.dp,
                         end    = 16.dp,
-                        top    = headerDp + with(density) { todoBarHeight.toDp() } + 8.dp,
+                        top    = headerDp + 8.dp,
                         bottom = with(density) { inputBarHeight.toDp() } + 8.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -685,6 +687,13 @@ fun ChatScreen(
                         }
                     },
                     actions = {
+                        // TodoPill — only visible when there are todo items
+                        if (todoItems.isNotEmpty()) {
+                            TodoPill(
+                                items   = todoItems,
+                                onClick = { showTodoSheet = true }
+                            )
+                        }
                         SessionInfoButton(
                             totalTokens         = uiState.totalInputTokens + uiState.totalOutputTokens,
                             activeModel         = selectedModel,
@@ -700,16 +709,7 @@ fun ChatScreen(
                         actionIconContentColor     = MaterialTheme.colorScheme.onSurface
                     )
                 )
-                AnimatedVisibility(
-                    visible = todoItems.isNotEmpty(),
-                    enter   = expandVertically(tween(250)) + fadeIn(tween(250)),
-                    exit    = shrinkVertically(tween(200)) + fadeOut(tween(200))
-                ) { 
-                    TodoBar(
-                        items = todoItems,
-                        modifier = Modifier.onSizeChanged { todoBarHeight = it.height }
-                    )
-                }
+                // TodoPill in TopAppBar actions replaces old TodoBar here
             }
 
             // -- 4. Floating bottom input --------------------------------------
@@ -764,6 +764,14 @@ fun ChatScreen(
 
 
     // --- Session Info bottom sheet ---
+    // TodoSheet
+    if (showTodoSheet && todoItems.isNotEmpty()) {
+        TodoSheet(
+            items     = todoItems,
+            onDismiss = { showTodoSheet = false }
+        )
+    }
+
     if (showSessionInfo) {
         SessionInfoSheet(
             totalTokens = uiState.totalInputTokens + uiState.totalOutputTokens,
@@ -943,180 +951,167 @@ private fun formatTokenCount(count: Int): String = when {
 }
 
 // -----------------------------------------------------------------------------
-//  TodoBar � collapsible task list shown below TopAppBar
+//  TodoPill — compact pill button in TopAppBar actions, opens TodoSheet
 // -----------------------------------------------------------------------------
 
 @Composable
-fun TodoBar(
+fun TodoPill(
     items: List<TodoItem>,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    val completed = items.count { it.status == TodoStatus.COMPLETED }
+    val total     = items.size
+    val isRunning = items.any { it.status == TodoStatus.IN_PROGRESS }
 
-    val completed  = items.count { it.status == TodoStatus.COMPLETED }
-    val total      = items.size
-    val current    = items.firstOrNull { it.status == TodoStatus.IN_PROGRESS }
-    val isRunning  = current != null
-
-    val collapsedLabel = current?.activeForm
-        ?: current?.content
-        ?: items.firstOrNull { it.status == TodoStatus.PENDING }?.content
-        ?: "Tasks"
-
-    val pillNumber = current?.id
-        ?: items.firstOrNull { it.status == TodoStatus.PENDING }?.id
-        ?: items.lastOrNull()?.id
-        ?: 1
-
-    // -- Shimmer � centered gradient for symmetrical fade ----
-    val transition = rememberInfiniteTransition(label = "todo_shimmer")
-    val shimmerOffset by transition.animateFloat(
-        initialValue = -400f,
-        targetValue  = 400f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1600, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "todo_shimmer_x"
+    // Shimmer for pill label when running
+    val transition = rememberInfiniteTransition(label = "todo_pill_shimmer")
+    val shimmerProgress by transition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing), RepeatMode.Restart),
+        label = "todo_pill_shimmer_x"
     )
 
-    val gradientWidth = 500f
-    val shimmerBrush = Brush.linearGradient(
-        colors = listOf(
-            Color.White.copy(alpha = 1f),    // Edge left: visible
-            Color.White.copy(alpha = 0.7f),  // Fade in
-            Color.White.copy(alpha = 0.4f),
-            Color.White.copy(alpha = 0.1f),
-            Color.White.copy(alpha = 0f),    // Center: invisible
-            Color.White.copy(alpha = 0.1f),
-            Color.White.copy(alpha = 0.4f),
-            Color.White.copy(alpha = 0.7f),  // Fade out
-            Color.White.copy(alpha = 1f)     // Edge right: visible
-        ),
-        start  = Offset(shimmerOffset - gradientWidth / 2, 0f),
-        end    = Offset(shimmerOffset + gradientWidth / 2, 0f)
-    )
+    val pillColor   = if (isRunning) MaterialTheme.colorScheme.primaryContainer
+                      else MaterialTheme.colorScheme.surfaceVariant
+    val labelColor  = if (isRunning) MaterialTheme.colorScheme.onPrimaryContainer
+                      else MaterialTheme.colorScheme.onSurfaceVariant
 
-    // Glassmorphism effect - matches header gradient scrim
-    val bgColor = MaterialTheme.colorScheme.surface
-    
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .drawBehind {
-                // Gradient scrim: solid top ? transparent bottom (same as header)
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0.0f to bgColor.copy(alpha = 0.98f),  // Top: nearly solid
-                            1.0f to bgColor.copy(alpha = 0.85f)   // Bottom: more transparent
-                        )
-                    )
-                )
-            }
+    Surface(
+        onClick  = onClick,
+        shape    = CircleShape,
+        color    = pillColor,
+        modifier = Modifier.padding(end = 4.dp, top = 4.dp, bottom = 4.dp)
     ) {
-        Column {
-            // -- Collapsed row ------------------------------------------------
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded }
-                    .padding(horizontal = 16.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // -- Step number pill -----------------------------------------
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isRunning) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-                        )
-                ) {
-                    Text(
-                        text = "$pillNumber",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
-                        color = if (isRunning) MaterialTheme.colorScheme.onPrimary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(Modifier.width(10.dp))
-
-                // -- Label � shimmer if running, muted if not -----------------
-                if (isRunning) {
-                    // Shimmer text: warna solid onSurface, lalu SrcAtop overlay shimmerBrush
-                    Text(
-                        text = collapsedLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface, // solid base agar SrcAtop bisa baca alpha
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .weight(1f)
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            // Progress fraction
+            Text(
+                text       = "$completed/$total",
+                style      = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color      = labelColor,
+                modifier   = Modifier
+                    .then(if (isRunning)
+                        Modifier
                             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                             .drawWithContent {
                                 drawContent()
-                                drawRect(brush = shimmerBrush, blendMode = BlendMode.DstIn)
+                                val w = size.width
+                                val peakX = (shimmerProgress * (w * 3f)) - w
+                                val hw = w * 0.6f
+                                drawRect(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(
+                                            Color.White.copy(alpha = 1f),
+                                            Color.White.copy(alpha = 0.7f),
+                                            Color.White.copy(alpha = 0.3f),
+                                            Color.White.copy(alpha = 0f),
+                                            Color.White.copy(alpha = 0.3f),
+                                            Color.White.copy(alpha = 0.7f),
+                                            Color.White.copy(alpha = 1f)
+                                        ),
+                                        start = Offset(peakX - hw, 0f),
+                                        end   = Offset(peakX + hw, 0f)
+                                    ),
+                                    blendMode = BlendMode.DstIn
+                                )
                             }
-                    )
-                } else {
+                    else Modifier)
+            )
+            Icon(
+                Icons.Default.KeyboardArrowDown, null,
+                modifier = Modifier.size(14.dp),
+                tint = labelColor.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+//  TodoSheet — ModalBottomSheet listing all todo items (same style as SessionInfoSheet)
+// -----------------------------------------------------------------------------
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TodoSheet(
+    items: List<TodoItem>,
+    onDismiss: () -> Unit
+) {
+    // Shimmer shared across all in_progress rows
+    val transition = rememberInfiniteTransition(label = "todo_sheet_shimmer")
+    val shimmerProgress by transition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing), RepeatMode.Restart),
+        label = "todo_sheet_shimmer_x"
+    )
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState       = sheetState,
+        containerColor   = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 48.dp)
+        ) {
+            // -- Header ---------------------------------------------------
+            val done  = items.count { it.status == TodoStatus.COMPLETED }
+            val total = items.size
+            Row(
+                modifier              = Modifier.fillMaxWidth().padding(bottom = 20.dp),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
                     Text(
-                        text = collapsedLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        "Task Plan",
+                        style      = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color      = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "$done of $total completed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-                Spacer(Modifier.width(10.dp))
-
-                // -- Progress fraction -----------------------------------------
-                Text(
-                    text = "$completed/$total",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.Medium
-                )
-
-                Spacer(Modifier.width(6.dp))
-
-                // -- Chevron ---------------------------------------------------
-                Icon(
-                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = if (done == total && total > 0)
+                                Color(0xFF4CAF50).copy(alpha = 0.15f)
+                            else MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        "$done/$total",
+                        style      = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color      = if (done == total && total > 0)
+                                         Color(0xFF4CAF50)
+                                     else MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier   = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                    )
+                }
             }
 
-            // -- Expanded list -------------------------------------------------
-            AnimatedVisibility(
-                visible = expanded,
-                enter = expandVertically(animationSpec = tween(220, easing = FastOutSlowInEasing)) + fadeIn(tween(180)),
-                exit  = shrinkVertically(animationSpec = tween(180, easing = FastOutSlowInEasing)) + fadeOut(tween(140))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(0.dp)
-                ) {
+            HorizontalDivider(
+                color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            // -- Todo items -----------------------------------------------
+            items.forEach { item ->
+                TodoItemRow(item = item, shimmerProgress = shimmerProgress)
+                if (item != items.last()) {
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f),
+                        modifier = Modifier.padding(start = 44.dp)
                     )
-                    items.forEach { item ->
-                        TodoItemRow(item = item, shimmerBrush = shimmerBrush)
-                    }
-                    Spacer(Modifier.height(2.dp))
                 }
             }
         }
@@ -1124,77 +1119,131 @@ fun TodoBar(
 }
 
 @Composable
-private fun TodoItemRow(item: TodoItem, shimmerBrush: Brush) {
+private fun TodoItemRow(item: TodoItem, shimmerProgress: Float) {
     val isActive    = item.status == TodoStatus.IN_PROGRESS
     val isCompleted = item.status == TodoStatus.COMPLETED
+    val isPending   = item.status == TodoStatus.PENDING
 
     val label = if (isActive) item.activeForm ?: item.content ?: "Task ${item.id}"
                 else item.content ?: "Task ${item.id}"
 
+    val iosGreen  = Color(0xFF34C759)
+    val iosBlue   = Color(0xFF007AFF)
+
     val iconTint = when (item.status) {
-        TodoStatus.COMPLETED   -> Color(0xFF4CAF50)
-        TodoStatus.IN_PROGRESS -> MaterialTheme.colorScheme.primary
-        TodoStatus.PENDING     -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+        TodoStatus.COMPLETED   -> iosGreen
+        TodoStatus.IN_PROGRESS -> iosBlue
+        TodoStatus.PENDING     -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
     }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 5.dp)
+            .padding(vertical = 14.dp)
     ) {
-        // -- Status icon ----------------------------------------------------
-        Icon(
-            imageVector = when (item.status) {
-                TodoStatus.COMPLETED   -> Icons.Default.CheckCircle
-                TodoStatus.IN_PROGRESS -> Icons.Default.RadioButtonChecked
-                TodoStatus.PENDING     -> Icons.Default.RadioButtonUnchecked
-            },
-            contentDescription = null,
-            modifier = Modifier.size(15.dp),
-            tint = iconTint
-        )
-
-        Spacer(Modifier.width(10.dp))
-
-        // -- Label -----------------------------------------------------------
-        if (isActive) {
-            // Shimmer: solid onSurface + SrcAtop shimmerBrush � persis teknik Thinking..
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .weight(1f)
-                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                    .drawWithContent {
-                        drawContent()
-                        drawRect(brush = shimmerBrush, blendMode = BlendMode.DstIn)
+        // -- Status indicator: circle with icon ----------------------------
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(
+                    when (item.status) {
+                        TodoStatus.COMPLETED   -> iosGreen.copy(alpha = 0.12f)
+                        TodoStatus.IN_PROGRESS -> iosBlue.copy(alpha = 0.12f)
+                        TodoStatus.PENDING     -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
                     }
-            )
-        } else {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (isCompleted)
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                )
+        ) {
+            Icon(
+                imageVector = when (item.status) {
+                    TodoStatus.COMPLETED   -> Icons.Default.Check
+                    TodoStatus.IN_PROGRESS -> Icons.Default.PlayArrow
+                    TodoStatus.PENDING     -> Icons.Default.HourglassEmpty
+                },
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = iconTint
             )
         }
 
-        // -- Step number � right aligned ------------------------------------
+        Spacer(Modifier.width(14.dp))
+
+        // -- Label + status badge -----------------------------------------
+        Column(modifier = Modifier.weight(1f)) {
+            if (isActive) {
+                Text(
+                    text       = label,
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color      = MaterialTheme.colorScheme.onSurface,
+                    maxLines   = 2,
+                    overflow   = TextOverflow.Ellipsis,
+                    modifier   = Modifier
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            val w = size.width
+                            val peakX = (shimmerProgress * (w * 3f)) - w
+                            val hw = w * 0.6f
+                            drawRect(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 1f),
+                                        Color.White.copy(alpha = 0.7f),
+                                        Color.White.copy(alpha = 0.3f),
+                                        Color.White.copy(alpha = 0f),
+                                        Color.White.copy(alpha = 0.3f),
+                                        Color.White.copy(alpha = 0.7f),
+                                        Color.White.copy(alpha = 1f)
+                                    ),
+                                    start = Offset(peakX - hw, 0f),
+                                    end   = Offset(peakX + hw, 0f)
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                )
+            } else {
+                Text(
+                    text       = label,
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isCompleted) FontWeight.Normal else FontWeight.Medium,
+                    color      = when {
+                        isCompleted -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        isPending   -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        else        -> MaterialTheme.colorScheme.onSurface
+                    },
+                    maxLines   = 2,
+                    overflow   = TextOverflow.Ellipsis,
+                    textDecoration = if (isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                     else null
+                )
+            }
+            // Status badge text
+            Text(
+                text  = when (item.status) {
+                    TodoStatus.COMPLETED   -> "Completed"
+                    TodoStatus.IN_PROGRESS -> "In progress"
+                    TodoStatus.PENDING     -> "Pending"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = when (item.status) {
+                    TodoStatus.COMPLETED   -> iosGreen.copy(alpha = 0.8f)
+                    TodoStatus.IN_PROGRESS -> iosBlue.copy(alpha = 0.9f)
+                    TodoStatus.PENDING     -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                },
+                modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+
+        // -- Step number badge --------------------------------------------
         Text(
-            text = "${item.id}",
+            text  = "${item.id}",
             style = MaterialTheme.typography.labelSmall,
-            fontSize = 10.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
+            modifier = Modifier.padding(start = 8.dp)
         )
     }
 }
@@ -1315,28 +1364,13 @@ fun ToolCallCard(execution: ToolExecution) {
         else                                                    -> Icons.Default.Terminal
     }
 
+    // Shimmer: DstIn alpha mask, same concept as Thinking..
+    // shimmerOffset travels from -1x to +2x of component width so sweep is always visible
     val shimmerTransition = rememberInfiniteTransition(label = "tool_shimmer")
-    val shimmerOffset by shimmerTransition.animateFloat(
-        initialValue  = -500f, targetValue = 800f,
+    val shimmerProgress by shimmerTransition.animateFloat(
+        initialValue  = 0f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing), RepeatMode.Restart),
         label = "shimmer_x"
-    )
-    // Shimmer: centered gradient for symmetrical fade (alpha mask via DstIn)
-    val gradientWidth = 600f
-    val shimmerBrush = Brush.linearGradient(
-        colors = listOf(
-            Color.White.copy(alpha = 1f),    // Edge left: visible
-            Color.White.copy(alpha = 0.7f),  // Fade in
-            Color.White.copy(alpha = 0.4f),
-            Color.White.copy(alpha = 0.1f),
-            Color.White.copy(alpha = 0f),    // Center: invisible
-            Color.White.copy(alpha = 0.1f),
-            Color.White.copy(alpha = 0.4f),
-            Color.White.copy(alpha = 0.7f),  // Fade out
-            Color.White.copy(alpha = 1f)     // Edge right: visible
-        ),
-        start = Offset(shimmerOffset - gradientWidth / 2, 0f),
-        end   = Offset(shimmerOffset + gradientWidth / 2, 0f)
     )
 
     // STICKY HEADER PATTERN: Surface wraps Column, header always visible, expandable content below
@@ -1373,7 +1407,29 @@ fun ToolCallCard(execution: ToolExecution) {
                             if (execution.status == ToolStatus.RUNNING)
                                 Modifier
                                     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                                    .drawWithContent { drawContent(); drawRect(brush = shimmerBrush, blendMode = BlendMode.DstIn) }
+                                    .drawWithContent {
+                                        drawContent()
+                                        // Build brush relative to actual component size so sweep always covers full width
+                                        val w = size.width
+                                        val peakX = (shimmerProgress * (w * 3f)) - w
+                                        val hw = w * 0.6f
+                                        drawRect(
+                                            brush = Brush.linearGradient(
+                                                colors = listOf(
+                                                    Color.White.copy(alpha = 1f),
+                                                    Color.White.copy(alpha = 0.7f),
+                                                    Color.White.copy(alpha = 0.3f),
+                                                    Color.White.copy(alpha = 0f),
+                                                    Color.White.copy(alpha = 0.3f),
+                                                    Color.White.copy(alpha = 0.7f),
+                                                    Color.White.copy(alpha = 1f)
+                                                ),
+                                                start = Offset(peakX - hw, 0f),
+                                                end   = Offset(peakX + hw, 0f)
+                                            ),
+                                            blendMode = BlendMode.DstIn
+                                        )
+                                    }
                             else Modifier
                         )
                 )
@@ -1402,12 +1458,12 @@ fun ToolCallCard(execution: ToolExecution) {
                     execution.children.forEach { child ->
                         key(child.index) {
                             SubagentChildCard(
-                                child        = child,
-                                isDark       = isDark,
-                                iosGreen     = iosGreen,
-                                iosBlue      = iosBlue,
-                                iosRed       = iosRed,
-                                shimmerBrush = shimmerBrush
+                                child           = child,
+                                isDark          = isDark,
+                                iosGreen        = iosGreen,
+                                iosBlue         = iosBlue,
+                                iosRed          = iosRed,
+                                shimmerProgress = shimmerProgress
                             )
                         }
                     }
@@ -1477,7 +1533,7 @@ private fun SubagentChildCard(
     iosGreen: Color,
     iosBlue: Color,
     iosRed: Color,
-    shimmerBrush: Brush
+    shimmerProgress: Float
 ) {
     var expanded by remember(child.index) { mutableStateOf(false) }
 
@@ -1537,23 +1593,6 @@ private fun SubagentChildCard(
                     }
                 }
 
-                val taskScrollState = rememberScrollState()
-                LaunchedEffect(child.index) {
-                    delay(600)
-                    while (true) {
-                        if (taskScrollState.maxValue > 0) {
-                            taskScrollState.animateScrollTo(
-                                taskScrollState.maxValue,
-                                animationSpec = tween((taskScrollState.maxValue * 6).coerceIn(2000, 8000), easing = LinearEasing)
-                            )
-                            delay(1000)
-                            taskScrollState.animateScrollTo(0, animationSpec = tween(300))
-                            delay(800)
-                        } else {
-                            delay(500)
-                        }
-                    }
-                }
                 Text(
                     text       = child.taskName,
                     style      = MaterialTheme.typography.labelSmall,
@@ -1562,15 +1601,35 @@ private fun SubagentChildCard(
                                      MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                                  else MaterialTheme.colorScheme.onSurface,
                     maxLines   = 1,
-                    softWrap   = false,
+                    overflow   = TextOverflow.Ellipsis,
                     modifier   = Modifier
                         .weight(1f)
-                        .horizontalScroll(taskScrollState, enabled = false)
                         .then(
                             if (child.status == ToolStatus.RUNNING)
                                 Modifier
                                     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                                    .drawWithContent { drawContent(); drawRect(brush = shimmerBrush, blendMode = BlendMode.DstIn) }
+                                    .drawWithContent {
+                                        drawContent()
+                                        val w = size.width
+                                        val peakX = (shimmerProgress * (w * 3f)) - w
+                                        val hw = w * 0.6f
+                                        drawRect(
+                                            brush = Brush.linearGradient(
+                                                colors = listOf(
+                                                    Color.White.copy(alpha = 1f),
+                                                    Color.White.copy(alpha = 0.7f),
+                                                    Color.White.copy(alpha = 0.3f),
+                                                    Color.White.copy(alpha = 0f),
+                                                    Color.White.copy(alpha = 0.3f),
+                                                    Color.White.copy(alpha = 0.7f),
+                                                    Color.White.copy(alpha = 1f)
+                                                ),
+                                                start = Offset(peakX - hw, 0f),
+                                                end   = Offset(peakX + hw, 0f)
+                                            ),
+                                            blendMode = BlendMode.DstIn
+                                        )
+                                    }
                             else Modifier
                         )
                 )
@@ -1590,9 +1649,11 @@ private fun SubagentChildCard(
                             color = iosRed, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                     }
-                    ToolStatus.RUNNING -> Text(
-                        "Running\u2026", style = MaterialTheme.typography.labelSmall,
-                        color = iosBlue, fontWeight = FontWeight.Medium
+                    ToolStatus.RUNNING -> Icon(
+                        Icons.Default.Autorenew,
+                        null,
+                        modifier = Modifier.size(13.dp),
+                        tint = iosBlue
                     )
                     ToolStatus.PENDING -> Text(
                         "Pending", style = MaterialTheme.typography.labelSmall,
@@ -1887,9 +1948,9 @@ private fun ToolResultPreview(
 
 private fun formatToolName(name: String, args: Map<String, Any?>?): String {
     // Helper: extract just the filename from a full path
-    fun fileName(key: String) = args?.get(key)?.toString()?.substringAfterLast("/")?.take(30) ?: ""
+    fun fileName(key: String) = args?.get(key)?.toString()?.substringAfterLast("/")?.take(60) ?: ""
     fun filePath(key: String) = args?.get(key)?.toString()?.let {
-        if (it.length > 28) "�" + it.takeLast(26) else it
+        if (it.length > 50) "…" + it.takeLast(48) else it
     } ?: ""
 
     @Suppress("UNCHECKED_CAST")
@@ -1930,19 +1991,24 @@ private fun formatToolName(name: String, args: Map<String, Any?>?): String {
         }
         "undo_change"       -> "Undo  ${fileName("path")}"
         // -- Shell -----------------------------------------------------------
-        "run_shell"         -> "$  ${args?.get("command")?.toString()?.take(32) ?: ""}"
+        "run_shell"         -> "$  ${args?.get("command")?.toString()?.take(80) ?: ""}"
         // -- AI tools -------------------------------------------------------
         "update_memory"     -> "Memory  ${args?.get("target")?.toString() ?: "daily"}"
         "create_reminder"   -> "Remind  ${args?.get("title")?.toString()?.take(20) ?: ""}"
         "invoke_subagents"  -> {
-            @Suppress("UNCHECKED_CAST")
-            val subagents = args?.get("subagents") as? List<Map<String, Any?>>
-            if (subagents.isNullOrEmpty()) {
-                "Subagents"
+            // Prefer explicit title field; fallback to task_name list
+            val title = args?.get("title")?.toString()
+            if (!title.isNullOrBlank()) {
+                title
             } else {
-                // Show ALL task names � MarqueeText handles overflow via auto-scroll
-                val names = subagents.mapNotNull { it["task_name"]?.toString() }
-                names.joinToString("  �  ")
+                @Suppress("UNCHECKED_CAST")
+                val subagents = args?.get("subagents") as? List<Map<String, Any?>>
+                if (subagents.isNullOrEmpty()) {
+                    "Subagents"
+                } else {
+                    val names = subagents.mapNotNull { it["task_name"]?.toString() }
+                    names.joinToString("  ·  ")
+                }
             }
         }
         // -- MCP tools ------------------------------------------------------

@@ -465,16 +465,28 @@ class AiRepository @Inject constructor(
         }
         
         // Format 3: {"tool": "tool_name", "arguments": {...}} as standalone JSON block
-        // Only as last resort — very conservative matching to avoid false positives
+        // Only as last resort — very conservative. Use brace-counting to handle nested JSON.
         if (results.isEmpty()) {
-            val jsonBlock = Regex(
-                """\{\s*"tool"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{.*?\})\s*\}""",
+            val toolKeyRegex = Regex(
+                """\{\s*"tool"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*\{""",
                 setOf(RegexOption.DOT_MATCHES_ALL)
             )
-            jsonBlock.findAll(text).forEach { match ->
+            toolKeyRegex.findAll(text).forEach { match ->
                 val name = match.groupValues[1].trim()
-                val argsJson = match.groupValues[2].trim()
-                if (name in knownTools) {
+                if (name !in knownTools) return@forEach
+                // match.range.last points to the opening '{' of arguments value
+                val argsStart = match.range.last
+                var depth = 1
+                var idx = argsStart + 1
+                while (idx < text.length && depth > 0) {
+                    when (text[idx]) {
+                        '{' -> depth++
+                        '}' -> depth--
+                    }
+                    idx++
+                }
+                if (depth == 0) {
+                    val argsJson = text.substring(argsStart, idx)
                     val args = parseJsonToMap(argsJson)
                     results.add(ToolCallMessage(
                         id = "text_tc_${callIndex++}",

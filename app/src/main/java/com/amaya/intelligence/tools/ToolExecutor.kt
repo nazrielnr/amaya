@@ -277,6 +277,12 @@ class ToolExecutor @Inject constructor(
                     "Returns combined summary from all subagents.",
                 parameters = listOf(
                     ToolParameter(
+                        name = "title",
+                        type = "string",
+                        description = "Short title for this parallel work shown in UI header (e.g. 'Auditing codebase'). Required.",
+                        required = true
+                    ),
+                    ToolParameter(
                         name = "subagents",
                         type = "array",
                         description = "List of subagent tasks. Each: {task_name: string (≤5 words), task: string (full self-contained prompt)}",

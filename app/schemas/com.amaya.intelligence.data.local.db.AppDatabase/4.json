@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "a3b261e48d6cddecc4c1b55e0004aab4",
+    "identityHash": "a8670b5d61cd9130f6a7bc9072dc3140",
     "entities": [
       {
         "tableName": "projects",
@@ -385,7 +385,7 @@
       },
       {
         "tableName": "cron_jobs",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `prompt` TEXT NOT NULL, `triggerTimeMillis` INTEGER NOT NULL, `recurringType` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `conversationId` INTEGER, `fireCount` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `prompt` TEXT NOT NULL, `triggerTimeMillis` INTEGER NOT NULL, `recurringType` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `conversationId` INTEGER, `fireCount` INTEGER NOT NULL, `sessionMode` TEXT NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -440,6 +440,12 @@
             "columnName": "fireCount",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "sessionMode",
+            "columnName": "sessionMode",
+            "affinity": "TEXT",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -455,7 +461,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a3b261e48d6cddecc4c1b55e0004aab4')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a8670b5d61cd9130f6a7bc9072dc3140')"
     ]
   }
 }

@@ -755,7 +755,7 @@ fun ChatScreen(
                 ChatInput(
                     onSend        = { viewModel.sendMessage(it) },
                     onStop        = { viewModel.stopGeneration() },
-                    isLoading     = uiState.isLoading,
+                    isLoading     = uiState.isLoading || uiState.isStreaming,
                     workspacePath = uiState.workspacePath
                 )
             }
@@ -1255,6 +1255,18 @@ fun MessageBubble(message: UiMessage) {
 }
 @Composable
 fun ToolCallCard(execution: ToolExecution) {
+    // Fade in only for brand-new cards (status starts as RUNNING/PENDING = live stream).
+    // Cards loaded from history start with SUCCESS/ERROR — skip animation to avoid
+    // janky mass-fade when a conversation with many tool calls is loaded.
+    val isLiveCard = execution.status == ToolStatus.RUNNING || execution.status == ToolStatus.PENDING
+    var visible by remember(execution.toolCallId) { mutableStateOf(!isLiveCard) }
+    LaunchedEffect(execution.toolCallId) {
+        if (isLiveCard) visible = true
+    }
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
+    ) {
     var expanded by remember(execution.toolCallId) { mutableStateOf(false) }
     val isDark = isSystemInDarkTheme()
 
@@ -1454,6 +1466,7 @@ fun ToolCallCard(execution: ToolExecution) {
                 }
             }
         }
+    }
     }
 }
 

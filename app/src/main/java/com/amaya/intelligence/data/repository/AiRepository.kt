@@ -197,6 +197,7 @@ class AiRepository @Inject constructor(
                     
                     is ChatResponse.ToolCall -> {
                         hasToolCalls = true
+                        android.util.Log.d("AiRepository", "ToolCall received: name=${response.name} args=${response.arguments} id=${response.id}")
                         send(AgentEvent.ToolCallStart(response.id, response.name, response.arguments))
                         
                         toolCalls.add(ToolCallMessage(

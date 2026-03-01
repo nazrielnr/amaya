@@ -7,14 +7,24 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.nio.charset.Charset
+import java.util.zip.ZipInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+// PDF support temporarily disabled - PDFBox-Android not available in public repos
+// import com.tom_roush.pdfbox.pdmodel.PDDocument
+// import com.tom_roush.pdfbox.text.PDFTextStripper
+// import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserFactory
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 /**
  * Read file content using java.io.File API for Android compatibility.
  */
 @Singleton
 class ReadFileTool @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val commandValidator: CommandValidator
 ) : Tool {
     
@@ -22,11 +32,16 @@ class ReadFileTool @Inject constructor(
         const val DEFAULT_MAX_SIZE = 1024 * 1024L  // 1MB
         const val ABSOLUTE_MAX_SIZE = 10 * 1024 * 1024L  // 10MB
         const val BINARY_CHECK_SIZE = 8000
+        
+        // Document formats supported (PDF disabled - dependency not available)
+        val DOCUMENT_EXTENSIONS = setOf(
+            "docx", "xlsx", "pptx", "odt", "ods", "odp", "rtf"
+        )
     }
     
     override val name = "read_file"
 
-    override val description = "Read one or multiple text files. Pass 'path' for single file or 'paths' array for batch. Use 'info_only' for metadata only."
+    override val description = "Read text files and document formats (DOCX, XLSX, PPTX, ODT, ODS, RTF). Pass 'path' for single file or 'paths' array for batch. Use 'info_only' for metadata only. Documents are automatically extracted to plain text. Note: PDF support currently unavailable."
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult =
         withContext(Dispatchers.IO) {
@@ -100,7 +115,13 @@ class ReadFileTool @Inject constructor(
                 )
             }
             
-            // Binary check
+            // Check if this is a document format
+            val ext = file.extension.lowercase()
+            if (ext in DOCUMENT_EXTENSIONS) {
+                return@withContext extractDocument(file, startLine, endLine)
+            }
+            
+            // Binary check for non-document files
             if (isBinaryFile(file)) {
                 return@withContext ToolResult.Error(
                     "File appears to be binary: $pathStr",
@@ -223,17 +244,41 @@ class ReadFileTool @Inject constructor(
                     if (!file.exists()) { appendLine("ERROR: File not found"); appendLine(); return@forEachIndexed }
                     if (!file.isFile)   { appendLine("ERROR: Not a file");      appendLine(); return@forEachIndexed }
                     try {
-                        val lines = file.readLines(Charsets.UTF_8)
-                        if (summaryOnly && lines.size > 20) {
-                            lines.take(10).forEach { appendLine(it) }
-                            appendLine("... (${lines.size - 20} lines omitted) ...")
-                            lines.takeLast(10).forEach { appendLine(it) }
-                        } else if (lines.size > maxLines) {
-                            lines.take(maxLines).forEach { appendLine(it) }
-                            appendLine("... (${lines.size - maxLines} more lines)")
+                        // Check if document format
+                        val ext = file.extension.lowercase()
+                        if (ext in DOCUMENT_EXTENSIONS) {
+                            val extractedText = when (ext) {
+                                "pdf" -> "ERROR: PDF support unavailable"
+                                "docx" -> extractDocx(file)
+                                "xlsx" -> extractXlsx(file)
+                                "pptx" -> extractPptx(file)
+                                "odt" -> extractOdt(file)
+                                "ods" -> extractOds(file)
+                                "odp" -> extractOdp(file)
+                                "rtf" -> extractRtf(file)
+                                else -> "ERROR: Unsupported format"
+                            }
+                            val lines = extractedText.lines()
+                            appendLine("[${ext.uppercase()}] Words: ~${extractedText.split(Regex("\\s+")).size}")
+                            if (lines.size > maxLines) {
+                                lines.take(maxLines).forEach { appendLine(it) }
+                                appendLine("... (${lines.size - maxLines} more lines)")
+                            } else {
+                                appendLine(extractedText)
+                            }
                         } else {
-                            // FIX 2.7: lines already read — don't call readText() again (double I/O, race risk)
-                            appendLine(lines.joinToString("\n"))
+                            val lines = file.readLines(Charsets.UTF_8)
+                            if (summaryOnly && lines.size > 20) {
+                                lines.take(10).forEach { appendLine(it) }
+                                appendLine("... (${lines.size - 20} lines omitted) ...")
+                                lines.takeLast(10).forEach { appendLine(it) }
+                            } else if (lines.size > maxLines) {
+                                lines.take(maxLines).forEach { appendLine(it) }
+                                appendLine("... (${lines.size - maxLines} more lines)")
+                            } else {
+                                // FIX 2.7: lines already read — don't call readText() again (double I/O, race risk)
+                                appendLine(lines.joinToString("\n"))
+                            }
                         }
                     } catch (e: Exception) { appendLine("ERROR: ${e.message}") }
                     appendLine()
@@ -262,5 +307,305 @@ class ReadFileTool @Inject constructor(
             if (file.isDirectory) appendLine("Children: ${file.listFiles()?.size ?: 0} items")
         }
         ToolResult.Success(output.trim(), metadata = mapOf("path" to pathStr, "type" to type, "size" to file.length()))
+    }
+
+    // ── Document Extraction ─────────────────────────────────────────────────────
+    private suspend fun extractDocument(file: File, startLine: Int?, endLine: Int?): ToolResult = withContext(Dispatchers.IO) {
+        try {
+            val ext = file.extension.lowercase()
+            val extractedText = when (ext) {
+                "pdf" -> return@withContext ToolResult.Error(
+                    "PDF support is currently unavailable. Supported formats: DOCX, XLSX, PPTX, ODT, ODS, RTF",
+                    ErrorType.VALIDATION_ERROR
+                )
+                "docx" -> extractDocx(file)
+                "xlsx" -> extractXlsx(file)
+                "pptx" -> extractPptx(file)
+                "odt" -> extractOdt(file)
+                "ods" -> extractOds(file)
+                "odp" -> extractOdp(file)
+                "rtf" -> extractRtf(file)
+                else -> return@withContext ToolResult.Error(
+                    "Unsupported document format: $ext",
+                    ErrorType.VALIDATION_ERROR
+                )
+            }
+            
+            val allLines = extractedText.lines()
+            val totalLines = allLines.size
+            val wordCount = extractedText.split(Regex("\\s+")).filter { it.isNotBlank() }.size
+            
+            // Apply line range if specified
+            val maxDisplayLines = 200
+            val (output, displayedRange) = if (startLine != null || endLine != null) {
+                val start = (startLine ?: 1) - 1
+                val end = (endLine ?: totalLines).coerceAtMost(totalLines)
+                
+                if (start >= totalLines) {
+                    return@withContext ToolResult.Error(
+                        "start_line ($startLine) exceeds document length ($totalLines lines)",
+                        ErrorType.VALIDATION_ERROR
+                    )
+                }
+                
+                val rangeLines = allLines.subList(start, end)
+                Pair(rangeLines.joinToString("\n"), "Lines ${start + 1}-$end of $totalLines")
+            } else {
+                if (totalLines > maxDisplayLines) {
+                    val limitedLines = allLines.take(maxDisplayLines)
+                    val output = buildString {
+                        append("[${ext.uppercase()} Document: ${file.name}]\n")
+                        append("Lines: $totalLines | Words: ~$wordCount\n\n")
+                        append(limitedLines.joinToString("\n"))
+                        append("\n\n--- Showing lines 1-$maxDisplayLines of $totalLines ---")
+                        append("\nTo see more, use: start_line and end_line parameters")
+                    }
+                    Pair(output, "Lines 1-$maxDisplayLines of $totalLines (truncated)")
+                } else {
+                    val output = buildString {
+                        append("[${ext.uppercase()} Document: ${file.name}]\n")
+                        append("Lines: $totalLines | Words: ~$wordCount\n\n")
+                        append(extractedText)
+                    }
+                    Pair(output, "All $totalLines lines")
+                }
+            }
+            
+            ToolResult.Success(
+                output = output,
+                metadata = mapOf(
+                    "path" to file.absolutePath,
+                    "format" to ext,
+                    "size" to file.length(),
+                    "total_lines" to totalLines,
+                    "word_count" to wordCount,
+                    "displayed" to displayedRange
+                )
+            )
+            
+        } catch (e: Exception) {
+            ToolResult.Error(
+                "Failed to extract document: ${e.message}",
+                ErrorType.EXECUTION_ERROR
+            )
+        }
+    }
+    
+    // ── PDF Extraction ──────────────────────────────────────────────────────────
+    // Disabled - PDFBox-Android dependency not available in public repos
+    // private fun extractPdf(file: File): String {
+    //     return PDDocument.load(file).use { document ->
+    //         val stripper = PDFTextStripper()
+    //         stripper.sortByPosition = true
+    //         stripper.getText(document)
+    //     }
+    // }
+    
+    // ── DOCX Extraction ─────────────────────────────────────────────────────────
+    private fun extractDocx(file: File): String = extractFromZipXml(
+        file = file,
+        targetPath = "word/document.xml",
+        textTag = "w:t"
+    )
+    
+    // ── XLSX Extraction ─────────────────────────────────────────────────────────
+    private fun extractXlsx(file: File): String {
+        val sharedStrings = mutableListOf<String>()
+        val sheetTexts = mutableListOf<String>()
+        
+        ZipInputStream(file.inputStream()).use { zip ->
+            var entry = zip.nextEntry
+            while (entry != null) {
+                when {
+                    entry.name == "xl/sharedStrings.xml" -> {
+                        // Extract shared strings
+                        val factory = XmlPullParserFactory.newInstance()
+                        val parser = factory.newPullParser()
+                        parser.setInput(zip.reader())
+                        
+                        var eventType = parser.eventType
+                        val textBuilder = StringBuilder()
+                        while (eventType != XmlPullParser.END_DOCUMENT) {
+                            if (eventType == XmlPullParser.START_TAG && parser.name == "t") {
+                                parser.next()
+                                if (parser.eventType == XmlPullParser.TEXT) {
+                                    textBuilder.append(parser.text)
+                                }
+                            } else if (eventType == XmlPullParser.END_TAG && parser.name == "si") {
+                                sharedStrings.add(textBuilder.toString())
+                                textBuilder.clear()
+                            }
+                            eventType = parser.next()
+                        }
+                    }
+                    entry.name.startsWith("xl/worksheets/sheet") && entry.name.endsWith(".xml") -> {
+                        // Extract sheet content
+                        val factory = XmlPullParserFactory.newInstance()
+                        val parser = factory.newPullParser()
+                        parser.setInput(zip.reader())
+                        
+                        val sheetText = StringBuilder()
+                        var eventType = parser.eventType
+                        while (eventType != XmlPullParser.END_DOCUMENT) {
+                            if (eventType == XmlPullParser.START_TAG && parser.name == "v") {
+                                parser.next()
+                                if (parser.eventType == XmlPullParser.TEXT) {
+                                    val value = parser.text
+                                    // Try to get from shared strings, otherwise use raw value
+                                    val cellValue = value.toIntOrNull()?.let { idx ->
+                                        sharedStrings.getOrNull(idx) ?: value
+                                    } ?: value
+                                    sheetText.append(cellValue).append("\t")
+                                }
+                            } else if (eventType == XmlPullParser.END_TAG && parser.name == "row") {
+                                sheetText.append("\n")
+                            }
+                            eventType = parser.next()
+                        }
+                        sheetTexts.add(sheetText.toString())
+                    }
+                }
+                entry = zip.nextEntry
+            }
+        }
+        
+        return sheetTexts.mapIndexed { idx, text -> 
+            "=== Sheet ${idx + 1} ===\n$text"
+        }.joinToString("\n\n")
+    }
+    
+    // ── PPTX Extraction ─────────────────────────────────────────────────────────
+    private fun extractPptx(file: File): String {
+        // Read all slide entry bytes first (can't parse while ZipInputStream is open for other entries)
+        val slideEntries = mutableListOf<Pair<String, ByteArray>>()
+        
+        ZipInputStream(file.inputStream()).use { zip ->
+            var entry = zip.nextEntry
+            while (entry != null) {
+                // Match slide files only, skip _rels and slideLayouts
+                if (entry.name.matches(Regex("ppt/slides/slide[0-9]+\\.xml"))) {
+                    slideEntries.add(entry.name to zip.readBytes())
+                }
+                entry = zip.nextEntry
+            }
+        }
+        
+        // Sort slides by number to ensure correct order
+        slideEntries.sortBy { (name, _) ->
+            name.replace("ppt/slides/slide", "").replace(".xml", "").toIntOrNull() ?: 0
+        }
+        
+        val slides = slideEntries.mapIndexedNotNull { _, (_, bytes) ->
+            val slideText = StringBuilder()
+            
+            // Parse XML bytes — use non-namespace-aware mode for simpler tag name matching
+            val factory = XmlPullParserFactory.newInstance()
+            factory.isNamespaceAware = false
+            val parser = factory.newPullParser()
+            parser.setInput(bytes.inputStream(), "UTF-8")
+            
+            var eventType = parser.eventType
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                if (eventType == XmlPullParser.START_TAG) {
+                    val tagName = parser.name ?: ""
+                    // PPTX text runs: a:t. Also handle <t> in case namespace stripped
+                    if (tagName == "a:t" || tagName == "t") {
+                        // Collect all TEXT tokens until end tag
+                        val sb = StringBuilder()
+                        eventType = parser.next()
+                        while (eventType == XmlPullParser.TEXT || eventType == XmlPullParser.ENTITY_REF) {
+                            sb.append(parser.text ?: "")
+                            eventType = parser.next()
+                        }
+                        val text = sb.toString()
+                        if (text.isNotBlank()) {
+                            slideText.append(text).append(" ")
+                        }
+                        continue // already advanced eventType
+                    }
+                    // End of paragraph → add newline
+                    if (tagName == "a:p" || tagName == "p") {
+                        if (slideText.isNotEmpty() && !slideText.endsWith("\n")) {
+                            slideText.append("\n")
+                        }
+                    }
+                }
+                eventType = parser.next()
+            }
+            
+            slideText.toString().trim().takeIf { it.isNotEmpty() }
+        }
+        
+        return if (slides.isEmpty()) {
+            "No text content found in presentation"
+        } else {
+            slides.mapIndexed { idx, text ->
+                "=== Slide ${idx + 1} ===\n$text"
+            }.joinToString("\n\n")
+        }
+    }
+    
+    // ── ODT Extraction ──────────────────────────────────────────────────────────
+    private fun extractOdt(file: File): String = extractFromZipXml(
+        file = file,
+        targetPath = "content.xml",
+        textTag = "text:p"
+    )
+    
+    // ── ODS Extraction ──────────────────────────────────────────────────────────
+    private fun extractOds(file: File): String = extractFromZipXml(
+        file = file,
+        targetPath = "content.xml",
+        textTag = "text:p"
+    )
+    
+    // ── ODP Extraction ──────────────────────────────────────────────────────────
+    private fun extractOdp(file: File): String = extractFromZipXml(
+        file = file,
+        targetPath = "content.xml",
+        textTag = "text:p"
+    )
+    
+    // ── RTF Extraction ──────────────────────────────────────────────────────────
+    private fun extractRtf(file: File): String {
+        val content = file.readText()
+        // Simple RTF stripping - remove control words and groups
+        return content
+            .replace(Regex("""\\[a-z]+(-?\d+)? ?"""), " ") // Control words
+            .replace(Regex("""\{|\}"""), "") // Braces
+            .replace(Regex("""\\'[0-9a-f]{2}"""), "") // Hex chars
+            .replace(Regex("""\s+"""), " ") // Normalize whitespace
+            .trim()
+    }
+    
+    // ── Helper: Extract from ZIP+XML ────────────────────────────────────────────
+    private fun extractFromZipXml(file: File, targetPath: String, textTag: String): String {
+        val textBuilder = StringBuilder()
+        
+        ZipInputStream(file.inputStream()).use { zip ->
+            var entry = zip.nextEntry
+            while (entry != null) {
+                if (entry.name == targetPath) {
+                    val factory = XmlPullParserFactory.newInstance()
+                    val parser = factory.newPullParser()
+                    parser.setInput(zip.reader())
+                    
+                    var eventType = parser.eventType
+                    while (eventType != XmlPullParser.END_DOCUMENT) {
+                        if (eventType == XmlPullParser.START_TAG && parser.name == textTag) {
+                            parser.next()
+                            if (parser.eventType == XmlPullParser.TEXT) {
+                                textBuilder.append(parser.text).append("\n")
+                            }
+                        }
+                        eventType = parser.next()
+                    }
+                    break
+                }
+                entry = zip.nextEntry
+            }
+        }
+        
+        return textBuilder.toString().trim()
     }
 }

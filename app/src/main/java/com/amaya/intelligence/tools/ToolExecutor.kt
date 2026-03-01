@@ -180,7 +180,7 @@ class ToolExecutor @Inject constructor(
             ),
             ToolDefinition(
                 name = "read_file",
-                description = "Read one or multiple text files. Single: pass 'path'. Batch: pass 'paths' array (max 10). Info-only: pass 'info_only=true' for file metadata.",
+                description = "Read text files and document formats (DOCX, XLSX, PPTX, ODT, ODS, RTF). Single: pass 'path'. Batch: pass 'paths' array (max 10). Info-only: pass 'info_only=true' for file metadata. Documents are automatically extracted to plain text. Note: PDF currently unavailable.",
                 parameters = listOf(
                     ToolParameter("path", "string", "Absolute path to single file", required = false),
                     ToolParameter("paths", "array", "Array of absolute paths for batch read (max 10)", required = false, items = "string"),
@@ -192,14 +192,14 @@ class ToolExecutor @Inject constructor(
             ),
             ToolDefinition(
                 name = "write_file",
-                description = "Write content to a file with atomic operations and automatic backup. " +
+                description = "Write content to a file with atomic operations and automatic backup. Supports text files and document formats (DOCX, XLSX, PPTX, ODT, ODS, ODP). " +
                     "Automatically creates parent directories if they don't exist (create_dirs=true by default). " +
-                    "Always creates a backup before writing. Use append=true to add content without overwriting.",
+                    "Always creates a backup before writing. Use append=true to add content without overwriting. For documents: creates new document with plain text content.",
                 parameters = listOf(
                     ToolParameter("path", "string", "Absolute path to the file. Parent directories are created automatically if missing.", required = true),
-                    ToolParameter("content", "string", "Content to write", required = true),
+                    ToolParameter("content", "string", "Content to write (plain text for documents)", required = true),
                     ToolParameter("create_backup", "boolean", "Create backup before write (default: true)", required = false),
-                    ToolParameter("validate_syntax", "boolean", "Validate code syntax (default: true for code files)", required = false),
+                    ToolParameter("validate_syntax", "boolean", "Validate code syntax (default: false)", required = false),
                     ToolParameter("create_dirs", "boolean", "Create parent directories if they don't exist (default: true)", required = false),
                     ToolParameter("append", "boolean", "Append to existing content instead of overwrite (default: false)", required = false)
                 )
@@ -235,14 +235,15 @@ class ToolExecutor @Inject constructor(
             ),
             ToolDefinition(
                 name = "edit_file",
-                description = "Edit a file by replacing text or applying a unified diff. Use 'old_content'+'new_content' for text replacement, or 'diff' for patch mode.",
+                description = "Edit a file by replacing text or applying a unified diff. Supports text files and document formats (DOCX, XLSX, PPTX, ODT, ODS, ODP). Use 'old_content'+'new_content' for text replacement, or 'diff' for patch mode (text files only). Use 'create_backup=false' to skip backup.",
                 parameters = listOf(
                     ToolParameter("path", "string", "Absolute path to the file", required = true),
                     ToolParameter("old_content", "string", "Exact text to find and replace", required = false),
                     ToolParameter("new_content", "string", "Text to replace with", required = false),
-                    ToolParameter("diff", "string", "Unified diff content (@@ hunks) to apply as patch", required = false),
+                    ToolParameter("diff", "string", "Unified diff content (@@ hunks) to apply as patch (text files only)", required = false),
                     ToolParameter("all_occurrences", "boolean", "Replace all occurrences (default: false)", required = false),
-                    ToolParameter("dry_run", "boolean", "Preview changes without saving (default: false)", required = false)
+                    ToolParameter("dry_run", "boolean", "Preview changes without saving (default: false)", required = false),
+                    ToolParameter("create_backup", "boolean", "Create backup before editing (default: true). Set false to skip.", required = false)
                 )
             ),
             ToolDefinition(

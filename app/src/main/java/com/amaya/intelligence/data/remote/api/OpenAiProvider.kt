@@ -91,6 +91,14 @@ class OpenAiProvider @Inject constructor(
             val listener = object : EventSourceListener() {
                 private val toolCallBuilders = mutableMapOf<Int, OpenAiToolCallBuilder>()
                 private var receivedDone = false
+                private var lastCreatedToolCallIndex = 0
+                // Queue-based approach: track which builders have received their args yet
+                // argsReceivedCount[idx] = true means this builder already got its args chunk
+                private val argsReceived = mutableSetOf<Int>()
+                // nextArgsTargetIndex: the next builder that hasn't received args yet
+                // This handles server sending args sequentially: tool0-header, tool0-args, tool1-header, tool1-args
+                // OR: tool0-header, tool1-header, tool0-args, tool1-args
+                private var nextArgsTargetIndex = 0
                 
                 override fun onEvent(
                     eventSource: EventSource,
@@ -98,10 +106,27 @@ class OpenAiProvider @Inject constructor(
                     type: String?,
                     data: String
                 ) {
+                    android.util.Log.v("OpenAiProvider", "SSE data: ${data.take(200)}")
                     if (data == "[DONE]") {
                         receivedDone = true
-                        // Tool calls are already emitted on finish_reason="tool_calls"
-                        // Only emit Done here
+                        // Emit any pending tool calls that weren't flushed by finish_reason
+                        // This handles local models that send [DONE] without finish_reason
+                        if (toolCallBuilders.isNotEmpty()) {
+                            android.util.Log.d("OpenAiProvider", "[DONE] flushing ${toolCallBuilders.size} pending tool calls")
+                            toolCallBuilders.keys.sorted().forEach { idx ->
+                                val builder = toolCallBuilders[idx] ?: return@forEach
+                                val rawArgs = builder.argumentsBuilder.toString()
+                                android.util.Log.d("OpenAiProvider", "[DONE] flush[$idx] name=${builder.name} rawArgs=$rawArgs")
+                                if (builder.isComplete()) {
+                                    trySend(ChatResponse.ToolCall(
+                                        id = builder.id,
+                                        name = builder.name,
+                                        arguments = parseJsonArgs(rawArgs)
+                                    ))
+                                }
+                            }
+                            toolCallBuilders.clear()
+                        }
                         trySend(ChatResponse.Done())
                         close()
                         return
@@ -119,51 +144,75 @@ class OpenAiProvider @Inject constructor(
                             
                             // Handle tool calls
                             choice.delta.toolCalls?.forEach { toolCall ->
-                                val index = toolCall.index ?: 0
+                                val rawIndex = toolCall.index
+                                val isNewToolCall = toolCall.id != null
+                                val hasArgs = !toolCall.function?.arguments.isNullOrEmpty()
                                 
-                                if (toolCall.id != null) {
-                                    // New tool call starting
+                                if (isNewToolCall) {
+                                    // New tool call — use explicit index if valid, else next slot
+                                    val index = if (rawIndex != null && rawIndex >= 0) rawIndex else toolCallBuilders.size
                                     toolCallBuilders[index] = OpenAiToolCallBuilder(
-                                        id = toolCall.id,
+                                        id = toolCall.id!!,
                                         name = toolCall.function?.name ?: ""
                                     )
-                                }
-                                
-                                // Append arguments
-                                toolCallBuilders[index]?.let { builder ->
-                                    toolCall.function?.name?.let { name ->
-                                        if (name.isNotEmpty()) builder.name = name
+                                    lastCreatedToolCallIndex = index
+                                    android.util.Log.d("OpenAiProvider", "new builder[$index]: id=${toolCall.id} name=${toolCall.function?.name}")
+                                    
+                                    // Handle args in same chunk as header
+                                    if (hasArgs) {
+                                        toolCallBuilders[index]?.argumentsBuilder?.append(toolCall.function!!.arguments!!)
+                                        argsReceived.add(index)
+                                        android.util.Log.v("OpenAiProvider", "args[$index] in header += ${toolCall.function?.arguments?.take(50)}")
                                     }
-                                    toolCall.function?.arguments?.let { args ->
-                                        builder.argumentsBuilder.append(args)
+                                } else if (hasArgs) {
+                                    // Continuation args chunk — server often sends index=0 for ALL args
+                                    // regardless of which tool they belong to. So we IGNORE the raw index
+                                    // and use queue: find first builder without args yet.
+                                    val targetIndex = toolCallBuilders.keys.sorted()
+                                        .firstOrNull { it !in argsReceived }
+                                        ?: lastCreatedToolCallIndex
+                                    
+                                    val args = toolCall.function!!.arguments!!
+                                    val targetBuilder = toolCallBuilders[targetIndex]
+                                    if (targetBuilder != null) {
+                                        targetBuilder.argumentsBuilder.append(args)
+                                        argsReceived.add(targetIndex)
+                                        android.util.Log.v("OpenAiProvider", "args[$targetIndex] (rawIdx=$rawIndex) += ${args.take(80)}")
+                                    } else {
+                                        android.util.Log.w("OpenAiProvider", "no builder for targetIndex=$targetIndex rawIndex=$rawIndex")
                                     }
                                 }
                             }
                             
-                            // Check finish reason
+                            // Check finish reason — only flush tool calls here if finish_reason is explicit "tool_calls"
+                            // For "stop", let [DONE] handler flush — some models send args after finish_reason
                             choice.finishReason?.let { reason ->
                                 when (reason) {
                                     "tool_calls" -> {
-                                        // Tool calls are complete, emit them
-                                        toolCallBuilders.values.forEach { builder ->
+                                        // Explicit tool_calls finish — safe to flush now
+                                        toolCallBuilders.keys.sorted().forEach { idx ->
+                                            val builder = toolCallBuilders[idx] ?: return@forEach
+                                            val rawArgs = builder.argumentsBuilder.toString()
+                                            android.util.Log.d("OpenAiProvider", "flush[$idx] name=${builder.name} rawArgs=$rawArgs")
                                             if (builder.isComplete()) {
                                                 trySend(ChatResponse.ToolCall(
                                                     id = builder.id,
                                                     name = builder.name,
-                                                    arguments = parseJsonArgs(builder.argumentsBuilder.toString())
+                                                    arguments = parseJsonArgs(rawArgs)
                                                 ))
                                             }
                                         }
-                                        // Clear builders after emitting
                                         toolCallBuilders.clear()
+                                        val usage = chunk.usage?.let { TokenUsage(it.promptTokens, it.completionTokens) }
+                                        trySend(ChatResponse.Done(finishReason = reason, usage = usage))
+                                        return
                                     }
                                     "stop" -> {
-                                        // FIX 2.3: Collect usage first, emit a single Done with usage attached
-                                        val usage = chunk.usage?.let {
-                                            TokenUsage(it.promptTokens, it.completionTokens)
-                                        }
+                                        // DO NOT flush tool calls here — args may still be streaming
+                                        // Let [DONE] handler flush after all chunks received
+                                        val usage = chunk.usage?.let { TokenUsage(it.promptTokens, it.completionTokens) }
                                         trySend(ChatResponse.Done(finishReason = reason, usage = usage))
-                                        return // skip the generic usage-Done below
+                                        return
                                     }
                                 }
                             }
@@ -188,16 +237,43 @@ class OpenAiProvider @Inject constructor(
                         return
                     }
                     
-                    // Connection reset with 200 is often just the server closing the stream
-                    if (response?.code == 200 && t?.message?.contains("Connection reset", ignoreCase = true) == true) {
-                        com.amaya.intelligence.util.debugLog("OpenAiProvider") { "Connection reset after successful response, treating as done" }
+                    // Flush any pending tool calls before checking error
+                    if (toolCallBuilders.isNotEmpty()) {
+                        android.util.Log.d("OpenAiProvider", "onFailure: flushing ${toolCallBuilders.size} pending tool calls before error")
+                        toolCallBuilders.keys.sorted().forEach { idx ->
+                            val builder = toolCallBuilders[idx] ?: return@forEach
+                            if (builder.isComplete()) {
+                                trySend(ChatResponse.ToolCall(
+                                    id = builder.id,
+                                    name = builder.name,
+                                    arguments = parseJsonArgs(builder.argumentsBuilder.toString())
+                                ))
+                            }
+                        }
+                        toolCallBuilders.clear()
+                        // Treat as done if we had tool calls — server closed after sending them
+                        trySend(ChatResponse.Done())
+                        close()
+                        return
+                    }
+                    
+                    // Socket closed / Connection reset / EOF after 200 = server closed stream normally
+                    val errorMsg = t?.message ?: ""
+                    val isNormalClose = response?.code == 200 || 
+                        errorMsg.contains("Socket closed", ignoreCase = true) ||
+                        errorMsg.contains("Connection reset", ignoreCase = true) ||
+                        errorMsg.contains("EOF", ignoreCase = true) ||
+                        errorMsg.contains("closed", ignoreCase = true)
+                    
+                    if (isNormalClose) {
+                        android.util.Log.d("OpenAiProvider", "onFailure: treating as normal close (${t?.message})")
                         trySend(ChatResponse.Done())
                         close()
                         return
                     }
                     
                     val responseBody = try { response?.body?.string() } catch (e: Exception) { null }
-                    com.amaya.intelligence.util.errorLog("OpenAiProvider", "Request failed - code: ${response?.code}, error: ${t?.message}")
+                    android.util.Log.e("OpenAiProvider", "Request FAILED - code: ${response?.code}, error: ${t?.message}")
                     val message = responseBody ?: t?.message ?: response?.message ?: "Unknown error"
                     trySend(ChatResponse.Error(message, retryable = true))
                     close()
@@ -287,11 +363,22 @@ class OpenAiProvider @Inject constructor(
                             )
                         )
                     }
-                    messages.add(OpenAiMessage(
-                        role = "assistant",
-                        content = msg.content ?: (if (aiToolCalls != null) "" else null),
-                        toolCalls = aiToolCalls
-                    ))
+                    if (aiToolCalls != null) {
+                        // Tool call message: content must be null or empty string
+                        // Some local models get confused if content is non-null alongside tool_calls
+                        messages.add(OpenAiMessage(
+                            role = "assistant",
+                            content = null,
+                            toolCalls = aiToolCalls
+                        ))
+                    } else {
+                        // Regular text message
+                        messages.add(OpenAiMessage(
+                            role = "assistant",
+                            content = msg.content,
+                            toolCalls = null
+                        ))
+                    }
                 }
                 MessageRole.TOOL -> {
                     msg.toolResult?.let { result ->

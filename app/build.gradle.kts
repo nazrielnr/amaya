@@ -53,6 +53,18 @@ android {
         compose = true
         buildConfig = true
     }
+    
+    packaging {
+        resources {
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt"
+            )
+        }
+    }
 }
 
 dependencies {
@@ -112,6 +124,9 @@ dependencies {
     implementation("org.apache.commons:commons-compress:1.26.0")
     // XZ compression library for .tar.xz (required by Commons Compress)
     implementation("org.tukaani:xz:1.9")
+
+    // PDF support disabled - requires PDFBox-Android which is not available in public repos
+    // Office/OpenDocument formats (DOCX, XLSX, PPTX, ODT, ODS, RTF) fully supported with zero dependencies
 
 
 

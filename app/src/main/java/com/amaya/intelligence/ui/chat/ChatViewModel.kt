@@ -15,8 +15,10 @@ import com.amaya.intelligence.data.repository.CronJobRepository
 import com.amaya.intelligence.tools.ConfirmationRequest
 import com.amaya.intelligence.tools.TodoItem
 import com.amaya.intelligence.tools.TodoRepository
+import kotlinx.coroutines.delay
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,9 +61,21 @@ class ChatViewModel @Inject constructor(
     )
     val scrollEvent: kotlinx.coroutines.flow.SharedFlow<ScrollReason> = _scrollEvent
     
-    val conversations: StateFlow<List<ConversationEntity>> = conversationDao
-        .getRecentConversations(20)
+    // All conversations from DB — UI will show incrementally for infinite scroll
+    private val allConversations: StateFlow<List<ConversationEntity>> = conversationDao
+        .getAllConversations()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    
+    // Visible conversation count for infinite scroll
+    private val _visibleConversationCount = MutableStateFlow(20)
+    
+    // Conversations to display — limited by visibleCount for performance
+    val conversations: StateFlow<List<ConversationEntity>> = combine(
+        allConversations,
+        _visibleConversationCount
+    ) { all, count ->
+        all.take(count)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     
     private var currentConversationId: Long? = null
     
@@ -373,6 +387,38 @@ class ChatViewModel @Inject constructor(
                         } else {
                             _uiState.update { it.copy(isLoading = false, isStreaming = false) }
                         }
+                        
+                        // Generate AI title for new conversations (first message)
+                        if (currentConversationId == null && _uiState.value.messages.size >= 2) {
+                            viewModelScope.launch {
+                                val firstUserMsg = _uiState.value.messages
+                                    .firstOrNull { it.role == MessageRole.USER }?.content
+                                if (!firstUserMsg.isNullOrBlank()) {
+                                    val settings = aiSettingsManager.getSettings()
+                                    val agentId = _uiState.value.activeAgentId.ifBlank { settings.activeAgentId }
+                                    val agentConfig = settings.agentConfigs.find { it.id == agentId && it.enabled }
+                                    if (agentConfig != null) {
+                                        // Generate title in background — don't block conversation save
+                                        val generatedTitle = aiRepository.generateTitle(
+                                            userMessage = firstUserMsg,
+                                            agentConfig = agentConfig,
+                                            selectedModel = _uiState.value.selectedModel.ifBlank { null }
+                                        )
+                                        // Update conversation title after it's saved
+                                        delay(200) // Give saveCurrentConversation() time to create the DB entry
+                                        currentConversationId?.let { id ->
+                                            val existing = conversationDao.getConversationById(id)
+                                            if (existing != null) {
+                                                conversationDao.updateConversation(
+                                                    existing.copy(title = generatedTitle.take(60))
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
                         saveCurrentConversation()
                     }
                 }
@@ -664,6 +710,32 @@ class ChatViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+    
+    fun deleteConversation(conversationId: Long) {
+        viewModelScope.launch {
+            try {
+                conversationDao.deleteConversationById(conversationId)
+                // If deleting current conversation, clear the chat
+                if (currentConversationId == conversationId) {
+                    clearConversation()
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to delete conversation") }
+            }
+        }
+    }
+    
+    fun loadMoreConversations() {
+        val current = _visibleConversationCount.value
+        val total = allConversations.value.size
+        if (current < total) {
+            _visibleConversationCount.value = minOf(current + 20, total)
+        }
+    }
+    
+    fun hasMoreConversations(): Boolean {
+        return _visibleConversationCount.value < allConversations.value.size
     }
     // FIX #21: removeToolExecution() removed — dead code, no UI calls it (no delete button on ToolCallCard).
 }

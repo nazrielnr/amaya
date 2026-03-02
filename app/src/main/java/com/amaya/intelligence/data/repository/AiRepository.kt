@@ -548,6 +548,56 @@ class AiRepository @Inject constructor(
         return localTools + mcpTools
     }
 
+    /**
+     * Generate a short conversation title (3-7 words) from the user's first message.
+     * Uses the same AI provider/model as the active conversation.
+     */
+    suspend fun generateTitle(
+        userMessage: String,
+        agentConfig: AgentConfig,
+        selectedModel: String?
+    ): String {
+        return try {
+            val provider = resolveProvider(agentConfig)
+            val model = when {
+                !selectedModel.isNullOrBlank() -> selectedModel
+                agentConfig.modelId.isNotBlank() -> agentConfig.modelId
+                else -> provider.supportedModels.firstOrNull() ?: return "New Chat"
+            }
+            
+            val request = ChatRequest(
+                model = model,
+                messages = listOf(
+                    ChatMessage(
+                        role = MessageRole.USER,
+                        content = """Generate a short, descriptive title (3-7 words max) for a conversation that starts with this message:
+
+"$userMessage"
+
+Respond with ONLY the title text, no quotes, no explanation."""
+                    )
+                ),
+                systemPrompt = "You are a title generator. Create short, clear conversation titles.",
+                tools = emptyList(),
+                maxTokens = 50,
+                stream = false,
+                agentId = agentConfig.id
+            )
+            
+            val result = StringBuilder()
+            provider.chat(request).collect { response ->
+                if (response is ChatResponse.TextDelta) {
+                    result.append(response.text)
+                }
+            }
+            
+            result.toString().trim().take(60).ifBlank { "New Chat" }
+        } catch (e: Exception) {
+            errorLog("AiRepository", "Failed to generate title", e)
+            "New Chat"
+        }
+    }
+
 }
 
 /**

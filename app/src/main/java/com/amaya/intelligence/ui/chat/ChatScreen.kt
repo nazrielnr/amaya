@@ -2,12 +2,15 @@
 
 import android.content.res.Configuration
 import com.amaya.intelligence.data.remote.api.AgentConfig
+import com.amaya.intelligence.data.local.db.entity.ConversationEntity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -63,7 +66,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import java.time.LocalDateTime
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel(),
@@ -193,6 +196,7 @@ fun ChatScreen(
         viewModel.clearConversation()
     }
 
+    var conversationToDelete by remember { mutableStateOf<ConversationEntity?>(null) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val conversations by viewModel.conversations.collectAsState()
 
@@ -203,6 +207,29 @@ fun ChatScreen(
             var searchQuery by remember { mutableStateOf("") }
             var isSearchExpanded by remember { mutableStateOf(false) }
             val searchFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+            val conversationListState = rememberLazyListState()
+            
+            // Auto-scroll to top when conversations list changes (new conversation added)
+            LaunchedEffect(conversations.firstOrNull()?.id) {
+                if (conversations.isNotEmpty() && conversationListState.firstVisibleItemIndex > 0) {
+                    conversationListState.animateScrollToItem(0)
+                }
+            }
+            
+            // Infinite scroll — load more when scrolled near bottom
+            LaunchedEffect(conversationListState.layoutInfo) {
+                snapshotFlow { 
+                    val layoutInfo = conversationListState.layoutInfo
+                    val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                    val totalItems = layoutInfo.totalItemsCount
+                    // Trigger load when within 5 items of the end
+                    lastVisibleItem >= totalItems - 5
+                }.collect { shouldLoad ->
+                    if (shouldLoad && viewModel.hasMoreConversations()) {
+                        viewModel.loadMoreConversations()
+                    }
+                }
+            }
             
             // Back gesture from expanded search → collapse to normal sidebar
             BackHandler(enabled = isSearchExpanded) {
@@ -548,6 +575,7 @@ fun ChatScreen(
 
                             // Conversation list
                             LazyColumn(
+                                state = conversationListState,
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(horizontal = 12.dp),
@@ -596,13 +624,19 @@ fun ChatScreen(
                                         key = { it.id }
                                     ) { conv ->
                                         Surface(
-                                            onClick = {
-                                                viewModel.loadConversation(conv.id)
-                                                scope.launch { drawerState.close() }
-                                            },
                                             shape = RoundedCornerShape(12.dp),
                                             color = Color.Transparent,
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .combinedClickable(
+                                                    onClick = {
+                                                        viewModel.loadConversation(conv.id)
+                                                        scope.launch { drawerState.close() }
+                                                    },
+                                                    onLongClick = {
+                                                        conversationToDelete = conv
+                                                    }
+                                                )
                                         ) {
                                             Column(
                                                 modifier = Modifier
@@ -692,6 +726,32 @@ fun ChatScreen(
             }
         }
     ) {
+        // Delete confirmation dialog
+        conversationToDelete?.let { conv ->
+            AlertDialog(
+                onDismissRequest = { conversationToDelete = null },
+                title = { Text("Delete Conversation?") },
+                text = { Text("\"${conv.title.ifEmpty { "New Chat" }}\" will be permanently deleted.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                viewModel.deleteConversation(conv.id)
+                                conversationToDelete = null
+                            }
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { conversationToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+        
         // Use WindowInsets for accurate status bar height on any device/notch
         val statusBarInsets = WindowInsets.statusBars.asPaddingValues()
         val statusBarHeight = statusBarInsets.calculateTopPadding()

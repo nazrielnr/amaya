@@ -203,6 +203,17 @@ fun ChatScreen(
             var searchQuery by remember { mutableStateOf("") }
             var isSearchExpanded by remember { mutableStateOf(false) }
             val searchFocusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+            
+            // Back gesture from expanded search → collapse to normal sidebar
+            BackHandler(enabled = isSearchExpanded) {
+                searchQuery = ""
+                isSearchExpanded = false
+            }
+            
+            // Back gesture from normal sidebar → close drawer (don't exit app)
+            BackHandler(enabled = drawerState.isOpen && !isSearchExpanded) {
+                scope.launch { drawerState.close() }
+            }
             val filteredConversations = remember(conversations, searchQuery) {
                 if (searchQuery.isBlank()) conversations
                 else conversations.filter { it.title.contains(searchQuery, ignoreCase = true) }
@@ -218,21 +229,16 @@ fun ChatScreen(
                 drawerContainerColor = drawerBg,
                 drawerShape = androidx.compose.ui.graphics.RectangleShape
             ) {
-                // Full-screen search overlay — expands when search is tapped
-                AnimatedContent(
-                    targetState = isSearchExpanded,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(200)) + expandVertically(
-                            expandFrom = Alignment.Top,
-                            animationSpec = tween(250, easing = FastOutSlowInEasing)
-                        )).togetherWith(fadeOut(animationSpec = tween(150)) + shrinkVertically(
-                            shrinkTowards = Alignment.Top,
-                            animationSpec = tween(200, easing = FastOutSlowInEasing)
-                        ))
-                    },
-                    label = "search_expand"
-                ) { expanded ->
-                    if (expanded) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // Expanded search — shown when search IS expanded
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isSearchExpanded,
+                        modifier = Modifier.fillMaxSize(),
+                        enter = fadeIn(tween(300, easing = FastOutSlowInEasing)) + 
+                                slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it },
+                        exit = fadeOut(tween(250, easing = FastOutSlowInEasing)) + 
+                               slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { it }
+                    ) {
                         // ── Full-screen search mode ──────────────────────────
                         Column(
                             modifier = Modifier
@@ -400,8 +406,17 @@ fun ChatScreen(
                                 searchFocusRequester.requestFocus()
                             }
                         }
-                    } else {
-                        // ── Normal drawer mode ───────────────────────────────
+                    }
+                    
+                    // Normal sidebar — shown when search NOT expanded
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !isSearchExpanded,
+                        modifier = Modifier.fillMaxSize(),
+                        enter = fadeIn(tween(300, easing = FastOutSlowInEasing)) + 
+                                slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it },
+                        exit = fadeOut(tween(250, easing = FastOutSlowInEasing)) + 
+                               slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { -it }
+                    ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -672,8 +687,8 @@ fun ChatScreen(
                                 }
                             }
                         } // end Column (normal drawer mode)
-                    } // end else
-                } // end AnimatedContent
+                    } // end AnimatedVisibility (normal)
+                } // end Box
             }
         }
     ) {
@@ -925,6 +940,7 @@ fun ChatScreen(
                     workspacePath = uiState.workspacePath,
                     onWorkspaceClick = onNavigateToWorkspace,
                     onSendMessage = { text ->
+                        keyboardController?.hide()
                         val path = attachedFilePath
                         attachedFilePath = null
                         if (path != null) {

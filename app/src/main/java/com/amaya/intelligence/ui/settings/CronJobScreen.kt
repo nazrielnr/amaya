@@ -10,6 +10,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,6 +25,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,11 +63,9 @@ fun CronJobScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Reminders", style = MaterialTheme.typography.titleLarge) },
+                title = { Text("Reminders", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 12.dp)) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
+                    SettingsBackButton(onClick = onNavigateBack)
                 },
                 actions = {
                     IconButton(onClick = { showAddSheet = true }) {
@@ -163,123 +165,148 @@ private fun CronJobCard(
     val timeStr = fmt.format(Date(job.triggerTimeMillis))
     val isPast = job.triggerTimeMillis < System.currentTimeMillis() && job.recurringType == CronRecurringType.ONCE
 
+    val isDark = isSystemInDarkTheme()
+    val iconBg = if (job.isActive && !isPast)
+        if (isDark) Color(0xFF4A2800) else Color(0xFFFFF3E0)
+    else MaterialTheme.colorScheme.surfaceContainerHigh
+    val iconTint = if (job.isActive && !isPast)
+        if (isDark) Color(0xFFFFCC80) else Color(0xFFE65100)
+    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = if (job.isActive && !isPast)
-            MaterialTheme.colorScheme.surface
-        else
-            MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = if (job.isActive) 1.dp else 0.dp,
+        shape = RoundedCornerShape(14.dp),
+        color = if (isDark) MaterialTheme.colorScheme.surfaceContainerHigh else Color.White,
+        tonalElevation = 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp)
         ) {
-            Icon(
-                when (job.recurringType) {
-                    CronRecurringType.ONCE -> Icons.Default.Alarm
-                    CronRecurringType.DAILY -> Icons.Default.Repeat
-                    CronRecurringType.WEEKLY -> Icons.Default.DateRange
-                },
-                contentDescription = null,
-                tint = if (job.isActive && !isPast)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
-                modifier = Modifier.size(24.dp)
-            )
-
-            Spacer(Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
+            // ── Top row: icon + title + toggle + delete ──────────────────
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(iconBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        when (job.recurringType) {
+                            CronRecurringType.ONCE   -> Icons.Default.Alarm
+                            CronRecurringType.DAILY  -> Icons.Default.Repeat
+                            CronRecurringType.WEEKLY -> Icons.Default.DateRange
+                        },
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
                 Text(
                     job.title.ifBlank { "Reminder" },
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Normal),
                     color = if (job.isActive && !isPast)
                         MaterialTheme.colorScheme.onSurface
                     else
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    timeStr,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Switch(
+                    checked = job.isActive && !isPast,
+                    onCheckedChange = { if (!isPast) onToggle(it) },
+                    enabled = !isPast
                 )
-                if (job.prompt.isNotBlank()) {
-                    Text(
-                        job.prompt,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                        maxLines = 2
+                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.DeleteOutline,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        modifier = Modifier.size(18.dp)
                     )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ) {
-                        Text(
-                            job.recurringType.name.lowercase().replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    Spacer(Modifier.width(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = if (job.sessionMode == CronSessionMode.CONTINUE)
-                            MaterialTheme.colorScheme.surfaceContainerHigh
-                        else
-                            MaterialTheme.colorScheme.surfaceContainerHighest
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                if (job.sessionMode == CronSessionMode.CONTINUE)
-                                    Icons.Default.Forum
-                                else
-                                    Icons.Default.AddComment,
-                                contentDescription = null,
-                                modifier = Modifier.size(10.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.width(3.dp))
-                            Text(
-                                if (job.sessionMode == CronSessionMode.CONTINUE) "Continue session" else "New session",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    if (isPast) {
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "Expired",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
                 }
             }
 
-            Switch(
-                checked = job.isActive && !isPast,
-                onCheckedChange = { if (!isPast) onToggle(it) },
-                enabled = !isPast
-            )
+            Spacer(Modifier.height(10.dp))
 
-            IconButton(onClick = onDelete) {
+            // ── Time ─────────────────────────────────────────────────────
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    Icons.Default.DeleteOutline,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                    Icons.Default.Schedule,
+                    contentDescription = null,
+                    modifier = Modifier.size(13.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    timeStr,
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.ExtraLight),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (isPast) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Expired",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            // ── Prompt preview ───────────────────────────────────────────
+            if (job.prompt.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    job.prompt,
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.ExtraLight),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    maxLines = 2
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // ── Pills row ────────────────────────────────────────────────
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Recurrence pill
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                ) {
+                    Text(
+                        job.recurringType.name.lowercase().replaceFirstChar { it.uppercase() },
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                // Session mode pill
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            if (job.sessionMode == CronSessionMode.CONTINUE) Icons.Default.Forum
+                            else Icons.Default.AddComment,
+                            contentDescription = null,
+                            modifier = Modifier.size(10.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            if (job.sessionMode == CronSessionMode.CONTINUE) "Continue" else "New chat",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }

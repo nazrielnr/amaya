@@ -50,11 +50,12 @@ class AiSettingsManager @Inject constructor(
 
     companion object {
         // KEY_ACTIVE_PROVIDER: legacy key kept in DataStore for backwards compat (not read by new code)
-        private val KEY_ACTIVE_MODEL    = stringPreferencesKey("active_model")
-        private val KEY_THEME           = stringPreferencesKey("theme")
-        private val KEY_AGENT_CONFIGS   = stringPreferencesKey("agent_configs")
-        private val KEY_ACTIVE_AGENT_ID = stringPreferencesKey("active_agent_id")
-        private val KEY_MCP_CONFIG_JSON = stringPreferencesKey("mcp_config_json")
+        private val KEY_ACTIVE_MODEL      = stringPreferencesKey("active_model")
+        private val KEY_THEME             = stringPreferencesKey("theme")
+        private val KEY_AGENT_CONFIGS     = stringPreferencesKey("agent_configs")
+        private val KEY_ACTIVE_AGENT_ID   = stringPreferencesKey("active_agent_id")
+        private val KEY_MCP_CONFIG_JSON   = stringPreferencesKey("mcp_config_json")
+        private val KEY_LAST_WORKSPACE    = stringPreferencesKey("last_workspace_path")
 
         // Per-agent encrypted API key storage: key = "agent_key_" + agentId
         private const val ENC_AGENT_KEY_PREFIX  = "agent_key_"
@@ -82,11 +83,12 @@ class AiSettingsManager @Inject constructor(
     val settingsFlow: Flow<AiSettings> = context.dataStore.data.map { prefs ->
         val configs = parseAgentConfigs(prefs[KEY_AGENT_CONFIGS] ?: "[]")
         AiSettings(
-            activeModel     = prefs[KEY_ACTIVE_MODEL] ?: "",
-            theme           = prefs[KEY_THEME] ?: "system",
-            agentConfigs    = configs,
-            activeAgentId   = prefs[KEY_ACTIVE_AGENT_ID] ?: "",
-            mcpConfigJson   = prefs[KEY_MCP_CONFIG_JSON] ?: ""
+            activeModel       = prefs[KEY_ACTIVE_MODEL] ?: "",
+            theme             = prefs[KEY_THEME] ?: "system",
+            agentConfigs      = configs,
+            activeAgentId     = prefs[KEY_ACTIVE_AGENT_ID] ?: "",
+            mcpConfigJson     = prefs[KEY_MCP_CONFIG_JSON] ?: "",
+            lastWorkspacePath = prefs[KEY_LAST_WORKSPACE]?.ifBlank { null }
         )
     }
 
@@ -154,6 +156,13 @@ class AiSettingsManager @Inject constructor(
         context.dataStore.edit { prefs -> prefs[KEY_THEME] = theme }
     }
 
+    suspend fun setLastWorkspacePath(path: String?) {
+        context.dataStore.edit { prefs ->
+            if (path.isNullOrBlank()) prefs.remove(KEY_LAST_WORKSPACE)
+            else prefs[KEY_LAST_WORKSPACE] = path
+        }
+    }
+
     suspend fun setMcpConfigJson(json: String) {
         context.dataStore.edit { prefs -> prefs[KEY_MCP_CONFIG_JSON] = json }
         writeMcpConfigToFixedPath(json)
@@ -212,11 +221,13 @@ class AiSettingsManager @Inject constructor(
 
 data class AiSettings(
     // activeModel: fallback model ID if no agent config found (rarely used)
-    val activeModel:     String          = "",
-    val theme:           String          = "system",
-    val agentConfigs:    List<AgentConfig> = emptyList(),
-    val activeAgentId:   String          = "",
-    val mcpConfigJson:   String          = ""
+    val activeModel:       String            = "",
+    val theme:             String            = "system",
+    val agentConfigs:      List<AgentConfig> = emptyList(),
+    val activeAgentId:     String            = "",
+    val mcpConfigJson:     String            = "",
+    /** Last workspace path the user opened — persisted across app restarts. */
+    val lastWorkspacePath: String?           = null
 )
 
 enum class ProviderType { ANTHROPIC, OPENAI, GEMINI }

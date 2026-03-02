@@ -7,6 +7,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,8 +23,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.data.remote.api.AiSettingsManager
@@ -52,7 +57,7 @@ fun McpScreen(
     var showAddSheet by remember { mutableStateOf(false) }
     var editingServer by remember { mutableStateOf<McpServerConfig?>(null) }
 
-    // File importer
+    // File importer — merges imported servers into existing config (no full replace)
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             scope.launch {
@@ -60,8 +65,27 @@ fun McpScreen(
                     context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
                 }
                 if (!json.isNullOrBlank()) {
-                    aiSettingsManager.setMcpConfigJson(json)
-                    snackbarHostState.showSnackbar("MCP config imported ✓")
+                    val imported = McpConfig.fromJson(json)
+                    if (imported.servers.isEmpty()) {
+                        snackbarHostState.showSnackbar("No valid MCP servers found in file")
+                        return@launch
+                    }
+                    // Merge: existing servers kept, imported servers added or overwrite by name
+                    val existing = mcpConfig.servers.toMutableList()
+                    var added = 0; var updated = 0
+                    imported.servers.forEach { importedServer ->
+                        val idx = existing.indexOfFirst { it.name == importedServer.name }
+                        if (idx >= 0) { existing[idx] = importedServer; updated++ }
+                        else { existing.add(importedServer); added++ }
+                    }
+                    aiSettingsManager.setMcpConfigJson(McpConfig(existing).toJson())
+                    val msg = buildString {
+                        if (added > 0) append("$added added")
+                        if (added > 0 && updated > 0) append(", ")
+                        if (updated > 0) append("$updated updated")
+                        append(" ✓")
+                    }
+                    snackbarHostState.showSnackbar("Imported: $msg")
                 }
             }
         }
@@ -72,11 +96,9 @@ fun McpScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("MCP Servers", style = MaterialTheme.typography.titleLarge) },
+                title = { Text("MCP Servers", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 12.dp)) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
+                    SettingsBackButton(onClick = onNavigateBack)
                 },
                 actions = {
                     IconButton(onClick = { filePicker.launch("application/json") }) {
@@ -250,42 +272,57 @@ private fun McpServerCard(
     onDelete: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = if (server.enabled)
-            MaterialTheme.colorScheme.surface
+        shape = RoundedCornerShape(14.dp),
+        color = if (isSystemInDarkTheme())
+            MaterialTheme.colorScheme.surfaceContainerHigh
         else
-            MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = if (server.enabled) 1.dp else 0.dp,
+            Color.White,
+        tonalElevation = 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.Default.Extension,
-                contentDescription = null,
-                tint = if (server.enabled)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(Modifier.width(14.dp))
+            val isDark = isSystemInDarkTheme()
+            val iconBg = if (server.enabled)
+                if (isDark) androidx.compose.ui.graphics.Color(0xFF1A3A28) else androidx.compose.ui.graphics.Color(0xFFDCF5E4)
+            else MaterialTheme.colorScheme.surfaceContainerHigh
+            val iconTint = if (server.enabled)
+                if (isDark) androidx.compose.ui.graphics.Color(0xFFA5D6A7) else androidx.compose.ui.graphics.Color(0xFF1B5E20)
+            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(iconBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Extension,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     server.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                     color = if (server.enabled)
                         MaterialTheme.colorScheme.onSurface
                     else
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     server.serverUrl.ifBlank { "No URL" },
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.ExtraLight,
+                        letterSpacing = 0.sp
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
                 )
@@ -405,7 +442,7 @@ private fun AddEditMcpSheet(
                 value = name,
                 onValueChange = { name = it.trim() },
                 label = { Text("Name") },
-                placeholder = { Text("e.g. context7") },
+                placeholder = { Text("e.g. my-server") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
@@ -546,42 +583,59 @@ private fun McpFormatGuide() {
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "MCP Server Format for Amaya",
+                    "MCP Server Guide",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
             Text(
-                "Amaya only supports HTTP-based MCP servers (no npx/stdio). Your server must accept JSON-RPC 2.0 POST requests.",
+                "Amaya supports HTTP-based MCP servers only (no npx/stdio). The server must accept JSON-RPC 2.0 POST requests.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            Text("Required endpoints:", style = MaterialTheme.typography.labelMedium)
+            Text("Required JSON-RPC methods:", style = MaterialTheme.typography.labelMedium)
             Text(
-                "• POST /mcp  →  method: \"tools/list\"\n• POST /mcp  →  method: \"tools/call\"",
+                "• tools/list  — discover available tools\n• tools/call  — invoke a specific tool",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Normal,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            Text("Required headers:", style = MaterialTheme.typography.labelMedium)
+            Text("Request headers sent by Amaya:", style = MaterialTheme.typography.labelMedium)
             Text(
-                "• Content-Type: application/json\n• Accept: application/json, text/event-stream",
+                "• Content-Type: application/json\n• Accept: application/json, text/event-stream\n• (+ any custom headers you add)",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            Text("Tool naming in AI:", style = MaterialTheme.typography.labelMedium)
+            Text("Tool naming inside AI:", style = MaterialTheme.typography.labelMedium)
             Text(
-                "mcp__{name}__{toolName}\n\nExample: mcp__context7__resolve-library-id",
+                "mcp__{name}__{toolName}\n\nWhere {name} is the server name you set above.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            Text("Public servers (no key needed):", style = MaterialTheme.typography.labelMedium)
+            Text("Config JSON format:", style = MaterialTheme.typography.labelMedium)
             Text(
-                "• Context7: https://mcp.context7.com/mcp",
+                "{\n" +
+                "  \"mcpServers\": {\n" +
+                "    \"my-server\": {\n" +
+                "      \"serverUrl\": \"https://mcp.example.com/mcp\",\n" +
+                "      \"headers\": {\n" +
+                "        \"Authorization\": \"Bearer YOUR_TOKEN\"\n" +
+                "      },\n" +
+                "      \"enabled\": true\n" +
+                "    }\n" +
+                "  }\n" +
+                "}",
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            Text(
+                "⚠ Servers with enabled: false will be skipped entirely — their tools won't appear in AI.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

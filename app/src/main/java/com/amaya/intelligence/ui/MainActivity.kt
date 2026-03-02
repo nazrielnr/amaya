@@ -7,13 +7,14 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,7 +64,7 @@ import javax.inject.Inject
  * survives conversation switches — e.g. active reminder count badge.
  */
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
     @Inject
     lateinit var aiSettingsManager: AiSettingsManager
@@ -86,13 +87,27 @@ class MainActivity : ComponentActivity() {
         checkStoragePermission()
         requestNotificationPermissionIfNeeded()
 
+        // Observe theme OUTSIDE Compose -- safe on UI thread via lifecycleScope.
+        lifecycleScope.launch {
+            aiSettingsManager.settingsFlow
+                .map { it.theme }
+                .distinctUntilChanged()
+                .collect { theme ->
+                    val mode = when (theme) {
+                        "light" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+                        "dark"  -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                        else    -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                    }
+                    if (androidx.appcompat.app.AppCompatDelegate.getDefaultNightMode() != mode) {
+                        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(mode)
+                        recreate()
+                    }
+                }
+        }
+
         setContent {
             val settings by aiSettingsManager.settingsFlow.collectAsState(initial = AiSettings())
-            val isDark = when (settings.theme) {
-                "light" -> false
-                "dark"  -> true
-                else    -> isSystemInDarkTheme()
-            }
+
 
             LaunchedEffect(Unit) {
                 val fixedJson = aiSettingsManager.loadMcpConfigFromFixedPath()
@@ -101,7 +116,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            AmayaTheme(darkTheme = isDark) {
+            AmayaTheme {
                 AppContent(
                     hasStoragePermission = hasStoragePermission,
                     appViewModel = appViewModel,
@@ -207,7 +222,7 @@ private fun AppContent(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.Transparent
+        color = MaterialTheme.colorScheme.background
     ) {
         NavHost(
             navController = navController,

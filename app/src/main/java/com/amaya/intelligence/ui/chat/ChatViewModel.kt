@@ -81,17 +81,26 @@ class ChatViewModel @Inject constructor(
     }
     
     init {
-        // Observe settings reactively — sync agent list only.
+        // Observe settings reactively — sync agent list + restore last workspace on first emit.
         // IMPORTANT: Do NOT override activeAgentId/selectedModel from DataStore here.
         // setSelectedAgent() already writes to DataStore AND updates _uiState immediately,
         // so re-reading from DataStore here would cause a race condition that reverts UI selection.
         // Agent/model selection is only overridden when the currently-selected agent becomes disabled.
+        var isFirstSettingsEmit = true
         viewModelScope.launch {
             aiSettingsManager.settingsFlow.collect { settings ->
                 val enabledAgents = settings.agentConfigs.filter { it.enabled }
 
                 _uiState.update { current ->
                     val currentAgent = enabledAgents.find { it.id == current.activeAgentId }
+
+                    // On first emit only: restore last workspace from DataStore if no workspace is
+                    // already set (i.e. app fresh open, not a conversation load).
+                    val restoredWorkspace = if (isFirstSettingsEmit && current.workspacePath == null) {
+                        settings.lastWorkspacePath
+                    } else {
+                        current.workspacePath
+                    }
 
                     if (currentAgent != null) {
                         // Current agent still enabled — sync agentConfigs AND update selectedModel
@@ -103,6 +112,7 @@ class ChatViewModel @Inject constructor(
                         val userPickedDifferentModel = current.selectedModel != oldAgentModel
                         current.copy(
                             agentConfigs  = settings.agentConfigs,
+                            workspacePath = restoredWorkspace,
                             // If user manually selected a different model from dropdown, keep it.
                             // Otherwise always follow the agent config's modelId (picks up edits).
                             selectedModel = if (userPickedDifferentModel) current.selectedModel
@@ -113,11 +123,13 @@ class ChatViewModel @Inject constructor(
                         val fallback = enabledAgents.firstOrNull()
                         current.copy(
                             agentConfigs  = settings.agentConfigs,
+                            workspacePath = restoredWorkspace,
                             activeAgentId = fallback?.id ?: "",
                             selectedModel = fallback?.modelId ?: ""
                         )
                     }
                 }
+                isFirstSettingsEmit = false
             }
         }
     }
@@ -405,7 +417,10 @@ class ChatViewModel @Inject constructor(
                 totalOutputTokens = 0,
                 isLoading = false,
                 isStreaming = false,
-                error = null
+                error = null,
+                // New chat: reset workspace so user starts fresh without inheriting old session's workspace.
+                workspacePath = null,
+                activeProjectId = null
             )
         }
     }
@@ -627,6 +642,10 @@ class ChatViewModel @Inject constructor(
     
     fun setWorkspace(path: String?) {
         _uiState.update { it.copy(workspacePath = path) }
+        // Persist last workspace to DataStore so it survives app restarts
+        viewModelScope.launch {
+            aiSettingsManager.setLastWorkspacePath(path)
+        }
     }
 
     // FIX 1.9: Removed setSelectedModel() — it was an identical alias for selectModel().

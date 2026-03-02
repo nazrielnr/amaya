@@ -79,6 +79,30 @@ class McpClientManager @Inject constructor(
         val handle = mcpState.handles[toolName]
             ?: return ToolResult.Error("Unknown MCP tool: $toolName")
 
+        // Always read the LATEST config from DataStore at call time, not from the cached snapshot.
+        // This ensures enable/disable and header changes take effect immediately without needing
+        // a full refresh cycle.
+        val latestConfig = McpConfig.fromJson(settingsManager.getSettings().mcpConfigJson)
+        val latestServer = latestConfig.servers.find { it.name == handle.server.name }
+            ?: return ToolResult.Error("MCP server '${handle.server.name}' no longer exists in config")
+
+        // Re-check enabled flag at call time — prevents bypassing disable toggle after cache is built
+        if (!latestServer.enabled) {
+            return ToolResult.Error("MCP server '${latestServer.name}' is disabled")
+        }
+
+        // Re-check that all header keys (non-blank) still have non-blank values —
+        // prevents calling with empty API keys that were cleared after the cache was built
+        val emptyRequiredHeaders = latestServer.headers.entries
+            .filter { (k, v) -> k.isNotBlank() && v.isBlank() }
+        if (emptyRequiredHeaders.isNotEmpty()) {
+            val keys = emptyRequiredHeaders.joinToString(", ") { it.key }
+            return ToolResult.Error(
+                "MCP server '${latestServer.name}' has empty header value(s): $keys. " +
+                "Please set the required header values in Settings → MCP Servers."
+            )
+        }
+
         val payload = JSONObject().apply {
             put("jsonrpc", "2.0")
             put("id", UUID.randomUUID().toString())
@@ -92,7 +116,7 @@ class McpClientManager @Inject constructor(
             )
         }
 
-        val response = executeRequest(handle.server, payload)
+        val response = executeRequest(latestServer, payload)
             ?: return ToolResult.Error("MCP server did not return a response")
 
         if (response.has("error")) {

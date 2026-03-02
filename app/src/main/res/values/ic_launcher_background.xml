@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#1E1E1E</color>
+    <!-- Window background for predictive back gesture + activity launch splash -->
+    <color name="window_background_light">#EEEEEE</color>
 </resources>

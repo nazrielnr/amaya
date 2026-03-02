@@ -232,20 +232,27 @@ val PremiumTypography = Typography(
 
 @Composable
 fun AmayaTheme(
+    // darkTheme follows AppCompatDelegate.setDefaultNightMode() automatically via isSystemInDarkTheme()
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = Color.Transparent.toArgb() // Let the TopAppBar draw edge-to-edge
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            // status bar is transparent — edge-to-edge
+            window.statusBarColor = Color.Transparent.toArgb()
+            // navigation bar is transparent — edge-to-edge
+            window.navigationBarColor = Color.Transparent.toArgb()
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightNavigationBars = !darkTheme
+            }
         }
     }
-    
+
     MaterialTheme(
         colorScheme = colorScheme,
         typography = PremiumTypography,

@@ -1,0 +1,193 @@
+# ==============================================
+# Android / Gradle
+# ==============================================
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+**/build/
+build/
+.gradle/
+.kotlin/
+.externalNativeBuild/
+.cxx/
+local.properties
+*.jks
+*.keystore
+google-services.json
+proguard/
+*.log
+
+# ==============================================
+# JavaScript / TypeScript / Node
+# ==============================================
+node_modules/
+**/node_modules/
+dist/
+out/
+amaya-remote-extension/dist/
+amaya-remote-extension/out/
+*.tsbuildinfo
+*.js.map
+*.d.ts.map
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+.npm/
+.cache/
+.parcel-cache/
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+.eslintcache
+.stylelintcache
+.node_repl_history
+.next/
+.nuxt/
+.storybook-out/
+coverage/
+.nyc_output/
+*.lcov
+tmp/
+temp/
+*.tgz
+
+# ==============================================
+# IDE / Editor
+# ==============================================
+*.iml
+.idea/
+.vscode/
+*.code-workspace
+*.ipr
+*.iws
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*~
+.#*
+\#*#
+
+# ==============================================
+# OS Files
+# ==============================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ==============================================
+# Local / Scratch Workspace Files
+# ==============================================
+AGENTSuhybvjh.md
+ChatScreen.kt
+jnkedf.txt
+sdfvb.txt
+temp_service.txt
+test_server.js
+test_server.py
+amaya_logcat.txt
+amaya_pid_log.txt
+debug_logcat.txt
+logcat_*.txt
+build_error*.txt
+build_error*.log
+install_failure*.txt
+install_failure*.log
+current_trajectory_dump.json
+full_trajectory_fe95.json
+trajectory_dump.json
+temp_pb_dump.txt
+tmp-lsfiles*
+target_steps.json
+random_file.txt
+simple.txt
+
+# ==============================================
+# Misc / Optional Generated Artifacts
+# ==============================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.seed
+*.pid
+*.pid.lock
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.lib
+*.a
+*.pkl
+*.model
+*.h5
+*.pb
+*.csv
+*.json.bak
+*.xml.bak
+docs/generated/
+.factory/
+hello_amaya.py
+analyze-*.js
+debug-*.js
+find-csrf.js
+list-tools.js
+standalone-api.js
+oop_audit.md.resolved
+REMOTE_SYNC_STRATEGY.md
+
+# Build reports (globally handled by **/build/)
+# !build/reports/.gitkeep
+
+
+# Security - exclude files with potential secrets
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+secrets/
+private/
+credentials/

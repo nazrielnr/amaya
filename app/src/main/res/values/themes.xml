@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        DayNight theme — AppCompatDelegate.setDefaultNightMode() controls light/dark.
+        The OS reads android:windowBackground BEFORE Compose renders, so predictive
+        back gestures and activity transitions show the correct colour from frame 0.
+    -->
+    <style name="Theme.Amaya" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/window_background_light</item>
+    </style>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark variant — windowBackground matches Compose dark background (#1E1E1E) -->
+    <style name="Theme.Amaya" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/window_background_dark</item>
+    </style>
+</resources>

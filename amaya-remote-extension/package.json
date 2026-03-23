@@ -1,0 +1,81 @@
+{
+  "name": "amaya-remote",
+  "displayName": "Amaya Remote Session",
+  "description": "Bridge between Amaya (Android) and Antigravity IDE - direct gRPC-Web API relay via WebSocket",
+  "version": "0.2.0",
+  "publisher": "amaya",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "amayaRemote.startServer",
+        "title": "Amaya Remote: Start Server"
+      },
+      {
+        "command": "amayaRemote.stopServer",
+        "title": "Amaya Remote: Stop Server"
+      },
+      {
+        "command": "amayaRemote.setCredentials",
+        "title": "Amaya Remote: Set Credentials (Manual)"
+      },
+      {
+        "command": "amayaRemote.diagnose",
+        "title": "Amaya Remote: Diagnose Connection"
+      }
+    ],
+    "configuration": {
+      "title": "Amaya Remote",
+      "properties": {
+        "amayaRemote.port": {
+          "type": "number",
+          "default": 8765,
+          "description": "WebSocket server port for Amaya connections"
+        },
+        "amayaRemote.autoStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start the WebSocket server when Antigravity launches"
+        },
+        "amayaRemote.provider": {
+          "type": "string",
+          "default": "antigravity",
+          "enum": [
+            "antigravity",
+            "stub"
+          ],
+          "description": "Provider backend used by Amaya Remote (foundation for multi-IDE support)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test:provider-contracts": "node test/provider-contracts.js",
+    "test:normalizer-contracts": "node test/normalizer-contracts.js"
+  },
+  "dependencies": {
+    "ip": "^2.0.1",
+    "module-alias": "^2.3.4",
+    "qrcode": "^1.5.4",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/ip": "^1.1.3",
+    "@types/node": "^20.11.0",
+    "@types/qrcode": "^1.5.6",
+    "@types/vscode": "^1.80.0",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.0"
+  }
+}

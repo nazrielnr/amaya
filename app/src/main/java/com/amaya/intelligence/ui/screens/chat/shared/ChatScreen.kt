@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -245,13 +246,45 @@ fun ChatScreen(
     // Auto-scroll
     var shouldAutoScroll by remember { mutableStateOf(true) }
 
-    LaunchedEffect(listState) {
-        snapshotFlow {
-            val info = listState.layoutInfo
-            val last = info.visibleItemsInfo.lastOrNull()
-            last != null && last.index < info.totalItemsCount - 1
-        }.collect { scrolledAway ->
-            if (scrolledAway) shouldAutoScroll = false
+    val performScrollToBottom: suspend (Boolean) -> Unit = { animated ->
+        val info = listState.layoutInfo
+        val total = info.totalItemsCount
+        if (total > 0) {
+            if (animated) {
+                val lastVisible = info.visibleItemsInfo.lastOrNull { it.index == total - 1 }
+                if (lastVisible != null) {
+                    val distance = (lastVisible.offset + lastVisible.size) - info.viewportEndOffset
+                    if (distance > 0) {
+                        listState.animateScrollBy(distance.toFloat())
+                    }
+                } else {
+                    listState.animateScrollToItem(total - 1)
+                    val newInfo = listState.layoutInfo
+                    val newLast = newInfo.visibleItemsInfo.lastOrNull { it.index == total - 1 }
+                    if (newLast != null) {
+                        val newDistance = (newLast.offset + newLast.size) - newInfo.viewportEndOffset
+                        if (newDistance > 0) {
+                            listState.animateScrollBy(newDistance.toFloat())
+                        }
+                    }
+                }
+            } else {
+                listState.scrollToItem(total - 1, Int.MAX_VALUE)
+            }
+        }
+    }
+
+    LaunchedEffect(listState.interactionSource) {
+        listState.interactionSource.interactions.collect { interaction ->
+            if (interaction is androidx.compose.foundation.interaction.DragInteraction.Start) {
+                shouldAutoScroll = false
+            }
+        }
+    }
+
+    LaunchedEffect(listState.canScrollForward) {
+        if (!listState.canScrollForward) {
+            shouldAutoScroll = true
         }
     }
 
@@ -261,29 +294,30 @@ fun ChatScreen(
                 ChatViewModel.ScrollReason.NEW_MESSAGE -> {
                     shouldAutoScroll = true
                     delay(150)
-                    val total = listState.layoutInfo.totalItemsCount
-                    if (total > 0) listState.scrollToItem(total - 1)
+                    performScrollToBottom(true)
                 }
                 ChatViewModel.ScrollReason.NEW_TOOL -> {
                     if (shouldAutoScroll) {
                         delay(150)
-                        val total = listState.layoutInfo.totalItemsCount
-                        if (total > 0) listState.scrollToItem(total - 1)
+                        performScrollToBottom(true)
                     }
                 }
             }
         }
     }
 
-    LaunchedEffect(uiState.isStreaming) {
-        if (!uiState.isStreaming) return@LaunchedEffect
-        delay(300)
+    LaunchedEffect(uiState.isStreaming, shouldAutoScroll) {
+        if (!uiState.isStreaming || !shouldAutoScroll) return@LaunchedEffect
         while (true) {
-            if (shouldAutoScroll) {
-                val total = listState.layoutInfo.totalItemsCount
-                if (total > 0) listState.scrollToItem(total - 1, Int.MAX_VALUE)
-            }
-            delay(300)
+            performScrollToBottom(false)
+            delay(50)
+        }
+    }
+
+    LaunchedEffect(displayMessages.size) {
+        if (shouldAutoScroll) {
+            delay(100)
+            performScrollToBottom(true)
         }
     }
 
@@ -294,8 +328,7 @@ fun ChatScreen(
         // Keep the latest remote turn visible whenever the message list grows.
         if (shouldAutoScroll) {
             delay(120)
-            val total = listState.layoutInfo.totalItemsCount
-            if (total > 0) listState.scrollToItem(total - 1)
+            performScrollToBottom(true)
         }
     }
 
@@ -388,6 +421,16 @@ fun ChatScreen(
                         selectedLocalhostLink = LocalhostLinkInfoParser.parse(annotationItem, serverIp)
                         showLocalhostLinkSheet = true
                     },
+                    onContentResized = {
+                        if (shouldAutoScroll) {
+                            scope.launch { performScrollToBottom(true) }
+                        }
+                    },
+                    onScrollToBottomClick = {
+                        shouldAutoScroll = true
+                        scope.launch { performScrollToBottom(true) }
+                    },
+                    shouldAutoScroll = shouldAutoScroll,
                     scope = scope
                 )
             }

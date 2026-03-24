@@ -31,7 +31,8 @@ fun MessageBubble(
     hideThinkingHeader: Boolean = false,
     onToolAccept: ((ToolExecution) -> Unit)? = null,
     onToolDecline: ((ToolExecution) -> Unit)? = null,
-    onLocalhostLinkClick: ((String) -> Unit)? = null
+    onLocalhostLinkClick: ((String) -> Unit)? = null,
+    onInteraction: () -> Unit = {}
 ) {
     val isUser = message.role == MessageRole.USER
     if (isUser) {
@@ -125,13 +126,14 @@ fun MessageBubble(
                         message.steps.forEach { step ->
                             when (step) {
                                 is MessageStep.ToolCall -> {
-                                    if (step.execution.uiMetadata?.isHidden != true) {
+                                    if (step.execution.name != "update_todo") {
                                         key(step.execution.toolCallId) {
                                             ToolCallCard(
                                                 execution = step.execution,
                                                 onAccept = onToolAccept?.let { callback -> { callback(step.execution) } },
                                                 onDecline = onToolDecline?.let { callback -> { callback(step.execution) } },
-                                                onLocalhostLinkClick = onLocalhostLinkClick
+                                                onLocalhostLinkClick = onLocalhostLinkClick,
+                                                onInteraction = onInteraction
                                             )
                                         }
                                     }
@@ -158,13 +160,14 @@ fun MessageBubble(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            message.toolExecutions.filter { it.uiMetadata?.isHidden != true }.forEach { execution ->
+                            message.toolExecutions.filter { it.name != "update_todo" }.forEach { execution ->
                                 key(execution.toolCallId) {
                                     ToolCallCard(
                                         execution = execution,
                                         onAccept = onToolAccept?.let { callback -> { callback(execution) } },
                                         onDecline = onToolDecline?.let { callback -> { callback(execution) } },
-                                        onLocalhostLinkClick = onLocalhostLinkClick
+                                        onLocalhostLinkClick = onLocalhostLinkClick,
+                                        onInteraction = onInteraction
                                     )
                                 }
                             }

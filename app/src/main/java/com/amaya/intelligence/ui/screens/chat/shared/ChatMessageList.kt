@@ -13,6 +13,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import com.amaya.intelligence.data.remote.api.MessageRole
 import com.amaya.intelligence.domain.models.UiMessage
 import com.amaya.intelligence.domain.models.ToolExecution
@@ -45,6 +50,9 @@ fun ChatMessageList(
     onToolAccept: ((ToolExecution) -> Unit)?,
     onToolDecline: ((ToolExecution) -> Unit)?,
     onLocalhostLinkClick: ((String) -> Unit)?,
+    onContentResized: () -> Unit = {},
+    onScrollToBottomClick: () -> Unit = {},
+    shouldAutoScroll: Boolean = false,
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
@@ -166,7 +174,7 @@ fun ChatMessageList(
             start = 16.dp,
             end = 16.dp,
             top = headerDp + 8.dp,
-            bottom = with(density) { inputBarHeight.toDp() } + 8.dp
+            bottom = with(density) { inputBarHeight.toDp() } + 16.dp
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -188,7 +196,8 @@ fun ChatMessageList(
                 hideThinkingHeader = hideThinking,
                 onToolAccept = onToolAccept,
                 onToolDecline = onToolDecline,
-                onLocalhostLinkClick = onLocalhostLinkClick
+                onLocalhostLinkClick = onLocalhostLinkClick,
+                onInteraction = onContentResized
             )
         }
         if (isLoading) {
@@ -199,30 +208,36 @@ fun ChatMessageList(
     }
 
     // Scroll-to-bottom FAB
-    val showFab by remember {
+    val showFab by remember(shouldAutoScroll) {
         derivedStateOf {
+            if (shouldAutoScroll) return@derivedStateOf false
             val info = listState.layoutInfo
-            val last = info.visibleItemsInfo.lastOrNull()
-            last != null && last.index < info.totalItemsCount - 1
+            val total = info.totalItemsCount
+            if (total == 0) return@derivedStateOf false
+            val lastVisible = info.visibleItemsInfo.lastOrNull()
+            if (lastVisible == null) return@derivedStateOf false
+            
+            if (lastVisible.index < total - 1) return@derivedStateOf true
+            
+            val distance = (lastVisible.offset + lastVisible.size) - info.viewportEndOffset
+            distance > 10
         }
     }
-    if (showFab) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(if (!drawerOpen) Modifier.imePadding() else Modifier)
-                .padding(
-                    bottom = with(density) { inputBarHeight.toDp() } + 12.dp,
-                    end = 16.dp
-                ),
-            contentAlignment = Alignment.BottomEnd
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(if (!drawerOpen) Modifier.imePadding() else Modifier)
+            .padding(bottom = with(density) { inputBarHeight.toDp() } + 12.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        AnimatedVisibility(
+            visible = showFab,
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut()
         ) {
             SmallFloatingActionButton(
-                onClick = {
-                    scope.launch {
-                        listState.animateScrollToItem((windowedMessages.size - 1).coerceAtLeast(0))
-                    }
-                },
+                onClick = onScrollToBottomClick,
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 elevation = FloatingActionButtonDefaults.elevation(

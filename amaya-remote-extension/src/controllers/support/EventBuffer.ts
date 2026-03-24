@@ -29,12 +29,6 @@ export class EventBuffer {
         const globalBuffer = this.buffers.get('global') || [];
         allEvents = [...globalBuffer];
 
-        for (const [key, buffer] of this.buffers) {
-            if (key !== 'global') {
-                allEvents.push(...buffer);
-            }
-        }
-
         allEvents.sort((a, b) => a.seqId - b.seqId);
         const missedEvents = allEvents.filter((event) => event.seqId > lastSeqId);
         const maxSeqId = allEvents.length > 0 ? allEvents[allEvents.length - 1].seqId : 0;

@@ -95,7 +95,8 @@ fun ToolCallCard(
     execution: ToolExecution,
     onAccept: (() -> Unit)? = null,
     onDecline: (() -> Unit)? = null,
-    onLocalhostLinkClick: ((String) -> Unit)? = null
+    onLocalhostLinkClick: ((String) -> Unit)? = null,
+    onInteraction: () -> Unit = {}
 ) {
     val shouldAnimate = execution.metadata["animateOnMount"].equals("true", ignoreCase = true)
     var visible by remember(execution.toolCallId) { mutableStateOf(!shouldAnimate) }
@@ -111,10 +112,10 @@ fun ToolCallCard(
             visible = visible,
             enter = ToolCallMotion.mountFadeIn
         ) {
-            ToolCardContent(execution, onAccept, onDecline, onLocalhostLinkClick)
+            ToolCardContent(execution, onAccept, onDecline, onLocalhostLinkClick, onInteraction)
         }
     } else {
-        ToolCardContent(execution, onAccept, onDecline, onLocalhostLinkClick)
+        ToolCardContent(execution, onAccept, onDecline, onLocalhostLinkClick, onInteraction)
     }
 }
 
@@ -125,7 +126,8 @@ internal fun ToolCardContent(
     execution: ToolExecution,
     onAccept: (() -> Unit)? = null,
     onDecline: (() -> Unit)? = null,
-    onLocalhostLinkClick: ((String) -> Unit)? = null
+    onLocalhostLinkClick: ((String) -> Unit)? = null,
+    onInteraction: () -> Unit = {}
 ) {
     val isThinkingCard = execution.isSyntheticThinkingCard()
     var expanded by remember(execution.toolCallId) { mutableStateOf(false) }
@@ -227,7 +229,7 @@ internal fun ToolCardContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(if (canExpand) Modifier.clickable { expanded = !expanded } else Modifier)
+                    .then(if (canExpand) Modifier.clickable { expanded = !expanded; onInteraction() } else Modifier)
                     .padding(horizontal = 12.dp, vertical = if (isThinkingCard) 6.dp else 9.dp),
                 verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -448,7 +450,8 @@ internal fun ToolCardContent(
                                 iosGreen        = iosGreen,
                                 iosBlue         = iosBlue,
                                 iosRed          = iosRed,
-                                shimmerProgress = shimmerProgress
+                                shimmerProgress = shimmerProgress,
+                                onInteraction   = onInteraction
                             )
                         }
                     }
@@ -539,7 +542,8 @@ internal fun SubagentChildCard(
     iosGreen: Color,
     iosBlue: Color,
     iosRed: Color,
-    shimmerProgress: Float
+    shimmerProgress: Float,
+    onInteraction: () -> Unit = {}
 ) {
     var expanded by remember(child.index) { mutableStateOf(false) }
 
@@ -569,7 +573,7 @@ internal fun SubagentChildCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(if (canExpand) Modifier.clickable { expanded = !expanded } else Modifier)
+                    .then(if (canExpand) Modifier.clickable { expanded = !expanded; onInteraction() } else Modifier)
                     .padding(horizontal = 10.dp, vertical = 9.dp),
                 verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -717,7 +721,7 @@ internal fun SubagentChildCard(
                                     color      = iosBlue,
                                     fontWeight = FontWeight.Medium,
                                     modifier   = Modifier
-                                        .clickable { showFull = !showFull }
+                                        .clickable { showFull = !showFull; onInteraction() }
                                         .padding(vertical = 2.dp)
                                 )
                             }

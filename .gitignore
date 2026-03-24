@@ -191,3 +191,5 @@ REMOTE_SYNC_STRATEGY.md
 secrets/
 private/
 credentials/
+.env.local
+.env.local.*

@@ -1,0 +1,380 @@
+Initializing API...
+[AntigravityApi] Step 1: Language Server process cmdline...
+[AntigravityApi] LS cmdline: c:\Users\[USERNAME]\AppData\Local\Programs\Antigravity\resources\app\extensions\antigravity\bin\language_server_windows_x64.exe --enable_lsp --csrf_token ...
+[AntigravityApi] CSRF token: 3bd066cc...
+[AntigravityApi] LS ports: 57894, 57887, 57886
+[AntigravityApi] LS HTTP gRPC port: 57887
+[AntigravityApi]   G£ô CmdLine: port=57887 csrf=3bd066cc...
+[AntigravityApi]   Protocol: HTTP=true HTTPS=false GåÆ HTTP
+[AntigravityApi] Step 6: API key (VS Code Auth)...
+[AntigravityApi]   G£ù Auth: no session
+[AntigravityApi] Step 7: API key (state.vscdb)...
+[AntigravityApi] API key from state.vscdb: ya29.xxxREDACTED...
+[AntigravityApi]   G£ô StateDB: ya29.xxxREDACTED...
+[AntigravityApi] Verifying: HTTP://127.0.0.1:57887...
+[AntigravityApi]   G£ô Verified OK!
+[AntigravityApi] G£à READY GÇö HTTP://127.0.0.1:57887
+Fetching trajectory for cascade: [CASCADE_ID]...
+Got 157 total steps
+[
+  {
+    "type": "CORTEX_STEP_TYPE_PLANNER_RESPONSE",
+    "status": "CORTEX_STEP_STATUS_DONE",
+    "metadata": {
+      "stepGenerationVersion": 1,
+      "createdAt": "2026-03-08T16:09:30.011597900Z",
+      "viewableAt": "2026-03-08T16:09:34.012780800Z",
+      "finishedGeneratingAt": "2026-03-08T16:09:34.528435300Z",
+      "completedAt": "2026-03-08T16:09:34.528435300Z",
+      "source": "CORTEX_STEP_SOURCE_MODEL",
+      "generatorModel": "MODEL_PLACEHOLDER_M37",
+      "requestedModel": {
+        "model": "MODEL_PLACEHOLDER_M37"
+      },
+      "executionId": "[EXECUTION_ID]",
+      "sourceTrajectoryStepInfo": {
+        "trajectoryId": "[TRAJECTORY_ID]",
+        "stepIndex": 150,
+        "metadataIndex": 31,
+        "cascadeId": "[CASCADE_ID]"
+      },
+      "internalMetadata": {
+        "statusTransitions": [
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_GENERATING",
+            "timestamp": "2026-03-08T16:09:34.012780800Z"
+          },
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+            "timestamp": "2026-03-08T16:09:34.528435300Z"
+          }
+        ]
+      }
+    },
+    "plannerResponse": {
+      "messageId": "bot-da7420e1-8328-4224-8ddf-7508b1a9dd34",
+      "toolCalls": [
+        {
+          "id": "37fa6aa5-9ce4-4dd8-8a5f-abae5eae0708",
+          "name": "run_command",
+          "argumentsJson": "{\"CommandLine\":\"node debug-trajectory.js\",\"Cwd\":\"c:\\\\Users\\\\[USERNAME]\\\\Documents\\\\my app\\\\amaya\\\\amaya-remote-extension\",\"SafeToAutoRun\":true,\"WaitMsBeforeAsync\":5000}",
+          "thinkingSignature": "EiYKJGUyNDgzMGE3LTVjZDYtNDJmZS05OThiLWVlNTM5ZTcyYjljMw=="
+        },
+        {
+          "id": "5d015de9-3c36-425b-abac-b5a1ba5457a8",
+          "name": "view_file",
+          "argumentsJson": "{\"AbsolutePath\":\"c:\\\\Users\\\\[USERNAME]\\\\.gemini\\\\antigravity\\\\brain\\\\[CASCADE_ID]\\\\task.md\"}"
+        }
+      ],
+      "stopReason": "STOP_REASON_STOP_PATTERN"
+    }
+  },
+  {
+    "type": "CORTEX_STEP_TYPE_RUN_COMMAND",
+    "status": "CORTEX_STEP_STATUS_DONE",
+    "metadata": {
+      "stepGenerationVersion": 1,
+      "createdAt": "2026-03-08T16:09:34.012780800Z",
+      "viewableAt": "2026-03-08T16:09:34.434758400Z",
+      "finishedGeneratingAt": "2026-03-08T16:09:34.434758400Z",
+      "lastCompletedChunkAt": "2026-03-08T16:09:34.434758400Z",
+      "completedAt": "2026-03-08T16:09:37.759063300Z",
+      "source": "CORTEX_STEP_SOURCE_MODEL",
+      "toolCall": {
+        "id": "37fa6aa5-9ce4-4dd8-8a5f-abae5eae0708",
+        "name": "run_command",
+        "argumentsJson": "{\"CommandLine\":\"node debug-trajectory.js\",\"Cwd\":\"c:\\\\Users\\\\[USERNAME]\\\\Documents\\\\my app\\\\amaya\\\\amaya-remote-extension\",\"SafeToAutoRun\":true,\"WaitMsBeforeAsync\":5000}",
+        "thinkingSignature": "EiYKJGUyNDgzMGE3LTVjZDYtNDJmZS05OThiLWVlNTM5ZTcyYjljMw=="
+      },
+      "argumentsOrder": [
+        "CommandLine",
+        "Cwd",
+        "SafeToAutoRun",
+        "WaitMsBeforeAsync"
+      ],
+      "generatorModel": "MODEL_PLACEHOLDER_M37",
+      "requestedModel": {
+        "model": "MODEL_PLACEHOLDER_M37"
+      },
+      "executionId": "[EXECUTION_ID]",
+      "toolCallOutputTokens": 41,
+      "sourceTrajectoryStepInfo": {
+        "trajectoryId": "[TRAJECTORY_ID]",
+        "stepIndex": 151,
+        "metadataIndex": 31,
+        "cascadeId": "[CASCADE_ID]"
+      },
+      "internalMetadata": {
+        "statusTransitions": [
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_PENDING",
+            "timestamp": "2026-03-08T16:09:34.434758400Z"
+          },
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_RUNNING",
+            "timestamp": "2026-03-08T16:09:34.434758400Z"
+          },
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+            "timestamp": "2026-03-08T16:09:37.759063300Z"
+          }
+        ]
+      }
+    },
+    "runCommand": {
+      "commandLine": "node debug-trajectory.js",
+      "proposedCommandLine": "node debug-trajectory.js",
+      "cwd": "c:\\Users\\[USERNAME]\\Documents\\my app\\amaya\\amaya-remote-extension",
+      "waitMsBeforeAsync": "5000",
+      "shouldAutoRun": true,
+      "blocking": true,
+      "exitCode": 0,
+      "autoRunDecision": "AUTO_RUN_DECISION_DEFAULT_ALLOW",
+      "terminalId": "23052",
+      "combinedOutput": {
+        "full": "          },\n                {\n                  \"text\": \"        const port = sessionData.port;\\r\",\n                  \"type\": \"UNIFIED_DIFF_LINE_TYPE_DELETE\"\n                },\n                {\n                  \"text\": \"        const csrf = sessionData.csrf;\\r\",\n                  \"type\": \"UNIFIED_DIFF_LINE_TYPE_DELETE\"\n                },\n                {\n                  \"text\": \"        console.log(`Port: ${port}, CSRF: ${csrf}`);\\r\",   \n                  \"type\": \"UNIFIED_DIFF_LINE_TYPE_DELETE\"\n                },\n                {\n                  \"text\": \"\\r\",\n                  \"type\": \"UNIFIED_DIFF_LINE_TYPE_DELETE\"\n                },\n                {\n                  \"text\": \"        const convDir = path.dirname(sessionPath);\\r\",    32c2-450a-87fa-3c6384ad6588/task.md\"50a-87fa-3c6384ad6588\\\\\\\\task.md\\\"}\"] Verifying: HT\n    } },\"thinkingSignature\": \"EiYKJGUyNDgzMGE3LTVjZDYtNDJmZS05OThiLWVlNTM5ZTcyYjljMw==\n  }   \"argumentsOrder\": [\\u001b]633;C\\u0007Initializing API...\\r\\n[AntigravityApi] Ste\n]       \"AbsolutePath\"TOP_REASON_STOP_PATTERN\"a5457a8\",\n      ],e\": \"CORTEX_STEP_TYPE_VIEW_FILE\",rt((a,b) => b.time - a.time);\",odules', 'vsco"
+      },
+      "usedIdeTerminal": true,
+      "rawDebugOutput": "escription\": \"Script to mock vscode and run AntigravityApi.\"\r\n    }\r\n  },\r\n  {\r\n    \"type\": \"CORTEX_STEP_TYPE_PLANNER_RESPONSE\",\r\n    \"status\": \"CORTEX_STEP_STATUS_DONE\",\r\n    \"metadata\": {\r\n      \"stepGenerationVersion\": 1,\r\n      \"createdAt\": \"2026-03-08T16:09:30.011597900Z\",\r\n      \"viewableAt\": \"2026-03-08T16:09:34.012780800Z\",\r\n      \"finishedGeneratingAt\": \"2026-03-08T16:09:34.528435300Z\",\r\n      \"completedAt\": \"2026-03-08T16:09:34.528435300Z\",\r\n      \"source\": \"CORTEX_STEP_SOURCE_MODEL\",\r\n      \"generatorModel\": \"MODEL_PLACEHOLDER_M37\",\r\n      \"requestedModel\": {\r\n        \"model\": \"MODEL_PLACEHOLDER_M37\"\r\n      },\r\n      \"executionId\": \"[EXECUTION_ID]\",\r\n      \"sourceTrajectoryStepInfo\": {\r\n        \"trajectoryId\": \"[TRAJECTORY_ID]\",\r\n        \"stepIndex\": 150,\r\n        \"metadataIndex\": 31,\r\n        \"cascadeId\": \"[CASCADE_ID]\"\r\n      },\r\n      \"internalMetadata\": {\r\n        \"statusTransitions\": [\r\n          {\r\n            \"updatedStatus\": \"CORTEX_STEP_STATUS_GENERATING\",\r\n            \"timestamp\": \"2026-03-08T16:09:34.012780800Z\"\r\n          },\r\n          {\r\n            \"updatedStatus\": \"CORTEX_STEP_STATUS_DONE\",\r\n            \"timestamp\": \"2026-03-08T16:09:34.528435300Z\"\r\n          }\r\n        ]\r\n      }\r\n    },\r\n    \"plannerResponse\": {\r\n      \"messageId\": \"bot-da7420e1-8328-4224-8ddf-7508b1a9dd34\",\r\n      \"toolCalls\": [\r\n        {\r\n          \"id\": \"37fa6aa5-9ce4-4dd8-8a5f-abae5eae0708\",\r\n          \"name\": \"run_command\",\r\n          \"argumentsJson\": \"{\\\"CommandLine\\\":\\\"node debug-trajectory.js\\\",\\\"Cwd\\\":\\\"c:\r\n\u001b[19;86H:\\\\\\\\Users\\\\\\\\[USERNAME]\\\\\\\\Documents\\\\\\\\my app\\\\\\\\amaya\\\\\\\\amaya-remote-extension\\\",\\\"Safe\r\n\u001b[19;86HeToAutoRun\\\":true,\\\"WaitMsBeforeAsync\\\":5000}\",\r\n          \"thinkingSignature\": \"EiYKJGUyNDgzMGE3LTVjZDYtNDJmZS05OThiLWVlNTM5ZTcyYjljMw\r\n\u001b[19;86Hw==\"\r\n        },\r\n        {\r\n          \"id\": \"5d015de9-3c36-425b-abac-b5a1ba5457a8\",\r\n          \"name\": \"view_file\",\r\n          \"argumentsJson\": \"{\\\"AbsolutePath\\\":\\\"c:\\\\\\\\Users\\\\\\\\[USERNAME]\\\\\\\\.gemini\\\\\\\\an\r\n\u001b[19;86Hntigravity\\\\\\\\brain\\\\\\\\[CASCADE_ID]\\\\\\\\task.md\\\"}\"\r\n        }\r\n      ],\r\n      \"stopReason\": \"STOP_REASON_STOP_PATTERN\"\r\n    }\r\n  },\r\n  {\r\n    \"type\": \"CORTEX_STEP_TYPE_RUN_COMMAND\",\r\n    \"status\": \"CORTEX_STEP_STATUS_RUNNING\",\r\n    \"metadata\": {\r\n      \"stepGenerationVersion\": 1,\r\n      \"createdAt\": \"2026-03-08T16:09:34.012780800Z\",\r\n      \"viewableAt\": \"2026-03-08T16:09:34.434758400Z\",\r\n      \"finishedGeneratingAt\": \"2026-03-08T16:09:34.434758400Z\",\r\n      \"lastCompletedChunkAt\": \"2026-03-08T16:09:34.434758400Z\",\r\n      \"source\": \"CORTEX_STEP_SOURCE_MODEL\",\r\n      \"toolCall\": {\r\n        \"id\": \"37fa6aa5-9ce4-4dd8-8a5f-abae5eae0708\",\r\n        \"name\": \"run_command\",\r\n        \"argumentsJson\": \"{\\\"CommandLine\\\":\\\"node debug-trajectory.js\\\",\\\"Cwd\\\":\\\"c:\\\\\r\n\u001b[19;86H\\\\\\Users\\\\\\\\[USERNAME]\\\\\\\\Documents\\\\\\\\my app\\\\\\\\amaya\\\\\\\\amaya-remote-extension\\\",\\\"SafeTo\r\n\u001b[19;86HoAutoRun\\\":true,\\\"WaitMsBeforeAsync\\\":5000}\",\r\n        \"thinkingSignature\": \"EiYKJGUyNDgzMGE3LTVjZDYtNDJmZS05OThiLWVlNTM5ZTcyYjljMw==\r\n\u001b[19;86H=\"\r\n      },\r\n      \"argumentsOrder\": [\r\n        \"CommandLine\",\r\n        \"Cwd\",\r\n        \"SafeToAutoRun\",\r\n        \"WaitMsBeforeAsync\"\r\n      ],\r\n      \"generatorModel\": \"MODEL_PLACEHOLDER_M37\",\r\n      \"requestedModel\": {\r\n        \"model\": \"MODEL_PLACEHOLDER_M37\"\r\n      },\r\n      \"executionId\": \"[EXECUTION_ID]\",\r\n      \"toolCallOutputTokens\": 41,\r\n      \"sourceTrajectoryStepInfo\": {\r\n        \"trajectoryId\": \"[TRAJECTORY_ID]\",\r\n        \"stepIndex\": 151,\r\n        \"metadataIndex\": 31,\r\n        \"cascadeId\": \"[CASCADE_ID]\"\r\n      },\r\n      \"internalMetadata\": {\r\n        \"statusTransitions\": [\r\n          {\r\n            \"updatedStatus\": \"CORTEX_STEP_STATUS_PENDING\",\r\n            \"timestamp\": \"2026-03-08T16:09:34.434758400Z\"\r\n          },\r\n          {\r\n            \"updatedStatus\": \"CORTEX_STEP_STATUS_RUNNING\",\r\n            \"timestamp\": \"2026-03-08T16:09:34.434758400Z\"\r\n          }\r\n        ]\r\n      }\r\n    },\r\n    \"runCommand\": {\r\n      \"commandLine\": \"node debug-trajectory.js\",\r\n      \"proposedCommandLine\": \"node debug-trajectory.js\",\r\n      \"cwd\": \"c:\\\\Users\\\\[USERNAME]\\\\Documents\\\\my app\\\\amaya\\\\amaya-remote-extension\",   \r\n      \"waitMsBeforeAsync\": \"5000\",\r\n      \"shouldAutoRun\": true,\r\n      \"blocking\": true,\r\n      \"autoRunDecision\": \"AUTO_RUN_DECISION_DEFAULT_ALLOW\",\r\n      \"terminalId\": \"23052\",\r\n      \"combinedOutput\": {\r\n        \"full\": \"Initializing API...\\n[AntigravityApi] Step 1: Language Server process\r\n\u001b[19;86Hs cmdline...\\n[AntigravityApi] LS cmdline: c:\\\\Users\\\\[USERNAME]\\\\AppData\\\\Local\\\\Programs\\\r\n\u001b[19;86H\\\\Antigravity\\\\resour\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n                                  \u001b[20;121H\r\n                                                   sion')n ...tensions\\\\antigravity\\\\b\r\n\u001b[19;86Hbin\\\\language_server_windows_x64.exe --enable_lsp --csrf\\n[AntigravityApi]   G£ù Auth: no\r\n\u001b[19;86Ho session...\\n[AntigravityApi] Step 7: API key (state.vscdb)...\\n[AntigravityApi] API k\r\n\u001b[19;86Hkey from state.vscdb: ya29.xxxREDACTED...\\n[AntigravityApi]   G£ô StateDB: ya29.xxxREDACTED\r\n\u001b[19;86HS...d066cc...\\n[AntigravityApi] Verifying: HTTP://127.0.0.1:57887...HTTP\\n[AntigravityA\r\n\u001b[19;86HApi] Step 6: API key (VS Code Auth)...\"\r\n      },\r\n      \"rawDebugOutput\": \"\\u001b]633;C\\u0007Initializing API...\\r\\n[AntigravityApi] Ste\r\n\u001b[19;86Hep 1: Language Server process cmdline...\\r\\n[AntigravityApi] LS cmdline: c:\\\\Users\\\\Biu\r\n\u001b[19;86HuBiu\\\\AppData\\\\Local\\\\Programs\\\\Antigravity\\\\resour\\r\\n\\u001b[19;86Hrces\\\\app\\\\extensio\r\n\u001b[19;86Hons\\\\antigravity\\\\bin\\\\language_server_windows_x64.exe --enable_lsp --csrf\\r\\n\\u001b[19\r\n\u001b[19;86H9;86Hf_token ...\\r\\n[AntigravityApi] CSRF token: 3bd066cc...\\r\\n[AntigravityApi] LS por\r\n\u001b[19;86Hrts: 57894, 57887, 57886\\r\\n[AntigravityApi] LS HTTP gRPC port: 57887\\r\\n[AntigravityAp\r\n\u001b[19;86Hpi]   G£ô CmdLine: port=57887 csrf=3bd066cc...\\r\\n[AntigravityApi]   Protocol: HTTP=true \r\n\u001b[19;86H HTTPS=false GåÆ HTTP\\r\\n[AntigravityApi] Step 6: API key (VS Code Auth)...\\r\\n[Antigravi\r\n\u001b[19;86HityApi] Auth API error: Cannot read properties of undefined (reading 'getSess\\r\\n\\u001b\r\n\u001b[19;86Hb[19;86Hsion')\\r\\n[AntigravityApi]   G£ù Auth: no session\\r\\n[AntigravityApi] Step 7: API\r\n\u001b[19;86HI key (state.vscdb)...\\r\\n[AntigravityApi] API key from state.vscdb: ya29.xxxREDACTED...\r\n\u001b[19;86H.\\r\\n[AntigravityApi]   G£ô StateDB: ya29.xxxREDACTED...\\r\\n[AntigravityApi] Verifying: HT\r\n\u001b[19;86HTTP://127.0.0.1:57887...\\r\\n\"\r\n    }\r\n  },\r\n  {\r\n    \"type\": \"CORTEX_STEP_TYPE_VIEW_FILE\",\r\n    \"status\": \"CORTEX_STEP_STATUS_PENDING\",\r\n    \"metadata\": {\r\n      \"stepGenerationVersion\": 1,\r\n      \"createdAt\": \"2026-03-08T16:09:34.434758400Z\",\r\n      \"viewableAt\": \"2026-03-08T16:09:34.528435300Z\",\r\n      \"finishedGeneratingAt\": \"2026-03-08T16:09:34.528435300Z\",\r\n      \"lastCompletedChunkAt\": \"2026-03-08T16:09:34.528435300Z\",\r\n      \"source\": \"CORTEX_STEP_SOURCE_MODEL\",\r\n      \"toolCall\": {\r\n        \"id\": \"5d015de9-3c36-425b-abac-b5a1ba5457a8\",\r\n        \"name\": \"view_file\",\r\n        \"argumentsJson\": \"{\\\"AbsolutePath\\\":\\\"c:\\\\\\\\Users\\\\\\\\[USERNAME]\\\\\\\\.gemini\\\\\\\\anti\r\n\u001b[19;86Higravity\\\\\\\\brain\\\\\\\\[CASCADE_ID]\\\\\\\\task.md\\\"}\"\r\n      },\r\n      \"argumentsOrder\": [\r\n        \"AbsolutePath\"\r\n      ],\r\n      \"generatorModel\": \"MODEL_PLACEHOLDER_M37\",\r\n      \"requestedModel\": {\r\n        \"model\": \"MODEL_PLACEHOLDER_M37\"\r\n      },\r\n      \"executionId\": \"[EXECUTION_ID]\",\r\n      \"toolCallOutputTokens\": 28,\r\n      \"sourceTrajectoryStepInfo\": {\r\n        \"trajectoryId\": \"[TRAJECTORY_ID]\",\r\n        \"stepIndex\": 152,\r\n        \"metadataIndex\": 31,\r\n        \"cascadeId\": \"[CASCADE_ID]\"\r\n      },\r\n      \"internalMetadata\": {\r\n        \"statusTransitions\": [\r\n          {\r\n            \"updatedStatus\": \"CORTEX_STEP_STATUS_PENDING\",\r\n            \"timestamp\": \"2026-03-08T16:09:34.528435300Z\"\r\n          }\r\n        ]\r\n      }\r\n    },\r\n    \"viewFile\": {\r\n      \"absolutePathUri\": \"file:///c:/Users/[USERNAME]/.gemini/antigravity/brain/46f03ec9-3\r\n\u001b[19;86H32c2-450a-87fa-3c6384ad6588/task.md\"\r\n    }\r\n  }\r\n]\r\n"
+    }
+  },
+  {
+    "type": "CORTEX_STEP_TYPE_VIEW_FILE",
+    "status": "CORTEX_STEP_STATUS_DONE",
+    "metadata": {
+      "stepGenerationVersion": 1,
+      "createdAt": "2026-03-08T16:09:34.434758400Z",
+      "viewableAt": "2026-03-08T16:09:34.528435300Z",
+      "finishedGeneratingAt": "2026-03-08T16:09:34.528435300Z",
+      "lastCompletedChunkAt": "2026-03-08T16:09:34.528435300Z",
+      "completedAt": "2026-03-08T16:09:37.763832Z",
+      "source": "CORTEX_STEP_SOURCE_MODEL",
+      "toolCall": {
+        "id": "5d015de9-3c36-425b-abac-b5a1ba5457a8",
+        "name": "view_file",
+        "argumentsJson": "{\"AbsolutePath\":\"c:\\\\Users\\\\[USERNAME]\\\\.gemini\\\\antigravity\\\\brain\\\\[CASCADE_ID]\\\\task.md\"}"
+      },
+      "argumentsOrder": [
+        "AbsolutePath"
+      ],
+      "generatorModel": "MODEL_PLACEHOLDER_M37",
+      "requestedModel": {
+        "model": "MODEL_PLACEHOLDER_M37"
+      },
+      "executionId": "[EXECUTION_ID]",
+      "toolCallOutputTokens": 28,
+      "sourceTrajectoryStepInfo": {
+        "trajectoryId": "[TRAJECTORY_ID]",
+        "stepIndex": 152,
+        "metadataIndex": 31,
+        "cascadeId": "[CASCADE_ID]"
+      },
+      "internalMetadata": {
+        "statusTransitions": [
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_PENDING",
+            "timestamp": "2026-03-08T16:09:34.528435300Z"
+          },
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_RUNNING",
+            "timestamp": "2026-03-08T16:09:37.759063300Z"
+          },
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+            "timestamp": "2026-03-08T16:09:37.763832Z"
+          }
+        ]
+      }
+    },
+    "viewFile": {
+      "absolutePathUri": "file:///c:/Users/[USERNAME]/.gemini/antigravity/brain/[CASCADE_ID]/task.md",
+      "endLine": 4,
+      "content": "# Task\r\n- [x] Read `extension.ts` and `antigravity-api.ts` in amaya-remote-extension to understand the toolcall stream.\r\n- [x] Read `RemoteSessionClient.kt` or related files in the app to see how it's received.\r\n- [x] Explain the flow to the user.\r\n",
+      "numLines": 5,
+      "numBytes": 249
+    }
+  },
+  {
+    "type": "CORTEX_STEP_TYPE_PLANNER_RESPONSE",
+    "status": "CORTEX_STEP_STATUS_DONE",
+    "metadata": {
+      "stepGenerationVersion": 1,
+      "createdAt": "2026-03-08T16:09:37.788812800Z",
+      "viewableAt": "2026-03-08T16:09:42.115079Z",
+      "finishedGeneratingAt": "2026-03-08T16:09:42.364683Z",
+      "completedAt": "2026-03-08T16:09:42.364683Z",
+      "source": "CORTEX_STEP_SOURCE_MODEL",
+      "generatorModel": "MODEL_PLACEHOLDER_M37",
+      "requestedModel": {
+        "model": "MODEL_PLACEHOLDER_M37"
+      },
+      "executionId": "[EXECUTION_ID]",
+      "sourceTrajectoryStepInfo": {
+        "trajectoryId": "[TRAJECTORY_ID]",
+        "stepIndex": 154,
+        "metadataIndex": 32,
+        "cascadeId": "[CASCADE_ID]"
+      },
+      "internalMetadata": {
+        "statusTransitions": [
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_GENERATING",
+            "timestamp": "2026-03-08T16:09:42.115079Z"
+          },
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+            "timestamp": "2026-03-08T16:09:42.364683Z"
+          }
+        ]
+      }
+    },
+    "plannerResponse": {
+      "messageId": "bot-376107d9-87b8-432c-b694-04d330b9df2d",
+      "toolCalls": [
+        {
+          "id": "c07c89cf-5c1f-47bf-8be4-11cecd508242",
+          "name": "task_boundary",
+          "argumentsJson": "{\"Mode\":\"%SAME%\",\"PredictedTaskSize\":3,\"TaskName\":\"%SAME%\",\"TaskStatus\":\"Redirecting trajectory output to a file and inspecting the dumped JSON to see what properties are present in the PB payloads.\",\"TaskSummary\":\"%SAME%\"}",
+          "thinkingSignature": "EiYKJGUyNDgzMGE3LTVjZDYtNDJmZS05OThiLWVlNTM5ZTcyYjljMw=="
+        },
+        {
+          "id": "f63c6e83-bd9b-4172-893a-80779518f7b2",
+          "name": "run_command",
+          "argumentsJson": "{\"CommandLine\":\"node debug-trajectory.js \\u003e test-trajectory.json\",\"Cwd\":\"c:\\\\Users\\\\[USERNAME]\\\\Documents\\\\my app\\\\amaya\\\\amaya-remote-extension\",\"SafeToAutoRun\":true,\"WaitMsBeforeAsync\":5000}"
+        }
+      ],
+      "stopReason": "STOP_REASON_STOP_PATTERN"
+    }
+  },
+  {
+    "type": "CORTEX_STEP_TYPE_TASK_BOUNDARY",
+    "status": "CORTEX_STEP_STATUS_DONE",
+    "metadata": {
+      "stepGenerationVersion": 1,
+      "createdAt": "2026-03-08T16:09:42.115079Z",
+      "viewableAt": "2026-03-08T16:09:42.271674700Z",
+      "finishedGeneratingAt": "2026-03-08T16:09:42.271674700Z",
+      "lastCompletedChunkAt": "2026-03-08T16:09:42.271141Z",
+      "completedAt": "2026-03-08T16:09:42.271674700Z",
+      "source": "CORTEX_STEP_SOURCE_MODEL",
+      "toolCall": {
+        "id": "c07c89cf-5c1f-47bf-8be4-11cecd508242",
+        "name": "task_boundary",
+        "argumentsJson": "{\"Mode\":\"%SAME%\",\"PredictedTaskSize\":3,\"TaskName\":\"%SAME%\",\"TaskStatus\":\"Redirecting trajectory output to a file and inspecting the dumped JSON to see what properties are present in the PB payloads.\",\"TaskSummary\":\"%SAME%\"}",
+        "thinkingSignature": "EiYKJGUyNDgzMGE3LTVjZDYtNDJmZS05OThiLWVlNTM5ZTcyYjljMw=="
+      },
+      "argumentsOrder": [
+        "Mode",
+        "PredictedTaskSize",
+        "TaskName",
+        "TaskStatus",
+        "TaskSummary"
+      ],
+      "generatorModel": "MODEL_PLACEHOLDER_M37",
+      "requestedModel": {
+        "model": "MODEL_PLACEHOLDER_M37"
+      },
+      "executionId": "[EXECUTION_ID]",
+      "toolCallOutputTokens": 55,
+      "sourceTrajectoryStepInfo": {
+        "trajectoryId": "[TRAJECTORY_ID]",
+        "stepIndex": 155,
+        "metadataIndex": 32,
+        "cascadeId": "[CASCADE_ID]"
+      },
+      "internalMetadata": {
+        "statusTransitions": [
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_PENDING",
+            "timestamp": "2026-03-08T16:09:42.271674700Z"
+          },
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_RUNNING",
+            "timestamp": "2026-03-08T16:09:42.271674700Z"
+          },
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+            "timestamp": "2026-03-08T16:09:42.271674700Z"
+          }
+        ]
+      }
+    },
+    "taskBoundary": {
+      "taskName": "Digging Deeper into Tool Call Parsing",
+      "taskStatus": "Redirecting trajectory output to a file and inspecting the dumped JSON to see what properties are present in the PB payloads.",
+      "taskSummary": "Investigating the issue of \"illusionary\" double tool calls. It looks like the issue isn't on the Android side anymore but perhaps how `extractToolResult` and `getTrajectory` parse the JSON in the TypeScript extension. I will write a simple debug script to dump the raw JSON of a trajectory step.",
+      "taskSummaryWithCitations": "Investigating the issue of \"illusionary\" double tool calls. It looks like the issue isn't on the Android side anymore but perhaps how [extractToolResult](cci:1://file:///c:/Users/[USERNAME]/Documents/my%20app/amaya/app/src/main/java/com/amaya/intelligence/ui/ide/antigravity/AntigravityToolMapper.kt:88:4-98:5) and [getTrajectory](cci:1://file:///c:/Users/[USERNAME]/Documents/my%20app/amaya/amaya-remote-extension/src/antigravity-api.ts:306:4-313:5) parse the JSON in the TypeScript extension. I will write a simple debug script to dump the raw JSON of a trajectory step.",
+      "mode": "AGENT_MODE_EXECUTION"
+    }
+  },
+  {
+    "type": "CORTEX_STEP_TYPE_RUN_COMMAND",
+    "status": "CORTEX_STEP_STATUS_RUNNING",
+    "metadata": {
+      "stepGenerationVersion": 1,
+      "createdAt": "2026-03-08T16:09:42.271674700Z",
+      "viewableAt": "2026-03-08T16:09:42.364683Z",
+      "finishedGeneratingAt": "2026-03-08T16:09:42.364683Z",
+      "lastCompletedChunkAt": "2026-03-08T16:09:42.364683Z",
+      "source": "CORTEX_STEP_SOURCE_MODEL",
+      "toolCall": {
+        "id": "f63c6e83-bd9b-4172-893a-80779518f7b2",
+        "name": "run_command",
+        "argumentsJson": "{\"CommandLine\":\"node debug-trajectory.js \\u003e test-trajectory.json\",\"Cwd\":\"c:\\\\Users\\\\[USERNAME]\\\\Documents\\\\my app\\\\amaya\\\\amaya-remote-extension\",\"SafeToAutoRun\":true,\"WaitMsBeforeAsync\":5000}"
+      },
+      "argumentsOrder": [
+        "CommandLine",
+        "Cwd",
+        "SafeToAutoRun",
+        "WaitMsBeforeAsync"
+      ],
+      "generatorModel": "MODEL_PLACEHOLDER_M37",
+      "requestedModel": {
+        "model": "MODEL_PLACEHOLDER_M37"
+      },
+      "executionId": "[EXECUTION_ID]",
+      "toolCallOutputTokens": 48,
+      "sourceTrajectoryStepInfo": {
+        "trajectoryId": "[TRAJECTORY_ID]",
+        "stepIndex": 156,
+        "metadataIndex": 32,
+        "cascadeId": "[CASCADE_ID]"
+      },
+      "internalMetadata": {
+        "statusTransitions": [
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_PENDING",
+            "timestamp": "2026-03-08T16:09:42.364683Z"
+          },
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_RUNNING",
+            "timestamp": "2026-03-08T16:09:42.364683Z"
+          },
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_WAITING",
+            "timestamp": "2026-03-08T16:09:42.367784700Z"
+          },
+          {
+            "updatedStatus": "CORTEX_STEP_STATUS_RUNNING",
+            "timestamp": "2026-03-08T16:09:44.717122100Z"
+          }
+        ]
+      }
+    },
+    "runCommand": {
+      "commandLine": "node debug-trajectory.js > test-trajectory.json",
+      "proposedCommandLine": "node debug-trajectory.js > test-trajectory.json",
+      "cwd": "c:\\Users\\[USERNAME]\\Documents\\my app\\amaya\\amaya-remote-extension",
+      "waitMsBeforeAsync": "5000",
+      "shouldAutoRun": true,
+      "blocking": true,
+      "autoRunDecision": "AUTO_RUN_DECISION_DEFAULT_DENY",
+      "terminalId": "23052",
+      "combinedOutput": {
+        "full": "[AntigravityApi] Auth API error: Cannot read properties of undefined (reading 'getSess\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                     sion')"
+      },
+      "rawDebugOutput": "\u001b]633;C\u0007[AntigravityApi] Auth API error: Cannot read properties of undefined (reading 'getSess\r\n\u001b[19;86Hsion')\r\n"
+    }
+  }
+]
+

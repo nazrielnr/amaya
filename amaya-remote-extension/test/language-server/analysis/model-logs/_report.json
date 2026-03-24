@@ -1,0 +1,105 @@
+{
+  "generatedAt": "2026-03-23T02:08:13.050Z",
+  "port": 61792,
+  "protocol": "http",
+  "targets": [
+    "MODEL_PLACEHOLDER_M26",
+    "MODEL_PLACEHOLDER_M35"
+  ],
+  "results": {
+    "MODEL_PLACEHOLDER_M26": [
+      {
+        "ok": true,
+        "modelId": "MODEL_PLACEHOLDER_M26",
+        "label": "MODEL_PLACEHOLDER_M26",
+        "index": 1,
+        "cascadeId": "cb2bd0d3-5d48-4386-ab24-ee3b113cac3c",
+        "stage": "completed",
+        "path": "C:\\Users\\BiuBiu\\Documents\\my app\\amaya\\amaya-remote-extension\\test\\model-logs\\MODEL_PLACEHOLDER_M26\\1-cek-random-bug-secara-read-only-lalu-sebutkan-3-file-paling-relevan.json"
+      },
+      {
+        "ok": true,
+        "modelId": "MODEL_PLACEHOLDER_M26",
+        "label": "MODEL_PLACEHOLDER_M26",
+        "index": 2,
+        "cascadeId": "07a77c62-daaa-4531-825e-7daa3d0506a5",
+        "stage": "completed",
+        "path": "C:\\Users\\BiuBiu\\Documents\\my app\\amaya\\amaya-remote-extension\\test\\model-logs\\MODEL_PLACEHOLDER_M26\\2-cek-status-dokumentasi-secara-read-only-dan-ringkas-struktur-dokumen-utama.json"
+      },
+      {
+        "ok": true,
+        "modelId": "MODEL_PLACEHOLDER_M26",
+        "label": "MODEL_PLACEHOLDER_M26",
+        "index": 3,
+        "cascadeId": "7279633a-3e42-478e-9ada-a03a62a7b9dc",
+        "stage": "completed",
+        "path": "C:\\Users\\BiuBiu\\Documents\\my app\\amaya\\amaya-remote-extension\\test\\model-logs\\MODEL_PLACEHOLDER_M26\\3-cek-dependensi-project-secara-read-only-dan-sebutkan-potensi-risiko-versi.json"
+      },
+      {
+        "ok": true,
+        "modelId": "MODEL_PLACEHOLDER_M26",
+        "label": "MODEL_PLACEHOLDER_M26",
+        "index": 4,
+        "cascadeId": "87c37a5d-431f-4f3b-a99a-eafa81291601",
+        "stage": "completed",
+        "path": "C:\\Users\\BiuBiu\\Documents\\my app\\amaya\\amaya-remote-extension\\test\\model-logs\\MODEL_PLACEHOLDER_M26\\4-cek-alur-chat-secara-read-only-lalu-jelaskan-file-handler-yang-terlibat.json"
+      },
+      {
+        "ok": true,
+        "modelId": "MODEL_PLACEHOLDER_M26",
+        "label": "MODEL_PLACEHOLDER_M26",
+        "index": 5,
+        "cascadeId": "eaa42ae8-6f58-4b20-9170-ae2bb008d6a7",
+        "stage": "completed",
+        "path": "C:\\Users\\BiuBiu\\Documents\\my app\\amaya\\amaya-remote-extension\\test\\model-logs\\MODEL_PLACEHOLDER_M26\\5-cek-struktur-workspace-secara-read-only-dan-daftar-area-kode-yang-paling-aktif.json"
+      }
+    ],
+    "MODEL_PLACEHOLDER_M35": [
+      {
+        "ok": true,
+        "modelId": "MODEL_PLACEHOLDER_M35",
+        "label": "MODEL_PLACEHOLDER_M35",
+        "index": 1,
+        "cascadeId": "f8332f7f-02fb-4a8f-8fe6-185f12c922d3",
+        "stage": "completed",
+        "path": "C:\\Users\\BiuBiu\\Documents\\my app\\amaya\\amaya-remote-extension\\test\\model-logs\\MODEL_PLACEHOLDER_M35\\1-cek-random-bug-secara-read-only-lalu-sebutkan-kemungkinan-penyebabnya.json"
+      },
+      {
+        "ok": true,
+        "modelId": "MODEL_PLACEHOLDER_M35",
+        "label": "MODEL_PLACEHOLDER_M35",
+        "index": 2,
+        "cascadeId": "9760efd8-092e-4782-a66e-b402f558bc29",
+        "stage": "completed",
+        "path": "C:\\Users\\BiuBiu\\Documents\\my app\\amaya\\amaya-remote-extension\\test\\model-logs\\MODEL_PLACEHOLDER_M35\\2-cek-status-dokumentasi-secara-read-only-dan-identifikasi-file-yang-perlu-dibaca-.json"
+      },
+      {
+        "ok": true,
+        "modelId": "MODEL_PLACEHOLDER_M35",
+        "label": "MODEL_PLACEHOLDER_M35",
+        "index": 3,
+        "cascadeId": "38ebe1fd-c2f9-4d12-8c0e-b5a35f16a287",
+        "stage": "completed",
+        "path": "C:\\Users\\BiuBiu\\Documents\\my app\\amaya\\amaya-remote-extension\\test\\model-logs\\MODEL_PLACEHOLDER_M35\\3-cek-struktur-event-stream-secara-read-only-dan-jelaskan-komponen-utamanya.json"
+      },
+      {
+        "ok": true,
+        "modelId": "MODEL_PLACEHOLDER_M35",
+        "label": "MODEL_PLACEHOLDER_M35",
+        "index": 4,
+        "cascadeId": "9f4c3d63-8c6d-4512-b663-f702a870c05d",
+        "stage": "completed",
+        "path": "C:\\Users\\BiuBiu\\Documents\\my app\\amaya\\amaya-remote-extension\\test\\model-logs\\MODEL_PLACEHOLDER_M35\\4-cek-integrasi-extension-server-secara-read-only-dan-ringkas-jalur-request.json"
+      },
+      {
+        "ok": true,
+        "modelId": "MODEL_PLACEHOLDER_M35",
+        "label": "MODEL_PLACEHOLDER_M35",
+        "index": 5,
+        "cascadeId": "a8dd4fe0-801f-4ccc-a87a-3a4fa0882135",
+        "stage": "completed",
+        "path": "C:\\Users\\BiuBiu\\Documents\\my app\\amaya\\amaya-remote-extension\\test\\model-logs\\MODEL_PLACEHOLDER_M35\\5-cek-workspace-secara-read-only-dan-buat-daftar-area-yang-kemungkinan-sering-beru.json"
+      }
+    ]
+  }
+}

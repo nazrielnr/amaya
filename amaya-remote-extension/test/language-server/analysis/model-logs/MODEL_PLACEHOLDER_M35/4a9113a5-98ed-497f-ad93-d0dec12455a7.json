@@ -1,0 +1,1788 @@
+{
+  "modelId": "MODEL_PLACEHOLDER_M35",
+  "label": "MODEL_PLACEHOLDER_M35",
+  "index": 5,
+  "prompt": "cek workspace",
+  "cascadeId": "4a9113a5-98ed-497f-ad93-d0dec12455a7",
+  "startResponse": {
+    "status": 200,
+    "text": "{\"cascadeId\":\"4a9113a5-98ed-497f-ad93-d0dec12455a7\"}",
+    "json": {
+      "cascadeId": "4a9113a5-98ed-497f-ad93-d0dec12455a7"
+    }
+  },
+  "sendResponse": {
+    "status": 200,
+    "text": "{}",
+    "json": {}
+  },
+  "trajectory": {
+    "trajectory": {
+      "trajectoryId": "efcd3ec1-a136-417b-8aff-0eec4f025bba",
+      "cascadeId": "4a9113a5-98ed-497f-ad93-d0dec12455a7",
+      "trajectoryType": "CORTEX_TRAJECTORY_TYPE_CASCADE",
+      "steps": [
+        {
+          "type": "CORTEX_STEP_TYPE_USER_INPUT",
+          "status": "CORTEX_STEP_STATUS_DONE",
+          "metadata": {
+            "createdAt": "2026-03-23T02:03:19.292888Z",
+            "source": "CORTEX_STEP_SOURCE_USER_EXPLICIT",
+            "executionId": "b2e7b9f9-b239-4903-b549-d22461243a44",
+            "sourceTrajectoryStepInfo": {
+              "trajectoryId": "efcd3ec1-a136-417b-8aff-0eec4f025bba",
+              "cascadeId": "4a9113a5-98ed-497f-ad93-d0dec12455a7"
+            },
+            "internalMetadata": {
+              "statusTransitions": [
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+                  "timestamp": "2026-03-23T02:03:19.329566800Z"
+                }
+              ]
+            }
+          },
+          "userInput": {
+            "items": [
+              {
+                "text": "cek workspace"
+              }
+            ],
+            "userResponse": "cek workspace",
+            "activeUserState": {
+              "activeDocument": {
+                "absoluteUri": "file:///c:/Users/BiuBiu/Documents/my%20app/amaya/app/src/main/java/com/amaya/intelligence/impl/ide/antigravity/services/event/ToolCallEventHandler.kt",
+                "workspaceUri": "file:///c:/Users/BiuBiu/Documents/my%20app/amaya",
+                "editorLanguage": "plaintext",
+                "language": "LANGUAGE_KOTLIN",
+                "cursorPosition": {},
+                "lineEnding": "\n"
+              },
+              "openDocuments": [
+                {
+                  "absoluteUri": "file:///c:/Users/BiuBiu/Documents/my%20app/amaya/app/src/main/java/com/amaya/intelligence/impl/ide/antigravity/services/event/ToolCallEventHandler.kt",
+                  "workspaceUri": "file:///c:/Users/BiuBiu/Documents/my%20app/amaya",
+                  "editorLanguage": "plaintext",
+                  "language": "LANGUAGE_KOTLIN",
+                  "lineEnding": "\n"
+                }
+              ]
+            },
+            "userConfig": {
+              "plannerConfig": {
+                "planModel": "MODEL_PLACEHOLDER_M35",
+                "requestedModel": {
+                  "model": "MODEL_PLACEHOLDER_M35"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "CORTEX_STEP_TYPE_CONVERSATION_HISTORY",
+          "status": "CORTEX_STEP_STATUS_DONE",
+          "metadata": {
+            "createdAt": "2026-03-23T02:03:19.329566800Z",
+            "completedAt": "2026-03-23T02:03:19.340555200Z",
+            "source": "CORTEX_STEP_SOURCE_SYSTEM",
+            "executionId": "b2e7b9f9-b239-4903-b549-d22461243a44",
+            "sourceTrajectoryStepInfo": {
+              "trajectoryId": "efcd3ec1-a136-417b-8aff-0eec4f025bba",
+              "stepIndex": 1,
+              "cascadeId": "4a9113a5-98ed-497f-ad93-d0dec12455a7"
+            },
+            "internalMetadata": {
+              "statusTransitions": [
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_PENDING",
+                  "timestamp": "2026-03-23T02:03:19.329566800Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_RUNNING",
+                  "timestamp": "2026-03-23T02:03:19.329566800Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+                  "timestamp": "2026-03-23T02:03:19.340555200Z"
+                }
+              ]
+            }
+          },
+          "conversationHistory": {
+            "content": "# Conversation History\nHere are the conversation IDs, titles, and summaries of your most recent 20 conversations, in reverse chronological order:\n\n<conversation_summaries>\n## Conversation 071d134c-48e1-43ae-8bee-455415bbd956: Workspace Directory Listing\n- Created: 2026-03-23T02:03:03Z\n- Last modified: 2026-03-23T02:03:18Z\n\n### USER Objective:\nWorkspace Directory Listing\nThe user wants to list the contents of the \"c:\\Users\\BiuBiu\\Documents\\my app\\amaya\" directory to understand the project structure and identify key files and directories for further actions. They have executed the `list_dir` command and are now reviewing the output.\n\n## Conversation a00a82c0-eb1c-4473-a8e4-7ff8ec17cbf6: Workspace Directory Listing\n- Created: 2026-03-23T02:02:49Z\n- Last modified: 2026-03-23T02:03:02Z\n\n### USER Objective:\nWorkspace Directory Listing\nThe user wants to list the contents of the \"c:\\Users\\BiuBiu\\Documents\\my app\\amaya\" directory to understand the project structure and identify key files and directories for further actions. They have executed the `list_dir` command and are now reviewing the output.\n\n## Conversation 9e9ed18d-2e9e-4b4f-b6de-5b2dcbc97322: Workspace Directory Listing\n- Created: 2026-03-23T02:02:32Z\n- Last modified: 2026-03-23T02:02:47Z\n\n### USER Objective:\nWorkspace Directory Listing\nThe user wants to list the contents of the \"c:\\Users\\BiuBiu\\Documents\\my app\\amaya\" directory to understand the project structure and identify key files and directories for further actions. They have executed the `list_dir` command and are now reviewing the output.\n\n## Conversation cac584c6-c8cd-4f08-a7fe-54bdfb2ba9b1: Workspace Directory Listing\n- Created: 2026-03-23T02:02:14Z\n- Last modified: 2026-03-23T02:02:32Z\n\n### USER Objective:\nWorkspace Directory Listing\n\nThe user wants to list the contents of the \"c:\\Users\\BiuBiu\\Documents\\my app\\amaya\" directory to understand the project structure and identify key files and directories for further actions. They have executed the `list_dir` command and are now reviewing the output.\n\n## Conversation d7560910-893b-401d-a53c-667888c69a0d: Workspace Check\n- Created: 2026-03-22T20:28:19Z\n- Last modified: 2026-03-22T20:28:48Z\n\n### USER Objective:\nWorkspace Check\n\nThe user wants to check the workspace. They have listed several Kotlin files that are currently open and have also initiated a directory listing of the 'amaya' directory.\n\n## Conversation c4df5971-da65-4775-a2c8-26325910d18d: Bug Check\n- Created: 2026-03-22T20:27:04Z\n- Last modified: 2026-03-22T20:28:02Z\n\n### USER Objective:\nBug Check\n\nThe user wants to check for bugs in the provided Kotlin files. They have opened `RemoteSessionClient.kt`, `AntigravityToolMapper.kt`, `AntigravityMessageMapper.kt`, `ToolCallEventHandler.kt`, and `LocalAgentScreen.kt` and want to inspect their contents for any issues.\n\n## Conversation 6b860271-515a-4783-a759-71a6ef7b0db5: Bug Check\n- Created: 2026-03-22T20:19:02Z\n- Last modified: 2026-03-22T20:19:36Z\n\n### USER Objective:\nBug Check\nThe user wants to check for bugs in the provided TypeScript and Kotlin files. They have opened `AntigravityClient.ts`, `LocalMcpScreen.kt`, and `AgentList.kt` and want to inspect their contents for any issues.\n\n## Conversation b1dec407-90dc-4762-aa08-f6b41eef334b: \n- Created: 2026-03-22T19:12:11Z\n- Last modified: 2026-03-22T19:12:12Z\n\n## Conversation b9b8a54e-588a-4515-b517-a3b751b838c9: Generating Short Conversation Title\n- Created: 2026-03-21T16:35:23Z\n- Last modified: 2026-03-21T16:35:27Z\n\n### USER Objective:\nGenerating Short Conversation Title\nThe user wants to generate a short conversation title (3-5 words, title-cased) that accurately reflects their intent and goals for the current chat. They also want a clear, action-oriented description of their main objective and goals for the chat, potentially drawing from previous summaries.\n\n## Conversation e9389a91-6806-43a0-846d-6c040e9d8a26: Refining Antigravity ToolMapper\n- Created: 2026-03-19T17:36:50Z\n- Last modified: 2026-03-19T17:36:53Z\n\n### USER Objective:\nRefining Antigravity ToolMapper\nThe user's objective is to refine the `AntigravityToolMapper.kt` file. This involves understanding its current implementation, identifying areas for improvement, and making necessary modifications to enhance its functionality and efficiency within the Antigravity IDE extension. The user aims to ensure the tool mapper is robust and effectively supports the IDE's operations.\n\n## Conversation cd977e1e-6da0-400b-8e58-0b2c99cdfa0c: Refining Antigravity ToolMapper\n- Created: 2026-03-19T17:25:47Z\n- Last modified: 2026-03-19T17:29:03Z\n\n### USER Objective:\nRefining Antigravity ToolMapper\nThe user's objective is to refine the `AntigravityToolMapper.kt` file. This involves understanding its current implementation, identifying areas for improvement, and making necessary modifications to enhance its functionality and efficiency within the Antigravity IDE extension. The user aims to ensure the tool mapper is robust and effectively supports the IDE's operations.\n\n## Conversation d5321042-9fe4-4ba0-b29e-3248c1144976: Refining Antigravity ToolMapper\n- Created: 2026-03-19T17:01:53Z\n- Last modified: 2026-03-19T17:01:57Z\n\n### USER Objective:\nRefining Antigravity ToolMapper\n\nThe user's objective is to refine the `AntigravityToolMapper.kt` file. This involves understanding its current implementation, identifying areas for improvement, and making necessary modifications to enhance its functionality and efficiency within the Antigravity IDE extension. The user aims to ensure the tool mapper is robust and effectively supports the IDE's operations.\n\n## Conversation 4948a0a9-97f2-49f9-8261-4e7bfd10a075: Refining Antigravity ToolMapper\n- Created: 2026-03-19T02:10:24Z\n- Last modified: 2026-03-19T02:10:31Z\n\n### USER Objective:\nRefining Antigravity ToolMapper\n\nThe user's objective is to refine the `AntigravityToolMapper.kt` file. This involves understanding its current implementation, identifying areas for improvement, and making necessary modifications to enhance its functionality and efficiency within the Antigravity IDE extension. The user aims to ensure the tool mapper is robust and effectively supports the IDE's operations.\n\n## Conversation 731406dc-7835-48b6-ba6e-15247ce57ce4: Checking Workspace Files\n- Created: 2026-03-18T03:38:06Z\n- Last modified: 2026-03-18T03:38:51Z\n\n### USER Objective:\nChecking Workspace Files\nThe user wants to explore the contents of the `c:\\Users\\BiuBiu\\Documents\\my app\\amaya` directory to understand the project structure and identify key files and directories for further actions. This involves reviewing the output of the `list_dir` command.\n\n## Conversation dda8ed22-2278-4330-8179-fb4cf49d48f5: Checking Workspace Files\n- Created: 2026-03-18T01:37:59Z\n- Last modified: 2026-03-18T01:38:40Z\n\n### USER Objective:\nChecking Workspace Files\nThe user wants to explore the contents of the `c:\\Users\\BiuBiu\\Documents\\my app\\amaya` directory to understand the project structure and identify key files and directories for further actions. This involves reviewing the output of the `list_dir` command.\n\n## Conversation 1525d2f4-8b4d-4aa7-bd95-4a6a3659ab98: Checking Workspace Files\n- Created: 2026-03-17T23:36:29Z\n- Last modified: 2026-03-17T23:37:00Z\n\n### USER Objective:\nChecking Workspace Files\nThe user wants to examine the contents of the `c:\\Users\\BiuBiu\\Documents\\my app\\amaya` directory to understand the project structure and identify any relevant files or directories for further actions. This involves reviewing the output of the `list_dir` command.\n\n## Conversation 5a3b4b7b-9070-4953-a523-2b61b13d2725: AI Chat UI Components\n- Created: 2026-03-17T23:36:09Z\n- Last modified: 2026-03-17T23:36:13Z\n\n### USER Objective:\nAI Chat UI Components\nThe user wants to generate a short, title-cased conversation title (3-5 words) that accurately reflects their intent and goals for this chat session. They also want a clear, action-oriented summary of their main objective and goals, potentially building upon previous discussions or checkpoints, to guide the current interaction.\n\n## Conversation 62b63472-344b-4507-94c1-b9613986be38: AI Chat UI Components\n- Created: 2026-03-17T23:35:49Z\n- Last modified: 2026-03-17T23:35:53Z\n\n### USER Objective:\nAI Chat UI Components\nThe user wants to generate a short, title-cased conversation title (3-5 words) that accurately reflects their intent and goals for this chat session. They also want a clear, action-oriented summary of their main objective and goals, potentially building upon previous discussions or checkpoints, to guide the current interaction.\n\n## Conversation 192657e6-2c8f-45d2-af69-5e74f9aaf286: Starting New Conversation\n- Created: 2026-03-17T22:47:40Z\n- Last modified: 2026-03-17T22:54:09Z\n\n### USER Objective:\nStarting New Conversation\nThe user wants to start a new conversation. The main goal is to establish a clear and concise title for the current chat session, reflecting the user's intent and objectives. Additionally, the user aims to articulate their primary objective and goals for this chat in an action-oriented manner, potentially building upon previous discussions or checkpoints.\n\n## Conversation 4e049e63-0ade-48d7-af2b-e0e739852dfd: Checking Workspace\n- Created: 2026-03-16T22:28:53Z\n- Last modified: 2026-03-16T22:29:07Z\n\n### USER Objective:\nChecking Workspace\nThe user wants to check the workspace using the terminal. They have executed the `dir` command in the `c:\\Users\\BiuBiu\\Documents\\my app\\amaya` directory. The output indicates that a background command was run. The next step is to review the output of the `dir` command to understand the workspace contents.\n\n</conversation_summaries>"
+          }
+        },
+        {
+          "type": "CORTEX_STEP_TYPE_EPHEMERAL_MESSAGE",
+          "status": "CORTEX_STEP_STATUS_DONE",
+          "metadata": {
+            "createdAt": "2026-03-23T02:03:19.329566800Z",
+            "completedAt": "2026-03-23T02:03:19.340555200Z",
+            "source": "CORTEX_STEP_SOURCE_SYSTEM",
+            "executionId": "b2e7b9f9-b239-4903-b549-d22461243a44",
+            "sourceTrajectoryStepInfo": {
+              "trajectoryId": "efcd3ec1-a136-417b-8aff-0eec4f025bba",
+              "stepIndex": 2,
+              "cascadeId": "4a9113a5-98ed-497f-ad93-d0dec12455a7"
+            },
+            "internalMetadata": {
+              "statusTransitions": [
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_PENDING",
+                  "timestamp": "2026-03-23T02:03:19.329566800Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_RUNNING",
+                  "timestamp": "2026-03-23T02:03:19.340555200Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+                  "timestamp": "2026-03-23T02:03:19.340555200Z"
+                }
+              ]
+            }
+          },
+          "ephemeralMessage": {}
+        },
+        {
+          "type": "CORTEX_STEP_TYPE_PLANNER_RESPONSE",
+          "status": "CORTEX_STEP_STATUS_DONE",
+          "metadata": {
+            "stepGenerationVersion": 1,
+            "createdAt": "2026-03-23T02:03:19.344919300Z",
+            "viewableAt": "2026-03-23T02:03:21.672614300Z",
+            "finishedGeneratingAt": "2026-03-23T02:03:22.919112Z",
+            "completedAt": "2026-03-23T02:03:22.919112Z",
+            "source": "CORTEX_STEP_SOURCE_MODEL",
+            "generatorModel": "MODEL_PLACEHOLDER_M35",
+            "requestedModel": {
+              "model": "MODEL_PLACEHOLDER_M35"
+            },
+            "executionId": "b2e7b9f9-b239-4903-b549-d22461243a44",
+            "sourceTrajectoryStepInfo": {
+              "trajectoryId": "efcd3ec1-a136-417b-8aff-0eec4f025bba",
+              "stepIndex": 3,
+              "cascadeId": "4a9113a5-98ed-497f-ad93-d0dec12455a7"
+            },
+            "internalMetadata": {
+              "statusTransitions": [
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_GENERATING",
+                  "timestamp": "2026-03-23T02:03:21.672614300Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+                  "timestamp": "2026-03-23T02:03:22.919112Z"
+                }
+              ]
+            }
+          },
+          "plannerResponse": {
+            "thinking": "The user wants to check their workspace. Let me list the directory contents of their workspace.",
+            "thinkingSignature": "RW9rQ0NrZ0lDeEFDR0FJcVFITU9qaUdDNUFyTTNOOGxkUTNNSkhqUXk5akI4Q0dHV29IWDRVWjdBa2gzNmVMS2dRQitqSHovUFRzTDdCNXM2aWRrRjVjOEY1YkhRbC93VHFmajdaMFNERHU0d0RBOXZBWm51T0FJZkJvTWZxZmtZYTVXY3dIUVllazFJakMvL3hoK3FpN1ZLYzh4dFVzZkw1N3NUQTU1Y3Nkc1liS1c1UHFyS3FKdzB3RFIvUjR2aWdCSXBSTVB1TmlKc3hRcWIwazZYR2pkcUJacG52WVAxQ2tLQi9xdCtuNnkzbDJRT1NqMUdmbEw4cWtZVVMxeCtkSXZtMjZqeUp6UVZkOHhuYy9VV0xTN291YmNBck5DY20yR2lnVVltcTBFalllcW1uVUZ5QUwzUjFqelNKQWlma2lWZE1BME5seGExY1drK0hxaFpSTjdYWHkzR2lhc2Q3VjlUaGdC",
+            "messageId": "bot-61362ea3-92b4-4629-875d-efdba8d86d74",
+            "toolCalls": [
+              {
+                "id": "toolu_vrtx_018J7maFxCpAfUvpAjhameZo",
+                "name": "list_dir",
+                "argumentsJson": "{\"DirectoryPath\":\"c:\\\\Users\\\\BiuBiu\\\\Documents\\\\my app\\\\amaya\"}"
+              }
+            ],
+            "thinkingDuration": "1.245955700s",
+            "stopReason": "STOP_REASON_STOP_PATTERN"
+          }
+        },
+        {
+          "type": "CORTEX_STEP_TYPE_LIST_DIRECTORY",
+          "status": "CORTEX_STEP_STATUS_DONE",
+          "metadata": {
+            "stepGenerationVersion": 1,
+            "createdAt": "2026-03-23T02:03:22.918570Z",
+            "viewableAt": "2026-03-23T02:03:22.918570Z",
+            "finishedGeneratingAt": "2026-03-23T02:03:22.918570Z",
+            "lastCompletedChunkAt": "2026-03-23T02:03:22.918570Z",
+            "completedAt": "2026-03-23T02:03:22.920328700Z",
+            "source": "CORTEX_STEP_SOURCE_MODEL",
+            "toolCall": {
+              "id": "toolu_vrtx_018J7maFxCpAfUvpAjhameZo",
+              "name": "list_dir",
+              "argumentsJson": "{\"DirectoryPath\":\"c:\\\\Users\\\\BiuBiu\\\\Documents\\\\my app\\\\amaya\"}"
+            },
+            "argumentsOrder": [
+              "DirectoryPath"
+            ],
+            "generatorModel": "MODEL_PLACEHOLDER_M35",
+            "requestedModel": {
+              "model": "MODEL_PLACEHOLDER_M35"
+            },
+            "executionId": "b2e7b9f9-b239-4903-b549-d22461243a44",
+            "toolCallOutputTokens": 15,
+            "sourceTrajectoryStepInfo": {
+              "trajectoryId": "efcd3ec1-a136-417b-8aff-0eec4f025bba",
+              "stepIndex": 4,
+              "cascadeId": "4a9113a5-98ed-497f-ad93-d0dec12455a7"
+            },
+            "internalMetadata": {
+              "statusTransitions": [
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_PENDING",
+                  "timestamp": "2026-03-23T02:03:22.918570Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_RUNNING",
+                  "timestamp": "2026-03-23T02:03:22.919112Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+                  "timestamp": "2026-03-23T02:03:22.920328700Z"
+                }
+              ]
+            }
+          },
+          "listDirectory": {
+            "directoryPathUri": "file:///c:/Users/BiuBiu/Documents/my%20app/amaya",
+            "results": [
+              {
+                "name": ".git",
+                "isDir": true
+              },
+              {
+                "name": ".gitignore",
+                "sizeBytes": "3961"
+              },
+              {
+                "name": ".gradle",
+                "isDir": true
+              },
+              {
+                "name": ".kotlin",
+                "isDir": true
+              },
+              {
+                "name": "AGENTSuhybvjh.md",
+                "sizeBytes": "131768"
+              },
+              {
+                "name": "ChatScreen.kt",
+                "sizeBytes": "82909"
+              },
+              {
+                "name": "LOCALHOST_LINK_FEATURE.md"
+              },
+              {
+                "name": "amaya-remote-extension",
+                "isDir": true
+              },
+              {
+                "name": "app",
+                "isDir": true
+              },
+              {
+                "name": "build",
+                "isDir": true
+              },
+              {
+                "name": "build.gradle.kts",
+                "sizeBytes": "359"
+              },
+              {
+                "name": "file_type_icons.txt",
+                "sizeBytes": "21710"
+              },
+              {
+                "name": "gradle",
+                "isDir": true
+              },
+              {
+                "name": "gradle.properties",
+                "sizeBytes": "1015"
+              },
+              {
+                "name": "gradlew",
+                "sizeBytes": "1487"
+              },
+              {
+                "name": "gradlew.bat",
+                "sizeBytes": "2091"
+              },
+              {
+                "name": "jnkedf.txt",
+                "sizeBytes": "1110715"
+              },
+              {
+                "name": "local.properties",
+                "sizeBytes": "248"
+              },
+              {
+                "name": "sdfvb.txt",
+                "sizeBytes": "116"
+              },
+              {
+                "name": "settings.gradle.kts",
+                "sizeBytes": "618"
+              },
+              {
+                "name": "temp_service.txt",
+                "sizeBytes": "44889"
+              },
+              {
+                "name": "test_server.js",
+                "sizeBytes": "949"
+              },
+              {
+                "name": "test_server.py",
+                "sizeBytes": "1131"
+              }
+            ]
+          }
+        },
+        {
+          "type": "CORTEX_STEP_TYPE_CHECKPOINT",
+          "status": "CORTEX_STEP_STATUS_DONE",
+          "metadata": {
+            "createdAt": "2026-03-23T02:03:22.920864900Z",
+            "completedAt": "2026-03-23T02:03:23.996582800Z",
+            "source": "CORTEX_STEP_SOURCE_SYSTEM",
+            "modelUsage": {
+              "model": "MODEL_GOOGLE_GEMINI_2_5_FLASH_LITE",
+              "inputTokens": "4184",
+              "outputTokens": "63",
+              "responseOutputTokens": "63",
+              "apiProvider": "API_PROVIDER_GOOGLE_GEMINI",
+              "responseHeader": {
+                "sessionID": "-3750763034362895579"
+              },
+              "responseId": "a5_AacKxNvXcjuMPiLKRqAM"
+            },
+            "retryInfos": [
+              {
+                "usage": {
+                  "model": "MODEL_GOOGLE_GEMINI_2_5_FLASH_LITE",
+                  "inputTokens": "4184",
+                  "outputTokens": "63",
+                  "responseOutputTokens": "63",
+                  "apiProvider": "API_PROVIDER_GOOGLE_GEMINI",
+                  "responseHeader": {
+                    "sessionID": "-3750763034362895579"
+                  },
+                  "responseId": "a5_AacKxNvXcjuMPiLKRqAM"
+                }
+              }
+            ],
+            "executionId": "b2e7b9f9-b239-4903-b549-d22461243a44",
+            "sourceTrajectoryStepInfo": {
+              "trajectoryId": "efcd3ec1-a136-417b-8aff-0eec4f025bba",
+              "stepIndex": 5,
+              "metadataIndex": 1,
+              "cascadeId": "4a9113a5-98ed-497f-ad93-d0dec12455a7"
+            },
+            "internalMetadata": {
+              "statusTransitions": [
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_PENDING",
+                  "timestamp": "2026-03-23T02:03:22.920864900Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_RUNNING",
+                  "timestamp": "2026-03-23T02:03:22.920864900Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+                  "timestamp": "2026-03-23T02:03:23.996582800Z"
+                }
+              ]
+            }
+          },
+          "checkpoint": {
+            "intentOnly": true,
+            "includedStepIndexEnd": 5,
+            "userIntent": "Workspace Directory Listing\nThe user wants to list the contents of the \"c:\\Users\\BiuBiu\\Documents\\my app\\amaya\" directory to understand the project structure and identify key files and directories for further actions. They have executed the `list_dir` command and are now reviewing the output.",
+            "conversationLogUris": [
+              "file:///C:/Users/BiuBiu/.gemini/antigravity/brain/4a9113a5-98ed-497f-ad93-d0dec12455a7/.system_generated/logs/overview.txt"
+            ],
+            "userRequests": [
+              "cek workspace"
+            ]
+          }
+        },
+        {
+          "type": "CORTEX_STEP_TYPE_EPHEMERAL_MESSAGE",
+          "status": "CORTEX_STEP_STATUS_DONE",
+          "metadata": {
+            "createdAt": "2026-03-23T02:03:22.921387100Z",
+            "completedAt": "2026-03-23T02:03:22.921387100Z",
+            "source": "CORTEX_STEP_SOURCE_SYSTEM",
+            "executionId": "b2e7b9f9-b239-4903-b549-d22461243a44",
+            "sourceTrajectoryStepInfo": {
+              "trajectoryId": "efcd3ec1-a136-417b-8aff-0eec4f025bba",
+              "stepIndex": 6,
+              "metadataIndex": 1,
+              "cascadeId": "4a9113a5-98ed-497f-ad93-d0dec12455a7"
+            },
+            "internalMetadata": {
+              "statusTransitions": [
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_PENDING",
+                  "timestamp": "2026-03-23T02:03:22.921387100Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_RUNNING",
+                  "timestamp": "2026-03-23T02:03:22.921387100Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+                  "timestamp": "2026-03-23T02:03:22.921387100Z"
+                }
+              ]
+            }
+          },
+          "ephemeralMessage": {}
+        },
+        {
+          "type": "CORTEX_STEP_TYPE_PLANNER_RESPONSE",
+          "status": "CORTEX_STEP_STATUS_DONE",
+          "metadata": {
+            "stepGenerationVersion": 1,
+            "createdAt": "2026-03-23T02:03:22.925671200Z",
+            "viewableAt": "2026-03-23T02:03:24.568747200Z",
+            "finishedGeneratingAt": "2026-03-23T02:03:32.846639700Z",
+            "completedAt": "2026-03-23T02:03:32.846639700Z",
+            "source": "CORTEX_STEP_SOURCE_MODEL",
+            "generatorModel": "MODEL_PLACEHOLDER_M35",
+            "requestedModel": {
+              "model": "MODEL_PLACEHOLDER_M35"
+            },
+            "executionId": "b2e7b9f9-b239-4903-b549-d22461243a44",
+            "sourceTrajectoryStepInfo": {
+              "trajectoryId": "efcd3ec1-a136-417b-8aff-0eec4f025bba",
+              "stepIndex": 7,
+              "metadataIndex": 1,
+              "cascadeId": "4a9113a5-98ed-497f-ad93-d0dec12455a7"
+            },
+            "internalMetadata": {
+              "statusTransitions": [
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_GENERATING",
+                  "timestamp": "2026-03-23T02:03:24.568747200Z"
+                },
+                {
+                  "updatedStatus": "CORTEX_STEP_STATUS_DONE",
+                  "timestamp": "2026-03-23T02:03:32.846639700Z"
+                }
+              ]
+            }
+          },
+          "plannerResponse": {
+            "response": "Berikut adalah isi workspace **`amaya`** milikmu:\n\n## 📁 Struktur Workspace\n\n### 📂 Direktori\n| Nama | Keterangan |\n|------|-----------|\n| `.git` | Version control Git |\n| `.gradle` | Cache Gradle |\n| `.kotlin` | Kotlin build cache |\n| `amaya-remote-extension` | Modul ekstensi remote |\n| `app` | Modul utama aplikasi Android |\n| `build` | Output build |\n| `gradle` | Wrapper Gradle |\n\n### 📄 File Penting\n| Nama | Ukuran | Keterangan |\n|------|--------|-----------|\n| `build.gradle.kts` | 359 B | Konfigurasi build root |\n| `settings.gradle.kts` | 618 B | Pengaturan project Gradle |\n| `gradle.properties` | 1.0 KB | Properti Gradle |\n| `local.properties` | 248 B | Konfigurasi lokal (SDK path) |\n| `.gitignore` | 3.9 KB | Git ignore rules |\n| `ChatScreen.kt` | ~81 KB | File Kotlin (besar, sepertinya UI utama) |\n| `AGENTSuhybvjh.md` | ~129 KB | File markdown agent |\n| `LOCALHOST_LINK_FEATURE.md` | - | Dokumentasi fitur localhost link |\n\n### 🗂️ File Lain-lain\n- `test_server.js` & `test_server.py` — script test server\n- `jnkedf.txt` (1.1 MB), `temp_service.txt` (44 KB), `file_type_icons.txt` (21 KB) — file teks sementara/referensi\n\n---\n\nWorkspace ini adalah **project Android** berbasis Kotlin dengan dua modul utama: `app` dan `amaya-remote-extension`. Ada yang ingin kamu kerjakan selanjutnya?",
+            "modifiedResponse": "Berikut adalah isi workspace **`amaya`** milikmu:\n\n## 📁 Struktur Workspace\n\n### 📂 Direktori\n| Nama | Keterangan |\n|------|-----------|\n| `.git` | Version control Git |\n| `.gradle` | Cache Gradle |\n| `.kotlin` | Kotlin build cache |\n| `amaya-remote-extension` | Modul ekstensi remote |\n| `app` | Modul utama aplikasi Android |\n| `build` | Output build |\n| `gradle` | Wrapper Gradle |\n\n### 📄 File Penting\n| Nama | Ukuran | Keterangan |\n|------|--------|-----------|\n| [build.gradle.kts](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/build.gradle.kts:0:0-0:0) | 359 B | Konfigurasi build root |\n| [settings.gradle.kts](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/settings.gradle.kts:0:0-0:0) | 618 B | Pengaturan project Gradle |\n| [gradle.properties](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/gradle.properties:0:0-0:0) | 1.0 KB | Properti Gradle |\n| [local.properties](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/local.properties:0:0-0:0) | 248 B | Konfigurasi lokal (SDK path) |\n| [.gitignore](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/.gitignore:0:0-0:0) | 3.9 KB | Git ignore rules |\n| [ChatScreen.kt](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/ChatScreen.kt:0:0-0:0) | ~81 KB | File Kotlin (besar, sepertinya UI utama) |\n| [AGENTSuhybvjh.md](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/AGENTSuhybvjh.md:0:0-0:0) | ~129 KB | File markdown agent |\n| [LOCALHOST_LINK_FEATURE.md](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/LOCALHOST_LINK_FEATURE.md:0:0-0:0) | - | Dokumentasi fitur localhost link |\n\n### 🗂️ File Lain-lain\n- [test_server.js](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/test_server.js:0:0-0:0) & [test_server.py](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/test_server.py:0:0-0:0) — script test server\n- [jnkedf.txt](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/jnkedf.txt:0:0-0:0) (1.1 MB), [temp_service.txt](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/temp_service.txt:0:0-0:0) (44 KB), [file_type_icons.txt](cci:7://file:///c:/Users/BiuBiu/Documents/my%20app/amaya/file_type_icons.txt:0:0-0:0) (21 KB) — file teks sementara/referensi\n\n---\n\nWorkspace ini adalah **project Android** berbasis Kotlin dengan dua modul utama: `app` dan `amaya-remote-extension`. Ada yang ingin kamu kerjakan selanjutnya?",
+            "messageId": "bot-95b69e2d-c80f-4a28-bffc-067c05eb089e",
+            "stopReason": "STOP_REASON_STOP_PATTERN"
+          }
+        }
+      ],
+      "generatorMetadata": [
+        {
+          "stepIndices": [
+            3,
+            4
+          ],
+          "chatModel": {
+            "model": "MODEL_PLACEHOLDER_M35",
+            "usage": {
+              "model": "MODEL_PLACEHOLDER_M35",
+              "inputTokens": "4213",
+              "outputTokens": "96",
+              "responseOutputTokens": "96",
+              "cacheReadTokens": "20100",
+              "apiProvider": "API_PROVIDER_ANTHROPIC_VERTEX",
+              "responseHeader": {
+                "sessionID": "-3750763034362895579"
+              },
+              "responseId": "req_vrtx_011CZKBypZZn8FCYTjQR6BVg"
+            },
+            "lastCacheIndex": 1,
+            "toolChoice": {
+              "optionName": "auto"
+            },
+            "chatStartMetadata": {
+              "createdAt": "2026-03-23T02:03:19.344919300Z",
+              "checkpointIndex": -1,
+              "latestStableMessageIndex": 1,
+              "cacheBreakpoints": [
+                {
+                  "index": 1,
+                  "options": {
+                    "type": "CACHE_CONTROL_TYPE_EPHEMERAL"
+                  },
+                  "contentChecksum": "efdeb367"
+                }
+              ],
+              "systemPromptCache": {
+                "options": {
+                  "type": "CACHE_CONTROL_TYPE_EPHEMERAL"
+                },
+                "contentChecksum": "e98895e0"
+              },
+              "timeSinceLastInvocation": "0s",
+              "contextWindowMetadata": {
+                "estimatedTokensUsed": 3463,
+                "tokenBreakdown": {
+                  "groups": [
+                    {
+                      "name": "Chat Messages",
+                      "type": "TOKEN_TYPE_CHAT_MESSAGES",
+                      "numTokens": 3463,
+                      "children": [
+                        {
+                          "name": "0: USER_INPUT",
+                          "numTokens": 236
+                        },
+                        {
+                          "name": "1: CONVERSATION_HISTORY",
+                          "numTokens": 3227
+                        }
+                      ]
+                    }
+                  ],
+                  "totalTokens": 3463
+                }
+              }
+            },
+            "timeToFirstToken": "2.327695s",
+            "streamingDuration": "1.246497700s",
+            "completionConfig": {
+              "numCompletions": "1",
+              "maxTokens": "16384",
+              "maxNewlines": "200",
+              "temperature": 0.4,
+              "firstTemperature": 0.4,
+              "topK": "50",
+              "topP": 1,
+              "stopPatterns": [
+                "<|user|>",
+                "<|bot|>",
+                "<|context_request|>",
+                "<|endoftext|>",
+                "<|end_of_turn|>"
+              ],
+              "fimEotProbThreshold": 1
+            },
+            "retryInfos": [
+              {
+                "usage": {
+                  "model": "MODEL_PLACEHOLDER_M35",
+                  "inputTokens": "4213",
+                  "outputTokens": "96",
+                  "responseOutputTokens": "96",
+                  "cacheReadTokens": "20100",
+                  "apiProvider": "API_PROVIDER_ANTHROPIC_VERTEX",
+                  "responseHeader": {
+                    "sessionID": "-3750763034362895579"
+                  },
+                  "responseId": "req_vrtx_011CZKBypZZn8FCYTjQR6BVg"
+                },
+                "traceId": "c8419e4b5892048"
+              }
+            ],
+            "responseModel": "claude-sonnet-4-6"
+          },
+          "executionId": "b2e7b9f9-b239-4903-b549-d22461243a44"
+        },
+        {
+          "stepIndices": [
+            7
+          ],
+          "chatModel": {
+            "systemPrompt": "<identity>\nYou are Antigravity, a powerful agentic AI coding assistant designed by the Google Deepmind team working on Advanced Agentic Coding.\nYou are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question.\nThe USER will send you requests, which you must always prioritize addressing. Along with each USER request, we will attach additional metadata about their current state, such as what files they have open and where their cursor is.\nThis information may or may not be relevant to the coding task, it is up for you to decide.\n</identity>\n\n<tool_calling>\nCall tools as you normally would. The following list provides additional guidance to help you avoid errors:   - **Absolute paths only**. When using tools that accept file path arguments, ALWAYS use the absolute file path.\n</tool_calling>\n\n<web_application_development>\n## Technology Stack,\nYour web applications should be built using the following technologies:,\n1. **Core**: Use HTML for structure and Javascript for logic.\n2. **Styling (CSS)**: Use Vanilla CSS for maximum flexibility and control. Avoid using TailwindCSS unless the USER explicitly requests it; in this case, first confirm which TailwindCSS version to use.\n3. **Web App**: If the USER specifies that they want a more complex web app, use a framework like Next.js or Vite. Only do this if the USER explicitly requests a web app.\n4. **New Project Creation**: If you need to use a framework for a new app, use `npx` with the appropriate script, but there are some rules to follow:,\n   - Use `npx -y` to automatically install the script and its dependencies\n   - You MUST run the command with `--help` flag to see all available options first, \n   - Initialize the app in the current directory with `./` (example: `npx -y create-vite-app@latest ./`),\n   - You should run in non-interactive mode so that the user doesn't need to input anything,\n5. **Running Locally**: When running locally, use `npm run dev` or equivalent dev server. Only build the production bundle if the USER explicitly requests it or you are validating the code for correctness.\n\n# Design Aesthetics,\n1. **Use Rich Aesthetics**: The USER should be wowed at first glance by the design. Use best practices in modern web design (e.g. vibrant colors, dark modes, glassmorphism, and dynamic animations) to create a stunning first impression. Failure to do this is UNACCEPTABLE.\n2. **Prioritize Visual Excellence**: Implement designs that will WOW the user and feel extremely premium:\n\t\t- Avoid generic colors (plain red, blue, green). Use curated, harmonious color palettes (e.g., HSL tailored colors, sleek dark modes).\n   - Using modern typography (e.g., from Google Fonts like Inter, Roboto, or Outfit) instead of browser defaults.\n\t\t- Use smooth gradients,\n\t\t- Add subtle micro-animations for enhanced user experience,\n3. **Use a Dynamic Design**: An interface that feels responsive and alive encourages interaction. Achieve this with hover effects and interactive elements. Micro-animations, in particular, are highly effective for improving user engagement.\n4. **Premium Designs**. Make a design that feels premium and state of the art. Avoid creating simple minimum viable products.\n4. **Don't use placeholders**. If you need an image, use your generate_image tool to create a working demonstration.,\n\n## Implementation Workflow,\nFollow this systematic approach when building web applications:,\n1. **Plan and Understand**:,\n\t\t- Fully understand the user's requirements,\n\t\t- Draw inspiration from modern, beautiful, and dynamic web designs,\n\t\t- Outline the features needed for the initial version,\n2. **Build the Foundation**:,\n\t\t- Start by creating/modifying `index.css`,\n\t\t- Implement the core design system with all tokens and utilities,\n3. **Create Components**:,\n\t\t- Build necessary components using your design system,\n\t\t- Ensure all components use predefined styles, not ad-hoc utilities,\n\t\t- Keep components focused and reusable,\n4. **Assemble Pages**:,\n\t\t- Update the main application to incorporate your design and components,\n\t\t- Ensure proper routing and navigation,\n\t\t- Implement responsive layouts,\n5. **Polish and Optimize**:,\n\t\t- Review the overall user experience,\n\t\t- Ensure smooth interactions and transitions,\n\t\t- Optimize performance where needed,\n\n## SEO Best Practices,\nAutomatically implement SEO best practices on every page:,\n- **Title Tags**: Include proper, descriptive title tags for each page,\n- **Meta Descriptions**: Add compelling meta descriptions that accurately summarize page content,\n- **Heading Structure**: Use a single `<h1>` per page with proper heading hierarchy,\n- **Semantic HTML**: Use appropriate HTML5 semantic elements,\n- **Unique IDs**: Ensure all interactive elements have unique, descriptive IDs for browser testing,\n- **Performance**: Ensure fast page load times through optimization,\nCRITICAL REMINDER: AESTHETICS ARE VERY IMPORTANT. If your web app looks simple and basic then you have FAILED!\n</web_application_development>\n<ephemeral_message>\nThere will be an <EPHEMERAL_MESSAGE> appearing in the conversation at times. This is not coming from the user, but instead injected by the system as important information to pay attention to. \nDo not respond to nor acknowledge those messages, but do follow them strictly.\n</ephemeral_message>\n<artifacts>\nArtifacts are special markdown documents that you can create to present structured information to the user.\nAll artifacts should be written to the artifact directory. You do NOT need to create this directory yourself, it will be created automatically when you create artifacts.\n\n# Naming Artifacts\n\nBe sure to give artifacts descriptive filenames:\n- `analysis_results.md`\n- `research_notes.md`\n- `experiment_results.md`\n\n# When to Use Artifacts\n\n**Use artifacts for:**\n- Extensive reports and analysis summaries\n- Tables, diagrams, or formatted data\n- Persistent information you'll update over time (task lists, experiment logs)\n- Code changes formatted as diffs\n\n**Don't use artifacts for:**\n- Simple one-off answers - just respond directly\n- Asking questions or requesting user input - just ask directly\n- Very short content that fits in a paragraph.\n- Scratch scripts or one-off data files - save these in the /tmp/ directory.\n\nHere are some formatting tips for artifacts that you choose to write as markdown files with the .md extension:\n\n# Artifact Formatting Tips\nWhen creating markdown artifacts, use standard markdown and GitHub Flavored Markdown formatting. The following elements are also available to enhance the user experience:\n\n## Alerts\nUse GitHub-style alerts strategically to emphasize critical information. They will display with distinct colors and icons. Do not place consecutively or nest within other elements:\n  > [!NOTE]\n  > Background context, implementation details, or helpful explanations\n\n  > [!TIP]\n  > Performance optimizations, best practices, or efficiency suggestions\n\n  > [!IMPORTANT]\n  > Essential requirements, critical steps, or must-know information\n\n  > [!WARNING]\n  > Breaking changes, compatibility issues, or potential problems\n\n  > [!CAUTION]\n  > High-risk actions that could cause data loss or security vulnerabilities\n\n## Code and Diffs\nUse fenced code blocks with language specification for syntax highlighting:\n```python\ndef example_function():\n  return \"Hello, World!\"\n```\n\nUse diff blocks to show code changes. Prefix lines with + for additions, - for deletions, and a space for unchanged lines:\n```diff\n-old_function_name()\n+new_function_name()\n unchanged_line()\n```\n\nUse the render_diffs shorthand to show all changes made to a file during the task. Format: render_diffs(absolute file URI) (example: render_diffs(file:///absolute/path/to/utils.py)). Place on its own line.\n\n## Mermaid Diagrams\nCreate mermaid diagrams using fenced code blocks with language `mermaid` to visualize complex relationships, workflows, and architectures.\nTo prevent syntax errors:\n- Quote node labels containing special characters like parentheses or brackets. For example, `id[\"Label (Extra Info)\"]` instead of `id[Label (Extra Info)]`.\n- Avoid HTML tags in labels.\n\n## Tables\nUse standard markdown table syntax to organize structured data. Tables significantly improve readability and improve scannability of comparative or multi-dimensional information.\n\n## File Links and Media\n- Create clickable file links using standard markdown link syntax: [link text](file:///absolute/path/to/file).\n- Link to specific line ranges using [link text](file:///absolute/path/to/file#L123-L145) format. Link text can be descriptive when helpful, such as for a function [foo](file:///path/to/bar.py#L127-143) or for a line range [bar.py:L127-143](file:///path/to/bar.py#L127-143)\n- Embed images and videos with ![caption](/absolute/path/to/file.jpg). Always use absolute paths. The caption should be a short description of the image or video, and it will always be displayed below the image or video.\n- **IMPORTANT**: To embed images and videos, you MUST use the ![caption](absolute path) syntax. Standard links [filename](absolute path) will NOT embed the media and are not an acceptable substitute.\n- **IMPORTANT**: If you are embedding a file in an artifact and the file is NOT already in <appDataDir>/brain/<conversation-id>, you MUST first copy the file to the artifacts directory before embedding it. Only embed files that are located in the artifacts directory.\n\n## Carousels\nUse carousels to display multiple related markdown snippets sequentially. Carousels can contain any markdown elements including images, code blocks, tables, mermaid diagrams, alerts, diff blocks, and more.\n\nSyntax:\n- Use four backticks with `carousel` language identifier\n- Separate slides with `<!-- slide -->` HTML comments\n- Four backticks enable nesting code blocks within slides\n\nExample:\n````carousel\n![Image description](/absolute/path/to/image1.png)\n<!-- slide -->\n![Another image](/absolute/path/to/image2.png)\n<!-- slide -->\n```python\ndef example():\n    print(\"Code in carousel\")\n```\n````\n\nUse carousels when:\n- Displaying multiple related items like screenshots, code blocks, or diagrams that are easier to understand sequentially\n- Showing before/after comparisons or UI state progressions\n- Presenting alternative approaches or implementation options\n- Condensing related information in walkthroughs to reduce document length\n\n## Critical Rules\n- **Keep lines short**: Keep bullet points concise to avoid wrapped lines\n- **Use basenames for readability**: Use file basenames for the link text instead of the full path\n- **File Links**: Do not surround the link text with backticks, that will break the link formatting.\n    - **Correct**: [utils.py](file:///path/to/utils.py) or [foo](file:///path/to/file.py#L123)\n    - **Incorrect**: [`utils.py`](file:///path/to/utils.py) or [`function name`](file:///path/to/file.py#L123)\n\n# Scratch Scripts and Files\n\nYou may find it useful to create scratch scripts or files for temporary purposes.\n\nExamples:\n- One-off scripts to debug code\n- Temporary data files for testing\n\nFor these files, you should store them in the /tmp/ directory instead of the artifacts directory so that they are automatically cleaned up when they are no longer needed.\n\n</artifacts>\n\n\n<skills>\nYou can use specialized 'skills' to help you with complex tasks. Each skill has a name and a description listed below.\n\nSkills are folders of instructions, scripts, and resources that extend your capabilities for specialized tasks. Each skill folder contains:\n- **SKILL.md** (required): The main instruction file with YAML frontmatter (name, description) and detailed markdown instructions\n\nMore complex skills may include additional directories and files as needed, for example:\n- **scripts/** - Helper scripts and utilities that extend your capabilities\n- **examples/** - Reference implementations and usage patterns\n- **resources/** - Additional files, templates, or assets the skill may reference\n\nIf a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.\n\n</skills>\n<communication_style>\n- **Formatting**. Format your responses in github-style markdown to make your responses easier for the USER to parse. For example, use headers to organize your responses and bolded or italicized text to highlight important keywords. Use backticks to format file, directory, function, and class names. If providing a URL to the user, format this in markdown as well, for example `[label](example.com)`. - **Proactiveness**. As an agent, you are allowed to be proactive, but only in the course of completing the user's task. For example, if the user asks you to add a new component, you can edit the code, verify build and test statuses, and take any other obvious follow-up actions, such as performing additional research. However, avoid surprising the user. For example, if the user asks HOW to approach something, you should answer their question and instead of jumping into editing a file. - **Helpfulness**. Respond like a helpful software engineer who is explaining your work to a friendly collaborator on the project. Acknowledge mistakes or any backtracking you do as a result of new information. - **Ask for clarification**. If you are unsure about the USER's intent, always ask for clarification rather than making assumptions.\n</communication_style>",
+            "messagePrompts": [
+              {
+                "source": "CHAT_MESSAGE_SOURCE_USER",
+                "prompt": "<user_information>\nThe USER's OS version is windows.\nThe user has 1 active workspaces, each defined by a URI and a CorpusName. Multiple URIs potentially map to the same CorpusName. The mapping is shown as follows in the format [URI] -> [CorpusName]:\nc:\\Users\\BiuBiu\\Documents\\my app\\amaya -> nazrielnr/amaya\nCode relating to the user's requests should be written in the locations listed above. Avoid writing project code files to tmp, in the .gemini dir, or directly to the Desktop and similar folders unless explicitly asked.\n</user_information>"
+              },
+              {
+                "source": "CHAT_MESSAGE_SOURCE_USER",
+                "prompt": "<mcp_servers>\nThe Model Context Protocol (MCP) is a standard that connects AI systems with external tools and data sources.\nMCP servers extend your capabilities by providing access to specialized functions, external information, and services.\nThe following MCP servers are available to you. Each server may provide (potentially truncated) additional recommendations and best practices.\n# chrome-devtools\n# context7\nUse this server to retrieve up-to-date documentation and code examples for any library.\n</mcp_servers>",
+                "promptCacheOptions": {
+                  "type": "CACHE_CONTROL_TYPE_EPHEMERAL"
+                }
+              },
+              {
+                "source": "CHAT_MESSAGE_SOURCE_USER",
+                "prompt": "<artifacts>\nArtifact Directory Path: C:\\Users\\BiuBiu\\.gemini\\antigravity\\brain\\4a9113a5-98ed-497f-ad93-d0dec12455a7\n</artifacts>"
+              },
+              {
+                "source": "CHAT_MESSAGE_SOURCE_USER",
+                "prompt": "<user_rules>\nThe user has not defined any custom rules.\n</user_rules>",
+                "promptCacheOptions": {
+                  "type": "CACHE_CONTROL_TYPE_EPHEMERAL"
+                }
+              },
+              {
+                "source": "CHAT_MESSAGE_SOURCE_USER",
+                "prompt": "<workflows>\nYou have the ability to use and create workflows, which are well-defined steps on how to achieve a particular thing. These workflows are defined as .md files in {.agents,.agent,_agents,_agent}/workflows.\nThe workflow files follow the following YAML frontmatter + markdown format:\n---\ndescription: [short title, e.g. how to deploy the application]\n---\n[specific steps on how to run this workflow]\n\n - You might be asked to create a new workflow. If so, create a new file in {.agents,.agent,_agents,_agent}/workflows/[filename].md (use absolute path) following the format described above. Be very specific with your instructions.\n - If a workflow step has a '// turbo' annotation above it, you can auto-run the workflow step if it involves the run_command tool, by setting 'SafeToAutoRun' to true. This annotation ONLY applies for this single step.\n   - For example if a workflow includes:\n```\n2. Make a folder called foo\n// turbo\n3. Make a folder called bar\n```\nYou should auto-run step 3, but use your usual judgement for step 2.\n - If a workflow has a '// turbo-all' annotation anywhere, you MUST auto-run EVERY step that involves the run_command tool, by setting 'SafeToAutoRun' to true. This annotation applies to EVERY step.\n - If a workflow looks relevant, or the user explicitly uses a slash command like /slash-command, then use the view_file tool to read {.agents,.agent,_agents,_agent}/workflows/slash-command.md.\n\n</workflows>"
+              },
+              {
+                "source": "CHAT_MESSAGE_SOURCE_USER",
+                "prompt": "Step Id: 0\n\n<USER_REQUEST>\ncek workspace\n</USER_REQUEST>\n<ADDITIONAL_METADATA>\nThe current local time is: 2026-03-23T09:03:19+07:00. This is the latest source of truth for time; do not attempt to get the time any other way.\n\nThe user's current state is as follows:\nActive Document: c:\\Users\\BiuBiu\\Documents\\my app\\amaya\\app\\src\\main\\java\\com\\amaya\\intelligence\\impl\\ide\\antigravity\\services\\event\\ToolCallEventHandler.kt (LANGUAGE_KOTLIN)\nCursor is on line: 1\nOther open documents:\n- c:\\Users\\BiuBiu\\Documents\\my app\\amaya\\app\\src\\main\\java\\com\\amaya\\intelligence\\impl\\ide\\antigravity\\services\\event\\ToolCallEventHandler.kt (LANGUAGE_KOTLIN)\nNo browser pages are currently open.\n</ADDITIONAL_METADATA>",
+                "numTokens": 236,
+                "safeForCodeTelemetry": true
+              },
+              {
+                "source": "CHAT_MESSAGE_SOURCE_USER",
+                "prompt": "Step Id: 1\n# Conversation History\nHere are the conversation IDs, titles, and summaries of your most recent 20 conversations, in reverse chronological order:\n\n<conversation_summaries>\n## Conversation 071d134c-48e1-43ae-8bee-455415bbd956: Workspace Directory Listing\n- Created: 2026-03-23T02:03:03Z\n- Last modified: 2026-03-23T02:03:18Z\n\n### USER Objective:\nWorkspace Directory Listing\nThe user wants to list the contents of the \"c:\\Users\\BiuBiu\\Documents\\my app\\amaya\" directory to understand the project structure and identify key files and directories for further actions. They have executed the `list_dir` command and are now reviewing the output.\n\n## Conversation a00a82c0-eb1c-4473-a8e4-7ff8ec17cbf6: Workspace Directory Listing\n- Created: 2026-03-23T02:02:49Z\n- Last modified: 2026-03-23T02:03:02Z\n\n### USER Objective:\nWorkspace Directory Listing\nThe user wants to list the contents of the \"c:\\Users\\BiuBiu\\Documents\\my app\\amaya\" directory to understand the project structure and identify key files and directories for further actions. They have executed the `list_dir` command and are now reviewing the output.\n\n## Conversation 9e9ed18d-2e9e-4b4f-b6de-5b2dcbc97322: Workspace Directory Listing\n- Created: 2026-03-23T02:02:32Z\n- Last modified: 2026-03-23T02:02:47Z\n\n### USER Objective:\nWorkspace Directory Listing\nThe user wants to list the contents of the \"c:\\Users\\BiuBiu\\Documents\\my app\\amaya\" directory to understand the project structure and identify key files and directories for further actions. They have executed the `list_dir` command and are now reviewing the output.\n\n## Conversation cac584c6-c8cd-4f08-a7fe-54bdfb2ba9b1: Workspace Directory Listing\n- Created: 2026-03-23T02:02:14Z\n- Last modified: 2026-03-23T02:02:32Z\n\n### USER Objective:\nWorkspace Directory Listing\n\nThe user wants to list the contents of the \"c:\\Users\\BiuBiu\\Documents\\my app\\amaya\" directory to understand the project structure and identify key files and directories for further actions. They have executed the `list_dir` command and are now reviewing the output.\n\n## Conversation d7560910-893b-401d-a53c-667888c69a0d: Workspace Check\n- Created: 2026-03-22T20:28:19Z\n- Last modified: 2026-03-22T20:28:48Z\n\n### USER Objective:\nWorkspace Check\n\nThe user wants to check the workspace. They have listed several Kotlin files that are currently open and have also initiated a directory listing of the 'amaya' directory.\n\n## Conversation c4df5971-da65-4775-a2c8-26325910d18d: Bug Check\n- Created: 2026-03-22T20:27:04Z\n- Last modified: 2026-03-22T20:28:02Z\n\n### USER Objective:\nBug Check\n\nThe user wants to check for bugs in the provided Kotlin files. They have opened `RemoteSessionClient.kt`, `AntigravityToolMapper.kt`, `AntigravityMessageMapper.kt`, `ToolCallEventHandler.kt`, and `LocalAgentScreen.kt` and want to inspect their contents for any issues.\n\n## Conversation 6b860271-515a-4783-a759-71a6ef7b0db5: Bug Check\n- Created: 2026-03-22T20:19:02Z\n- Last modified: 2026-03-22T20:19:36Z\n\n### USER Objective:\nBug Check\nThe user wants to check for bugs in the provided TypeScript and Kotlin files. They have opened `AntigravityClient.ts`, `LocalMcpScreen.kt`, and `AgentList.kt` and want to inspect their contents for any issues.\n\n## Conversation b1dec407-90dc-4762-aa08-f6b41eef334b: \n- Created: 2026-03-22T19:12:11Z\n- Last modified: 2026-03-22T19:12:12Z\n\n## Conversation b9b8a54e-588a-4515-b517-a3b751b838c9: Generating Short Conversation Title\n- Created: 2026-03-21T16:35:23Z\n- Last modified: 2026-03-21T16:35:27Z\n\n### USER Objective:\nGenerating Short Conversation Title\nThe user wants to generate a short conversation title (3-5 words, title-cased) that accurately reflects their intent and goals for the current chat. They also want a clear, action-oriented description of their main objective and goals for the chat, potentially drawing from previous summaries.\n\n## Conversation e9389a91-6806-43a0-846d-6c040e9d8a26: Refining Antigravity ToolMapper\n- Created: 2026-03-19T17:36:50Z\n- Last modified: 2026-03-19T17:36:53Z\n\n### USER Objective:\nRefining Antigravity ToolMapper\nThe user's objective is to refine the `AntigravityToolMapper.kt` file. This involves understanding its current implementation, identifying areas for improvement, and making necessary modifications to enhance its functionality and efficiency within the Antigravity IDE extension. The user aims to ensure the tool mapper is robust and effectively supports the IDE's operations.\n\n## Conversation cd977e1e-6da0-400b-8e58-0b2c99cdfa0c: Refining Antigravity ToolMapper\n- Created: 2026-03-19T17:25:47Z\n- Last modified: 2026-03-19T17:29:03Z\n\n### USER Objective:\nRefining Antigravity ToolMapper\nThe user's objective is to refine the `AntigravityToolMapper.kt` file. This involves understanding its current implementation, identifying areas for improvement, and making necessary modifications to enhance its functionality and efficiency within the Antigravity IDE extension. The user aims to ensure the tool mapper is robust and effectively supports the IDE's operations.\n\n## Conversation d5321042-9fe4-4ba0-b29e-3248c1144976: Refining Antigravity ToolMapper\n- Created: 2026-03-19T17:01:53Z\n- Last modified: 2026-03-19T17:01:57Z\n\n### USER Objective:\nRefining Antigravity ToolMapper\n\nThe user's objective is to refine the `AntigravityToolMapper.kt` file. This involves understanding its current implementation, identifying areas for improvement, and making necessary modifications to enhance its functionality and efficiency within the Antigravity IDE extension. The user aims to ensure the tool mapper is robust and effectively supports the IDE's operations.\n\n## Conversation 4948a0a9-97f2-49f9-8261-4e7bfd10a075: Refining Antigravity ToolMapper\n- Created: 2026-03-19T02:10:24Z\n- Last modified: 2026-03-19T02:10:31Z\n\n### USER Objective:\nRefining Antigravity ToolMapper\n\nThe user's objective is to refine the `AntigravityToolMapper.kt` file. This involves understanding its current implementation, identifying areas for improvement, and making necessary modifications to enhance its functionality and efficiency within the Antigravity IDE extension. The user aims to ensure the tool mapper is robust and effectively supports the IDE's operations.\n\n## Conversation 731406dc-7835-48b6-ba6e-15247ce57ce4: Checking Workspace Files\n- Created: 2026-03-18T03:38:06Z\n- Last modified: 2026-03-18T03:38:51Z\n\n### USER Objective:\nChecking Workspace Files\nThe user wants to explore the contents of the `c:\\Users\\BiuBiu\\Documents\\my app\\amaya` directory to understand the project structure and identify key files and directories for further actions. This involves reviewing the output of the `list_dir` command.\n\n## Conversation dda8ed22-2278-4330-8179-fb4cf49d48f5: Checking Workspace Files\n- Created: 2026-03-18T01:37:59Z\n- Last modified: 2026-03-18T01:38:40Z\n\n### USER Objective:\nChecking Workspace Files\nThe user wants to explore the contents of the `c:\\Users\\BiuBiu\\Documents\\my app\\amaya` directory to understand the project structure and identify key files and directories for further actions. This involves reviewing the output of the `list_dir` command.\n\n## Conversation 1525d2f4-8b4d-4aa7-bd95-4a6a3659ab98: Checking Workspace Files\n- Created: 2026-03-17T23:36:29Z\n- Last modified: 2026-03-17T23:37:00Z\n\n### USER Objective:\nChecking Workspace Files\nThe user wants to examine the contents of the `c:\\Users\\BiuBiu\\Documents\\my app\\amaya` directory to understand the project structure and identify any relevant files or directories for further actions. This involves reviewing the output of the `list_dir` command.\n\n## Conversation 5a3b4b7b-9070-4953-a523-2b61b13d2725: AI Chat UI Components\n- Created: 2026-03-17T23:36:09Z\n- Last modified: 2026-03-17T23:36:13Z\n\n### USER Objective:\nAI Chat UI Components\nThe user wants to generate a short, title-cased conversation title (3-5 words) that accurately reflects their intent and goals for this chat session. They also want a clear, action-oriented summary of their main objective and goals, potentially building upon previous discussions or checkpoints, to guide the current interaction.\n\n## Conversation 62b63472-344b-4507-94c1-b9613986be38: AI Chat UI Components\n- Created: 2026-03-17T23:35:49Z\n- Last modified: 2026-03-17T23:35:53Z\n\n### USER Objective:\nAI Chat UI Components\nThe user wants to generate a short, title-cased conversation title (3-5 words) that accurately reflects their intent and goals for this chat session. They also want a clear, action-oriented summary of their main objective and goals, potentially building upon previous discussions or checkpoints, to guide the current interaction.\n\n## Conversation 192657e6-2c8f-45d2-af69-5e74f9aaf286: Starting New Conversation\n- Created: 2026-03-17T22:47:40Z\n- Last modified: 2026-03-17T22:54:09Z\n\n### USER Objective:\nStarting New Conversation\nThe user wants to start a new conversation. The main goal is to establish a clear and concise title for the current chat session, reflecting the user's intent and objectives. Additionally, the user aims to articulate their primary objective and goals for this chat in an action-oriented manner, potentially building upon previous discussions or checkpoints.\n\n## Conversation 4e049e63-0ade-48d7-af2b-e0e739852dfd: Checking Workspace\n- Created: 2026-03-16T22:28:53Z\n- Last modified: 2026-03-16T22:29:07Z\n\n### USER Objective:\nChecking Workspace\nThe user wants to check the workspace using the terminal. They have executed the `dir` command in the `c:\\Users\\BiuBiu\\Documents\\my app\\amaya` directory. The output indicates that a background command was run. The next step is to review the output of the `dir` command to understand the workspace contents.\n\n</conversation_summaries>",
+                "numTokens": 3227,
+                "stepIdx": 1
+              },
+              {
+                "messageId": "bot-61362ea3-92b4-4629-875d-efdba8d86d74",
+                "source": "CHAT_MESSAGE_SOURCE_SYSTEM",
+                "numTokens": 76,
+                "toolCalls": [
+                  {
+                    "id": "toolu_vrtx_018J7maFxCpAfUvpAjhameZo",
+                    "name": "list_dir",
+                    "argumentsJson": "{\"DirectoryPath\":\"c:\\\\Users\\\\BiuBiu\\\\Documents\\\\my app\\\\amaya\"}"
+                  }
+                ],
+                "thinking": "The user wants to check their workspace. Let me list the directory contents of their workspace.",
+                "thinkingSignature": "RW9rQ0NrZ0lDeEFDR0FJcVFITU9qaUdDNUFyTTNOOGxkUTNNSkhqUXk5akI4Q0dHV29IWDRVWjdBa2gzNmVMS2dRQitqSHovUFRzTDdCNXM2aWRrRjVjOEY1YkhRbC93VHFmajdaMFNERHU0d0RBOXZBWm51T0FJZkJvTWZxZmtZYTVXY3dIUVllazFJakMvL3hoK3FpN1ZLYzh4dFVzZkw1N3NUQTU1Y3Nkc1liS1c1UHFyS3FKdzB3RFIvUjR2aWdCSXBSTVB1TmlKc3hRcWIwazZYR2pkcUJacG52WVAxQ2tLQi9xdCtuNnkzbDJRT1NqMUdmbEw4cWtZVVMxeCtkSXZtMjZqeUp6UVZkOHhuYy9VV0xTN291YmNBck5DY20yR2lnVVltcTBFalllcW1uVUZ5QUwzUjFqelNKQWlma2lWZE1BME5seGExY1drK0hxaFpSTjdYWHkzR2lhc2Q3VjlUaGdC",
+                "stepIdx": 3
+              },
+              {
+                "source": "CHAT_MESSAGE_SOURCE_TOOL",
+                "prompt": "Step Id: 4\n{\"name\":\".git\",\"isDir\":true}\n{\"name\":\".gitignore\",\"sizeBytes\":\"3961\"}\n{\"name\":\".gradle\",\"isDir\":true}\n{\"name\":\".kotlin\",\"isDir\":true}\n{\"name\":\"AGENTSuhybvjh.md\",\"sizeBytes\":\"131768\"}\n{\"name\":\"ChatScreen.kt\",\"sizeBytes\":\"82909\"}\n{\"name\":\"LOCALHOST_LINK_FEATURE.md\"}\n{\"name\":\"amaya-remote-extension\",\"isDir\":true}\n{\"name\":\"app\",\"isDir\":true}\n{\"name\":\"build\",\"isDir\":true}\n{\"name\":\"build.gradle.kts\",\"sizeBytes\":\"359\"}\n{\"name\":\"file_type_icons.txt\",\"sizeBytes\":\"21710\"}\n{\"name\":\"gradle\",\"isDir\":true}\n{\"name\":\"gradle.properties\",\"sizeBytes\":\"1015\"}\n{\"name\":\"gradlew\",\"sizeBytes\":\"1487\"}\n{\"name\":\"gradlew.bat\",\"sizeBytes\":\"2091\"}\n{\"name\":\"jnkedf.txt\",\"sizeBytes\":\"1110715\"}\n{\"name\":\"local.properties\",\"sizeBytes\":\"248\"}\n{\"name\":\"sdfvb.txt\",\"sizeBytes\":\"116\"}\n{\"name\":\"settings.gradle.kts\",\"sizeBytes\":\"618\"}\n{\"name\":\"temp_service.txt\",\"sizeBytes\":\"44889\"}\n{\"name\":\"test_server.js\",\"sizeBytes\":\"949\"}\n{\"name\":\"test_server.py\",\"sizeBytes\":\"1131\"}\n\nSummary: This directory contains 7 subdirectories and 16 files.",
+                "numTokens": 340,
+                "safeForCodeTelemetry": true,
+                "toolCallId": "toolu_vrtx_018J7maFxCpAfUvpAjhameZo",
+                "stepIdx": 4
+              },
+              {
+                "source": "CHAT_MESSAGE_SOURCE_SYSTEM",
+                "prompt": "Berikut adalah isi workspace **`amaya`** milikmu:\n\n## 📁 Struktur Workspace\n\n### 📂 Direktori\n| Nama | Keterangan |\n|------|-----------|\n| `.git` | Version control Git |\n| `.gradle` | Cache Gradle |\n| `.kotlin` | Kotlin build cache |\n| `amaya-remote-extension` | Modul ekstensi remote |\n| `app` | Modul utama aplikasi Android |\n| `build` | Output build |\n| `gradle` | Wrapper Gradle |\n\n### 📄 File Penting\n| Nama | Ukuran | Keterangan |\n|------|--------|-----------|\n| `build.gradle.kts` | 359 B | Konfigurasi build root |\n| `settings.gradle.kts` | 618 B | Pengaturan project Gradle |\n| `gradle.properties` | 1.0 KB | Properti Gradle |\n| `local.properties` | 248 B | Konfigurasi lokal (SDK path) |\n| `.gitignore` | 3.9 KB | Git ignore rules |\n| `ChatScreen.kt` | ~81 KB | File Kotlin (besar, sepertinya UI utama) |\n| `AGENTSuhybvjh.md` | ~129 KB | File markdown agent |\n| `LOCALHOST_LINK_FEATURE.md` | - | Dokumentasi fitur localhost link |\n\n### 🗂️ File Lain-lain\n- `test_server.js` & `test_server.py` — script test server\n- `jnkedf.txt` (1.1 MB), `temp_service.txt` (44 KB), `file_type_icons.txt` (21 KB) — file teks sementara/referensi\n\n---\n\nWorkspace ini adalah **project Android** berbasis Kotlin dengan dua modul utama: `app` dan `amaya-remote-extension`. Ada yang ingin kamu kerjakan selanjutnya?",
+                "stepIdx": 7
+              }
+            ],
+            "messageMetadata": [
+              {},
+              {
+                "messageIndex": 1
+              },
+              {
+                "messageIndex": 2
+              },
+              {
+                "messageIndex": 3
+              },
+              {
+                "messageIndex": 4
+              },
+              {
+                "messageIndex": 5
+              },
+              {
+                "messageIndex": 6
+              },
+              {
+                "messageIndex": 7
+              },
+              {
+                "messageIndex": 8
+              },
+              {
+                "messageIndex": 8,
+                "segmentIndex": 1
+              }
+            ],
+            "model": "MODEL_PLACEHOLDER_M35",
+            "usage": {
+              "model": "MODEL_PLACEHOLDER_M35",
+              "inputTokens": "3557",
+              "outputTokens": "506",
+              "responseOutputTokens": "506",
+              "cacheReadTokens": "21371",
+              "apiProvider": "API_PROVIDER_ANTHROPIC_VERTEX",
+              "responseHeader": {
+                "sessionID": "-3750763034362895579"
+              },
+              "responseId": "req_vrtx_011CZKBz5RHJW4aYu3RknAv4"
+            },
+            "lastCacheIndex": 3,
+            "toolChoice": {
+              "optionName": "auto"
+            },
+            "tools": [
+              {
+                "name": "browser_subagent",
+                "description": "Start a browser subagent to perform actions in the browser with the given task description. The subagent has access to tools for both interacting with web page content (clicking, typing, navigating, etc) and controlling the browser window itself (resizing, etc). Please make sure to define a clear condition to return on. After the subagent returns, you should read the DOM or capture a screenshot to see what it did. Note: All browser interactions are automatically recorded and saved as WebP videos to the artifacts directory. This is the ONLY way you can record a browser session video/animation. IMPORTANT: if the subagent returns that the open_browser_url tool failed, there is a browser issue that is out of your control. You MUST ask the user how to proceed.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"TaskName\":{\"type\":\"string\",\"description\":\"Name of the task that the browser subagent is performing. This is the identifier that groups the subagent steps together, but should still be a human readable name. This should read like a title, should be properly capitalized and human readable, example: 'Navigating to Example Page'. Replace URLs or non-human-readable expressions like CSS selectors or long text with human-readable terms like 'URL' or 'Page' or 'Submit Button'. Be very sure this task name represents a reasonable chunk of work. It should almost never be the entire user request. This should be the very first argument.\"},\"Task\":{\"type\":\"string\",\"description\":\"A clear, actionable task description for the browser subagent. The subagent is an agent similar to you, with a different set of tools, limited to tools to understand the state of and control the browser. The task you define is the prompt sent to this subagent. Since each agent invocation is a one-shot, autonomous execution, the prompt must be highly detailed, containing a comprehensive task description and all necessary context. Avoid vague instructions; be specific about what to do, when to stop, and clearly state exactly what information the agent should return in its final and only report. This should be the second argument.\"},\"TaskSummary\":{\"type\":\"string\",\"description\":\"A short, user-friendly summary of the task (1-2 sentences max). This will be displayed to the user in the UI instead of the full task description. Should be concise and describe the goal at a high level.\"},\"RecordingName\":{\"type\":\"string\",\"description\":\"Name of the browser recording that is created with the actions of the subagent. Should be all lowercase with underscores, describing what the recording contains. Maximum 3 words. Example: 'login_flow_demo'\"},\"ReusedSubagentId\":{\"type\":\"string\",\"description\":\"ID of a previous subagent to resume from. If provided, the agent will continue from the previous context. If empty, the subagent will start with an empty context. Use this to resume work from a cancelled subagent, or when the current task would benefit from the previous subagent's context.\"},\"MediaPaths\":{\"items\":{\"type\":\"string\"},\"type\":\"array\",\"description\":\"Optional absolute paths to media files (images, videos, etc.) to provide as context to the subagent. Maximum 3 files.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"TaskName\",\"Task\",\"TaskSummary\",\"RecordingName\"]}"
+              },
+              {
+                "name": "command_status",
+                "description": "Get the status of a previously executed terminal command by its ID. Returns the current status (running, done), output lines as specified by output priority, and any error if present. Do not try to check the status of any IDs other than Background command IDs.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"CommandId\":{\"type\":\"string\",\"description\":\"ID of the command to get status for\"},\"OutputCharacterCount\":{\"type\":\"integer\",\"description\":\"Number of characters to view. Make this as small as possible to avoid excessive memory usage.\"},\"WaitDurationSeconds\":{\"type\":\"integer\",\"description\":\"Number of seconds to wait for command completion before getting the status. If the command completes before this duration, this tool call will return early. Set to 0 to get the status of the command immediately. If you are only interested in waiting for command completion, set to the max value, 300.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"CommandId\",\"WaitDurationSeconds\"]}"
+              },
+              {
+                "name": "find_by_name",
+                "description": "Search for files and subdirectories within a specified directory using fd.\nSearch uses smart case and will ignore gitignored files by default.\nPattern and Excludes both use the glob format. If you are searching for Extensions, there is no need to specify both Pattern AND Extensions.\nTo avoid overwhelming output, the results are capped at 50 matches. Use the various arguments to filter the search scope as needed.\nResults will include the type, size, modification time, and relative path.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"SearchDirectory\":{\"type\":\"string\",\"description\":\"The directory to search within\"},\"Pattern\":{\"type\":\"string\",\"description\":\"Optional, Pattern to search for, supports glob format\"},\"Excludes\":{\"items\":{\"type\":\"string\"},\"type\":\"array\",\"description\":\"Optional, exclude files/directories that match the given glob patterns\"},\"Type\":{\"type\":\"string\",\"description\":\"Optional, type filter, enum=file,directory,any\"},\"MaxDepth\":{\"type\":\"integer\",\"description\":\"Optional, maximum depth to search\"},\"Extensions\":{\"items\":{\"type\":\"string\"},\"type\":\"array\",\"description\":\"Optional, file extensions to include (without leading .), matching paths must match at least one of the included extensions\"},\"FullPath\":{\"type\":\"boolean\",\"description\":\"Optional, whether the full absolute path must match the glob pattern, default: only filename needs to match. Take care when specifying glob patterns with this flag on, e.g when FullPath is on, pattern '*.py' will not match to the file '/foo/bar.py', but pattern '**/*.py' will match.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"SearchDirectory\",\"Pattern\"]}"
+              },
+              {
+                "name": "generate_image",
+                "description": "Generate an image or edit existing images based on a text prompt. The resulting image will be saved as an artifact for use. You can use this tool to generate user interfaces and iterate on a design with the USER for an application or website that you are building. When creating UI designs, generate only the interface itself without surrounding device frames (laptops, phones, tablets, etc.) unless the user explicitly requests them. You can also use this tool to generate assets for use in an application or website.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"Prompt\":{\"type\":\"string\",\"description\":\"The text prompt to generate an image for.\"},\"ImagePaths\":{\"items\":{\"type\":\"string\"},\"type\":\"array\",\"description\":\"Optional absolute paths to the images to use in generation. You can pass in images here if you would like to edit or combine images. You can pass in artifact images and any images in the file system. Note: you cannot pass in more than 3 images.\"},\"ImageName\":{\"type\":\"string\",\"description\":\"Name of the generated image to save. Should be all lowercase with underscores, describing what the image contains. Maximum 3 words. Example: 'login_page_mockup'\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"Prompt\",\"ImageName\"]}"
+              },
+              {
+                "name": "grep_search",
+                "description": "Use ripgrep to find exact pattern matches within files or directories.\nResults are returned in JSON format and for each match you will receive the:\n- Filename\n- LineNumber\n- LineContent: the content of the matching line\nTotal results are capped at 50 matches. Use the Includes option to filter by file type or specific paths to refine your search.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"SearchPath\":{\"type\":\"string\",\"description\":\"The path to search. This can be a directory or a file. This is a required parameter.\"},\"Query\":{\"type\":\"string\",\"description\":\"The search term or pattern to look for within files.\"},\"MatchPerLine\":{\"type\":\"boolean\",\"description\":\"If true, returns each line that matches the query, including line numbers and snippets of matching lines (equivalent to 'git grep -nI'). If false, only returns the names of files containing the query (equivalent to 'git grep -l').\"},\"Includes\":{\"items\":{\"type\":\"string\"},\"type\":\"array\",\"description\":\"Glob patterns to filter files found within the 'SearchPath', if 'SearchPath' is a directory. For example, '*.go' to only include Go files, or '!**/vendor/*' to exclude vendor directories. This is NOT for specifying the primary search directory; use 'SearchPath' for that. Leave empty if no glob filtering is needed or if 'SearchPath' is a single file.\"},\"CaseInsensitive\":{\"type\":\"boolean\",\"description\":\"If true, performs a case-insensitive search.\"},\"IsRegex\":{\"type\":\"boolean\",\"description\":\"If true, treats Query as a regular expression pattern with special characters like *, +, (, etc. having regex meaning. If false, treats Query as a literal string where all characters are matched exactly. Use false for normal text searches and true only when you specifically need regex functionality.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"SearchPath\",\"Query\"]}"
+              },
+              {
+                "name": "list_dir",
+                "description": "List the contents of a directory, i.e. all files and subdirectories that are children of the directory. Directory path must be an absolute path to a directory that exists. For each child in the directory, output will have: relative path to the directory, whether it is a directory or file, size in bytes if file, and number of children (recursive) if directory. Number of children may be missing if the workspace is too large, since we are not able to track the entire workspace.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"DirectoryPath\":{\"type\":\"string\",\"description\":\"Path to list contents of, should be absolute path to a directory\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"DirectoryPath\"]}"
+              },
+              {
+                "name": "list_resources",
+                "description": "Lists the available resources from an MCP server.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"ServerName\":{\"type\":\"string\",\"description\":\"Name of the server to list available resources from.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}"
+              },
+              {
+                "name": "mcp_chrome-devtools_click",
+                "description": "This is a tool from the chrome-devtools MCP server.\nClicks on the provided element",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"dblClick\":{\"description\":\"Set to true for double clicks. Default is false.\",\"type\":\"boolean\"},\"includeSnapshot\":{\"description\":\"Whether to include a snapshot in the response. Default is false.\",\"type\":\"boolean\"},\"uid\":{\"description\":\"The uid of an element on the page from the page content snapshot\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"uid\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_close_page",
+                "description": "This is a tool from the chrome-devtools MCP server.\nCloses the page by its index. The last open page cannot be closed.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"pageId\":{\"description\":\"The ID of the page to close. Call list_pages to list pages.\",\"type\":\"number\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"pageId\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_drag",
+                "description": "This is a tool from the chrome-devtools MCP server.\nDrag an element onto another element",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"from_uid\":{\"description\":\"The uid of the element to drag\",\"type\":\"string\"},\"includeSnapshot\":{\"description\":\"Whether to include a snapshot in the response. Default is false.\",\"type\":\"boolean\"},\"to_uid\":{\"description\":\"The uid of the element to drop into\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"from_uid\",\"to_uid\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_emulate",
+                "description": "This is a tool from the chrome-devtools MCP server.\nEmulates various features on the selected page.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"colorScheme\":{\"description\":\"Emulate the dark or the light mode. Set to \\\"auto\\\" to reset to the default.\",\"enum\":[\"dark\",\"light\",\"auto\"],\"type\":\"string\"},\"cpuThrottlingRate\":{\"description\":\"Represents the CPU slowdown factor. Omit or set the rate to 1 to disable throttling\",\"maximum\":20,\"minimum\":1,\"type\":\"number\"},\"geolocation\":{\"description\":\"Geolocation (`\\u003clatitude\\u003ex\\u003clongitude\\u003e`) to emulate. Latitude between -90 and 90. Longitude between -180 and 180. Omit clear the geolocation override.\",\"type\":\"string\"},\"networkConditions\":{\"description\":\"Throttle network. Omit to disable throttling.\",\"enum\":[\"Offline\",\"Slow 3G\",\"Fast 3G\",\"Slow 4G\",\"Fast 4G\"],\"type\":\"string\"},\"userAgent\":{\"description\":\"User agent to emulate. Set to empty string to clear the user agent override.\",\"type\":\"string\"},\"viewport\":{\"description\":\"Emulate device viewports '\\u003cwidth\\u003ex\\u003cheight\\u003ex\\u003cdevicePixelRatio\\u003e[,mobile][,touch][,landscape]'. 'touch' and 'mobile' to emulate mobile devices. 'landscape' to emulate landscape mode.\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_evaluate_script",
+                "description": "This is a tool from the chrome-devtools MCP server.\nEvaluate a JavaScript function inside the currently selected page. Returns the response as JSON,\nso returned values have to be JSON-serializable.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"args\":{\"description\":\"An optional list of arguments to pass to the function.\",\"items\":{\"description\":\"The uid of an element on the page from the page content snapshot\",\"type\":\"string\"},\"type\":\"array\"},\"function\":{\"description\":\"A JavaScript function declaration to be executed by the tool in the currently selected page.\\nExample without arguments: `() =\\u003e {\\n  return document.title\\n}` or `async () =\\u003e {\\n  return await fetch(\\\"example.com\\\")\\n}`.\\nExample with arguments: `(el) =\\u003e {\\n  return el.innerText;\\n}`\\n\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"function\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_fill",
+                "description": "This is a tool from the chrome-devtools MCP server.\nType text into a input, text area or select an option from a <select> element.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"includeSnapshot\":{\"description\":\"Whether to include a snapshot in the response. Default is false.\",\"type\":\"boolean\"},\"uid\":{\"description\":\"The uid of an element on the page from the page content snapshot\",\"type\":\"string\"},\"value\":{\"description\":\"The value to fill in\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"uid\",\"value\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_fill_form",
+                "description": "This is a tool from the chrome-devtools MCP server.\nFill out multiple form elements at once",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"elements\":{\"description\":\"Elements from snapshot to fill out.\",\"items\":{\"additionalProperties\":false,\"properties\":{\"uid\":{\"description\":\"The uid of the element to fill out\",\"type\":\"string\"},\"value\":{\"description\":\"Value for the element\",\"type\":\"string\"}},\"required\":[\"uid\",\"value\"],\"type\":\"object\"},\"type\":\"array\"},\"includeSnapshot\":{\"description\":\"Whether to include a snapshot in the response. Default is false.\",\"type\":\"boolean\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"elements\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_get_console_message",
+                "description": "This is a tool from the chrome-devtools MCP server.\nGets a console message by its ID. You can get all messages by calling list_console_messages.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"msgid\":{\"description\":\"The msgid of a console message on the page from the listed console messages\",\"type\":\"number\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"msgid\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_get_network_request",
+                "description": "This is a tool from the chrome-devtools MCP server.\nGets a network request by an optional reqid, if omitted returns the currently selected request in the DevTools Network panel.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"reqid\":{\"description\":\"The reqid of the network request. If omitted returns the currently selected request in the DevTools Network panel.\",\"type\":\"number\"},\"requestFilePath\":{\"description\":\"The absolute or relative path to save the request body to. If omitted, the body is returned inline.\",\"type\":\"string\"},\"responseFilePath\":{\"description\":\"The absolute or relative path to save the response body to. If omitted, the body is returned inline.\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_handle_dialog",
+                "description": "This is a tool from the chrome-devtools MCP server.\nIf a browser dialog was opened, use this command to handle it",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"action\":{\"description\":\"Whether to dismiss or accept the dialog\",\"enum\":[\"accept\",\"dismiss\"],\"type\":\"string\"},\"promptText\":{\"description\":\"Optional prompt text to enter into the dialog.\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"action\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_hover",
+                "description": "This is a tool from the chrome-devtools MCP server.\nHover over the provided element",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"includeSnapshot\":{\"description\":\"Whether to include a snapshot in the response. Default is false.\",\"type\":\"boolean\"},\"uid\":{\"description\":\"The uid of an element on the page from the page content snapshot\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"uid\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_lighthouse_audit",
+                "description": "This is a tool from the chrome-devtools MCP server.\nGet Lighthouse score and reports for accessibility, SEO and best practices. This excludes performance. For performance audits, run performance_start_trace",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"device\":{\"default\":\"desktop\",\"description\":\"Device to emulate.\",\"enum\":[\"desktop\",\"mobile\"],\"type\":\"string\"},\"mode\":{\"default\":\"navigation\",\"description\":\"\\\"navigation\\\" reloads \\u0026 audits. \\\"snapshot\\\" analyzes current state.\",\"enum\":[\"navigation\",\"snapshot\"],\"type\":\"string\"},\"outputDirPath\":{\"description\":\"Directory for reports. If omitted, uses temporary files.\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_list_console_messages",
+                "description": "This is a tool from the chrome-devtools MCP server.\nList all console messages for the currently selected page since the last navigation.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"includePreservedMessages\":{\"default\":false,\"description\":\"Set to true to return the preserved messages over the last 3 navigations.\",\"type\":\"boolean\"},\"pageIdx\":{\"description\":\"Page number to return (0-based). When omitted, returns the first page.\",\"minimum\":0,\"type\":\"integer\"},\"pageSize\":{\"description\":\"Maximum number of messages to return. When omitted, returns all requests.\",\"exclusiveMinimum\":0,\"type\":\"integer\"},\"types\":{\"description\":\"Filter messages to only return messages of the specified resource types. When omitted or empty, returns all messages.\",\"items\":{\"enum\":[\"log\",\"debug\",\"info\",\"error\",\"warn\",\"dir\",\"dirxml\",\"table\",\"trace\",\"clear\",\"startGroup\",\"startGroupCollapsed\",\"endGroup\",\"assert\",\"profile\",\"profileEnd\",\"count\",\"timeEnd\",\"verbose\",\"issue\"],\"type\":\"string\"},\"type\":\"array\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_list_network_requests",
+                "description": "This is a tool from the chrome-devtools MCP server.\nList all requests for the currently selected page since the last navigation.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"includePreservedRequests\":{\"default\":false,\"description\":\"Set to true to return the preserved requests over the last 3 navigations.\",\"type\":\"boolean\"},\"pageIdx\":{\"description\":\"Page number to return (0-based). When omitted, returns the first page.\",\"minimum\":0,\"type\":\"integer\"},\"pageSize\":{\"description\":\"Maximum number of requests to return. When omitted, returns all requests.\",\"exclusiveMinimum\":0,\"type\":\"integer\"},\"resourceTypes\":{\"description\":\"Filter requests to only return requests of the specified resource types. When omitted or empty, returns all requests.\",\"items\":{\"enum\":[\"document\",\"stylesheet\",\"image\",\"media\",\"font\",\"script\",\"texttrack\",\"xhr\",\"fetch\",\"prefetch\",\"eventsource\",\"websocket\",\"manifest\",\"signedexchange\",\"ping\",\"cspviolationreport\",\"preflight\",\"fedcm\",\"other\"],\"type\":\"string\"},\"type\":\"array\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_list_pages",
+                "description": "This is a tool from the chrome-devtools MCP server.\nGet a list of pages  open in the browser.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"type\":\"object\"}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_navigate_page",
+                "description": "This is a tool from the chrome-devtools MCP server.\nGo to a URL, or back, forward, or reload. Use project URL if not specified otherwise.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"handleBeforeUnload\":{\"description\":\"Whether to auto accept or beforeunload dialogs triggered by this navigation. Default is accept.\",\"enum\":[\"accept\",\"decline\"],\"type\":\"string\"},\"ignoreCache\":{\"description\":\"Whether to ignore cache on reload.\",\"type\":\"boolean\"},\"initScript\":{\"description\":\"A JavaScript script to be executed on each new document before any other scripts for the next navigation.\",\"type\":\"string\"},\"timeout\":{\"description\":\"Maximum wait time in milliseconds. If set to 0, the default timeout will be used.\",\"type\":\"integer\"},\"type\":{\"description\":\"Navigate the page by URL, back or forward in history, or reload.\",\"enum\":[\"url\",\"back\",\"forward\",\"reload\"],\"type\":\"string\"},\"url\":{\"description\":\"Target URL (only type=url)\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_new_page",
+                "description": "This is a tool from the chrome-devtools MCP server.\nOpen a new tab and load a URL. Use project URL if not specified otherwise.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"background\":{\"description\":\"Whether to open the page in the background without bringing it to the front. Default is false (foreground).\",\"type\":\"boolean\"},\"isolatedContext\":{\"description\":\"If specified, the page is created in an isolated browser context with the given name. Pages in the same browser context share cookies and storage. Pages in different browser contexts are fully isolated.\",\"type\":\"string\"},\"timeout\":{\"description\":\"Maximum wait time in milliseconds. If set to 0, the default timeout will be used.\",\"type\":\"integer\"},\"url\":{\"description\":\"URL to load in a new page.\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"url\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_performance_analyze_insight",
+                "description": "This is a tool from the chrome-devtools MCP server.\nProvides more detailed information on a specific Performance Insight of an insight set that was highlighted in the results of a trace recording.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"insightName\":{\"description\":\"The name of the Insight you want more information on. For example: \\\"DocumentLatency\\\" or \\\"LCPBreakdown\\\"\",\"type\":\"string\"},\"insightSetId\":{\"description\":\"The id for the specific insight set. Only use the ids given in the \\\"Available insight sets\\\" list.\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"insightSetId\",\"insightName\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_performance_start_trace",
+                "description": "This is a tool from the chrome-devtools MCP server.\nStart a performance trace on the selected webpage. Use to find frontend performance issues, Core Web Vitals (LCP, INP, CLS), and improve page load speed.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"autoStop\":{\"default\":true,\"description\":\"Determines if the trace recording should be automatically stopped.\",\"type\":\"boolean\"},\"filePath\":{\"description\":\"The absolute file path, or a file path relative to the current working directory, to save the raw trace data. For example, trace.json.gz (compressed) or trace.json (uncompressed).\",\"type\":\"string\"},\"reload\":{\"default\":true,\"description\":\"Determines if, once tracing has started, the current selected page should be automatically reloaded. Navigate the page to the right URL using the navigate_page tool BEFORE starting the trace if reload or autoStop is set to true.\",\"type\":\"boolean\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_performance_stop_trace",
+                "description": "This is a tool from the chrome-devtools MCP server.\nStop the active performance trace recording on the selected webpage.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"filePath\":{\"description\":\"The absolute file path, or a file path relative to the current working directory, to save the raw trace data. For example, trace.json.gz (compressed) or trace.json (uncompressed).\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_press_key",
+                "description": "This is a tool from the chrome-devtools MCP server.\nPress a key or key combination. Use this when other input methods like fill() cannot be used (e.g., keyboard shortcuts, navigation keys, or special key combinations).",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"includeSnapshot\":{\"description\":\"Whether to include a snapshot in the response. Default is false.\",\"type\":\"boolean\"},\"key\":{\"description\":\"A key or a combination (e.g., \\\"Enter\\\", \\\"Control+A\\\", \\\"Control++\\\", \\\"Control+Shift+R\\\"). Modifiers: Control, Shift, Alt, Meta\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"key\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_resize_page",
+                "description": "This is a tool from the chrome-devtools MCP server.\nResizes the selected page's window so that the page has specified dimension",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"height\":{\"description\":\"Page height\",\"type\":\"number\"},\"width\":{\"description\":\"Page width\",\"type\":\"number\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"width\",\"height\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_select_page",
+                "description": "This is a tool from the chrome-devtools MCP server.\nSelect a page as a context for future tool calls.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"bringToFront\":{\"description\":\"Whether to focus the page and bring it to the top.\",\"type\":\"boolean\"},\"pageId\":{\"description\":\"The ID of the page to select. Call list_pages to get available pages.\",\"type\":\"number\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"pageId\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_take_memory_snapshot",
+                "description": "This is a tool from the chrome-devtools MCP server.\nCapture a memory heapsnapshot of the currently selected page to memory leak debugging",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"filePath\":{\"description\":\"A path to a .heapsnapshot file to save the heapsnapshot to.\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"filePath\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_take_screenshot",
+                "description": "This is a tool from the chrome-devtools MCP server.\nTake a screenshot of the page or element.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"filePath\":{\"description\":\"The absolute path, or a path relative to the current working directory, to save the screenshot to instead of attaching it to the response.\",\"type\":\"string\"},\"format\":{\"default\":\"png\",\"description\":\"Type of format to save the screenshot as. Default is \\\"png\\\"\",\"enum\":[\"png\",\"jpeg\",\"webp\"],\"type\":\"string\"},\"fullPage\":{\"description\":\"If set to true takes a screenshot of the full page instead of the currently visible viewport. Incompatible with uid.\",\"type\":\"boolean\"},\"quality\":{\"description\":\"Compression quality for JPEG and WebP formats (0-100). Higher values mean better quality but larger file sizes. Ignored for PNG format.\",\"maximum\":100,\"minimum\":0,\"type\":\"number\"},\"uid\":{\"description\":\"The uid of an element on the page from the page content snapshot. If omitted takes a pages screenshot.\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_take_snapshot",
+                "description": "This is a tool from the chrome-devtools MCP server.\nTake a text snapshot of the currently selected page based on the a11y tree. The snapshot lists page elements along with a unique\nidentifier (uid). Always use the latest snapshot. Prefer taking a snapshot over taking a screenshot. The snapshot indicates the element selected\nin the DevTools Elements panel (if any).",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"filePath\":{\"description\":\"The absolute path, or a path relative to the current working directory, to save the snapshot to instead of attaching it to the response.\",\"type\":\"string\"},\"verbose\":{\"description\":\"Whether to include all possible information available in the full a11y tree. Default is false.\",\"type\":\"boolean\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_type_text",
+                "description": "This is a tool from the chrome-devtools MCP server.\nType text using keyboard into a previously focused input",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"submitKey\":{\"description\":\"Optional key to press after typing. E.g., \\\"Enter\\\", \\\"Tab\\\", \\\"Escape\\\"\",\"type\":\"string\"},\"text\":{\"description\":\"The text to type\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"text\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_upload_file",
+                "description": "This is a tool from the chrome-devtools MCP server.\nUpload a file through a provided element.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"filePath\":{\"description\":\"The local path of the file to upload\",\"type\":\"string\"},\"includeSnapshot\":{\"description\":\"Whether to include a snapshot in the response. Default is false.\",\"type\":\"boolean\"},\"uid\":{\"description\":\"The uid of the file input element or an element that will open file chooser on the page from the page content snapshot\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"uid\",\"filePath\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_chrome-devtools_wait_for",
+                "description": "This is a tool from the chrome-devtools MCP server.\nWait for the specified text to appear on the selected page.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"text\":{\"description\":\"Non-empty list of texts. Resolves when any value appears on the page.\",\"items\":{\"type\":\"string\"},\"minItems\":1,\"type\":\"array\"},\"timeout\":{\"description\":\"Maximum wait time in milliseconds. If set to 0, the default timeout will be used.\",\"type\":\"integer\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"text\"]}",
+                "serverName": "chrome-devtools"
+              },
+              {
+                "name": "mcp_context7_query-docs",
+                "description": "This is a tool from the context7 MCP server.\nRetrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.\n\nYou must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.\n\nIMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best information you have.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"libraryId\":{\"description\":\"Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'.\",\"type\":\"string\"},\"query\":{\"description\":\"The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"type\":\"object\",\"required\":[\"libraryId\",\"query\"]}",
+                "serverName": "context7"
+              },
+              {
+                "name": "mcp_context7_resolve-library-id",
+                "description": "This is a tool from the context7 MCP server.\nResolves a package/product name to a Context7-compatible library ID and returns matching libraries.\n\nYou MUST call this function before 'Query Documentation' tool to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.\n\nEach result includes:\n- Library ID: Context7-compatible identifier (format: /org/project)\n- Name: Library or package name\n- Description: Short summary\n- Code Snippets: Number of available code examples\n- Source Reputation: Authority indicator (High, Medium, Low, or Unknown)\n- Benchmark Score: Quality indicator (100 is the highest score)\n- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.\n\nFor best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.\n\nSelection Process:\n1. Analyze the query to understand what library/package the user is looking for\n2. Return the most relevant match based on:\n- Name similarity to the query (exact matches prioritized)\n- Description relevance to the query's intent\n- Documentation coverage (prioritize libraries with higher Code Snippet counts)\n- Source reputation (consider libraries with High or Medium reputation more authoritative)\n- Benchmark Score: Quality indicator (100 is the highest score)\n\nResponse Format:\n- Return the selected library ID in a clearly marked section\n- Provide a brief explanation for why this library was chosen\n- If multiple good matches exist, acknowledge this but proceed with the most relevant one\n- If no good matches exist, clearly state this and suggest query refinements\n\nFor ambiguous queries, request clarification before proceeding with a best-guess match.\n\nIMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.",
+                "jsonSchemaString": "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"properties\":{\"libraryName\":{\"description\":\"Library name to search for and retrieve a Context7-compatible library ID.\",\"type\":\"string\"},\"query\":{\"description\":\"The question or task you need help with. This is used to rank library results by relevance to what the user is trying to accomplish. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.\",\"type\":\"string\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"type\":\"object\",\"required\":[\"query\",\"libraryName\"]}",
+                "serverName": "context7"
+              },
+              {
+                "name": "multi_replace_file_content",
+                "description": "Use this tool to edit an existing file. Follow these rules:\n1. Use this tool ONLY when you are making MULTIPLE, NON-CONTIGUOUS edits to the same file (i.e., you are changing more than one separate block of text). If you are making a single contiguous block of edits, use the replace_file_content tool instead.\n2. Do NOT use this tool if you are only editing a single contiguous block of lines.\n3. Do NOT make multiple parallel calls to this tool or the replace_file_content tool for the same file.\n4. To edit multiple, non-adjacent lines of code in the same file, make a single call to this tool. Specify each edit as a separate ReplacementChunk.\n5. For each ReplacementChunk, specify StartLine, EndLine, TargetContent and ReplacementContent. StartLine and EndLine should specify a range of lines containing precisely the instances of TargetContent that you wish to edit. To edit a single instance of the TargetContent, the range should be such that it contains that specific instance of the TargetContent and no other instances. When applicable, provide a range that matches the range viewed in a previous view_file call. In TargetContent, specify the precise lines of code to edit. These lines MUST EXACTLY MATCH text in the existing file content. In ReplacementContent, specify the replacement content for the specified target content. This must be a complete drop-in replacement of the TargetContent, with necessary modifications made.\n6. If you are making multiple edits across a single file, specify multiple separate ReplacementChunks. DO NOT try to replace the entire existing content with the new content, this is very expensive.\n7. You may not edit file extensions: [.ipynb]\nIMPORTANT: You must generate the following arguments first, before any others: [TargetFile]",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"TargetFile\":{\"type\":\"string\",\"description\":\"The target file to modify. Always specify the target file as the very first argument.\"},\"CodeMarkdownLanguage\":{\"type\":\"string\",\"description\":\"Markdown language for the code block, e.g 'python' or 'javascript'\"},\"Instruction\":{\"type\":\"string\",\"description\":\"A description of the changes that you are making to the file.\"},\"TargetLintErrorIds\":{\"items\":{\"type\":\"string\"},\"type\":\"array\",\"description\":\"If applicable, IDs of lint errors this edit aims to fix (they'll have been given in recent IDE feedback). If you believe the edit could fix lints, do specify lint IDs; if the edit is wholly unrelated, do not. A rule of thumb is, if your edit was influenced by lint feedback, include lint IDs. Exercise honest judgement here.\"},\"Description\":{\"type\":\"string\",\"description\":\"Brief, user-facing explanation of what this change did. Focus on non-obvious rationale, design decisions, or important context. Don't just restate what the code does.\"},\"Complexity\":{\"type\":\"integer\",\"description\":\"A 1-10 rating of how important it is for the user to review this change. Rate based on: 1-3 (routine/obvious), 4-6 (worth noting), 7-10 (critical or subtle and warrants explanation).\"},\"ReplacementChunks\":{\"items\":{\"properties\":{\"AllowMultiple\":{\"type\":\"boolean\",\"description\":\"If true, multiple occurrences of 'targetContent' will be replaced by 'replacementContent' if they are found. Otherwise if multiple occurences are found, an error will be returned.\"},\"TargetContent\":{\"type\":\"string\",\"description\":\"The exact string to be replaced. This must be the exact character-sequence to be replaced, including whitespace. Be very careful to include any leading whitespace otherwise this will not work at all. This must be a unique substring within the file, or else it will error.\"},\"ReplacementContent\":{\"type\":\"string\",\"description\":\"The content to replace the target content with.\"},\"StartLine\":{\"type\":\"integer\",\"description\":\"The starting line number of the chunk (1-indexed). Should be at or before the first line containing the target content. Must satisfy 1 \\u003c= StartLine \\u003c= EndLine. The target content is searched for within the [StartLine, EndLine] range.\"},\"EndLine\":{\"type\":\"integer\",\"description\":\"The ending line number of the chunk (1-indexed). Should be at or after the last line containing the target content. Must satisfy StartLine \\u003c= EndLine \\u003c= number of lines in the file. The target content is searched for within the [StartLine, EndLine] range.\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"AllowMultiple\",\"TargetContent\",\"ReplacementContent\",\"StartLine\",\"EndLine\"]},\"type\":\"array\",\"description\":\"A list of chunks to replace. It is best to provide multiple chunks for non-contiguous edits if possible. This must be a JSON array, not a string.\"},\"ArtifactMetadata\":{\"properties\":{\"Summary\":{\"type\":\"string\",\"description\":\"Detailed multi-line summary of the artifact file, after edits have been made. Summary does not need to mention the artifact name and should focus on the contents and purpose of the artifact.\"},\"ArtifactType\":{\"type\":\"string\",\"enum\":[\"implementation_plan\",\"walkthrough\",\"task\",\"other\"],\"description\":\"Type of artifact: 'implementation_plan', 'walkthrough', 'task', or 'other'.\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"Summary\",\"ArtifactType\"],\"description\":\"Metadata updates if updating an artifact file, leave blank if not updating an artifact. Should be updated if the content is changing meaningfully.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"TargetFile\",\"CodeMarkdownLanguage\",\"Instruction\",\"Description\",\"Complexity\",\"ReplacementChunks\"]}",
+                "attributionFieldNames": [
+                  "ReplacementChunks.ReplacementChunkNoRange.ReplacementChunkBase.ReplacementContent"
+                ]
+              },
+              {
+                "name": "read_resource",
+                "description": "Retrieves a specified resource's contents.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"ServerName\":{\"type\":\"string\",\"description\":\"Name of the server to read the resource from.\"},\"Uri\":{\"type\":\"string\",\"description\":\"Unique identifier for the resource.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\"}"
+              },
+              {
+                "name": "read_terminal",
+                "description": "Reads the contents of a terminal given its process ID.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"ProcessID\":{\"type\":\"string\",\"description\":\"Process ID of the terminal to read.\"},\"Name\":{\"type\":\"string\",\"description\":\"Name of the terminal to read.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"ProcessID\",\"Name\"]}"
+              },
+              {
+                "name": "read_url_content",
+                "description": "Fetch content from a URL via HTTP request (invisible to USER). Use when: (1) extracting text from public pages, (2) reading static content/documentation, (3) batch processing multiple URLs, (4) speed is important, or (5) no visual interaction needed. Converts HTML to markdown. No JavaScript execution, no authentication. For pages requiring login, JavaScript, or USER visibility, use read_browser_page instead.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"Url\":{\"type\":\"string\",\"description\":\"URL to read content from\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"Url\"]}"
+              },
+              {
+                "name": "replace_file_content",
+                "description": "Use this tool to edit an existing file. Follow these rules:\n1. Use this tool ONLY when you are making a SINGLE CONTIGUOUS block of edits to the same file (i.e. replacing a single contiguous block of text). If you are making edits to multiple non-adjacent lines, use the multi_replace_file_content tool instead.\n2. Do NOT make multiple parallel calls to this tool or the multi_replace_file_content tool for the same file.\n3. To edit multiple, non-adjacent lines of code in the same file, make a single call to the multi_replace_file_content tool..\n4. For the ReplacementChunk, specify StartLine, EndLine, TargetContent and ReplacementContent. StartLine and EndLine should specify a range of lines containing precisely the instances of TargetContent that you wish to edit. To edit a single instance of the TargetContent, the range should be such that it contains that specific instance of the TargetContent and no other instances. When applicable, provide a range that matches the range viewed in a previous view_file call. In TargetContent, specify the precise lines of code to edit. These lines MUST EXACTLY MATCH text in the existing file content. In ReplacementContent, specify the replacement content for the specified target content. This must be a complete drop-in replacement of the TargetContent, with necessary modifications made.\n5. If you are making multiple edits across a single file, use the multi_replace_file_content tool instead. DO NOT try to replace the entire existing content with the new content, this is very expensive.\n6. You may not edit file extensions: [.ipynb]\nIMPORTANT: You must generate the following arguments first, before any others: [TargetFile]",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"TargetFile\":{\"type\":\"string\",\"description\":\"The target file to modify. Always specify the target file as the very first argument.\"},\"CodeMarkdownLanguage\":{\"type\":\"string\",\"description\":\"Markdown language for the code block, e.g 'python' or 'javascript'\"},\"Instruction\":{\"type\":\"string\",\"description\":\"A description of the changes that you are making to the file.\"},\"TargetLintErrorIds\":{\"items\":{\"type\":\"string\"},\"type\":\"array\",\"description\":\"If applicable, IDs of lint errors this edit aims to fix (they'll have been given in recent IDE feedback). If you believe the edit could fix lints, do specify lint IDs; if the edit is wholly unrelated, do not. A rule of thumb is, if your edit was influenced by lint feedback, include lint IDs. Exercise honest judgement here.\"},\"Description\":{\"type\":\"string\",\"description\":\"Brief, user-facing explanation of what this change did. Focus on non-obvious rationale, design decisions, or important context. Don't just restate what the code does.\"},\"Complexity\":{\"type\":\"integer\",\"description\":\"A 1-10 rating of how important it is for the user to review this change. Rate based on: 1-3 (routine/obvious), 4-6 (worth noting), 7-10 (critical or subtle and warrants explanation).\"},\"AllowMultiple\":{\"type\":\"boolean\",\"description\":\"If true, multiple occurrences of 'targetContent' will be replaced by 'replacementContent' if they are found. Otherwise if multiple occurences are found, an error will be returned.\"},\"TargetContent\":{\"type\":\"string\",\"description\":\"The exact string to be replaced. This must be the exact character-sequence to be replaced, including whitespace. Be very careful to include any leading whitespace otherwise this will not work at all. This must be a unique substring within the file, or else it will error.\"},\"ReplacementContent\":{\"type\":\"string\",\"description\":\"The content to replace the target content with.\"},\"StartLine\":{\"type\":\"integer\",\"description\":\"The starting line number of the chunk (1-indexed). Should be at or before the first line containing the target content. Must satisfy 1 \\u003c= StartLine \\u003c= EndLine. The target content is searched for within the [StartLine, EndLine] range.\"},\"EndLine\":{\"type\":\"integer\",\"description\":\"The ending line number of the chunk (1-indexed). Should be at or after the last line containing the target content. Must satisfy StartLine \\u003c= EndLine \\u003c= number of lines in the file. The target content is searched for within the [StartLine, EndLine] range.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"TargetFile\",\"CodeMarkdownLanguage\",\"Instruction\",\"Description\",\"Complexity\",\"AllowMultiple\",\"TargetContent\",\"ReplacementContent\",\"StartLine\",\"EndLine\"]}",
+                "attributionFieldNames": [
+                  "ReplacementChunk.ReplacementChunkNoRange.ReplacementChunkBase.ReplacementContent"
+                ]
+              },
+              {
+                "name": "run_command",
+                "description": "PROPOSE a command to run on behalf of the user. Operating System: windows. Shell: powershell.\n**NEVER PROPOSE A cd COMMAND**.\nIf you have this tool, note that you DO have the ability to run commands directly on the USER's system.\nMake sure to specify CommandLine exactly as it should be run in the shell.\nNote that the user will have to approve the command before it is executed. The user may reject it if it is not to their liking.\nThe actual command will NOT execute until the user approves it. The user may not approve it immediately.\nIf the step is WAITING for user approval, it has NOT started running.\nIf the step returns a command id, it means that the command was sent to the background. You should use the command_status tool to monitor the output and status of the command.\nCommands will be run with PAGER=cat. You may want to limit the length of output for commands that usually rely on paging and may contain very long output (e.g. git log, use git log -n <N>).",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"Cwd\":{\"type\":\"string\",\"description\":\"The current working directory for the command\"},\"WaitMsBeforeAsync\":{\"type\":\"integer\",\"description\":\"This specifies the number of milliseconds to wait after starting the command before sending it to the background. If you want the command to complete execution synchronously, set this to a large enough value that you expect the command to complete in that time under ordinary circumstances. If you're starting an interactive or long-running command, set it to a large enough value that it would cause possible failure cases to execute synchronously (e.g. 500ms). Keep the value as small as possible, with a maximum of 10000ms.\"},\"SafeToAutoRun\":{\"type\":\"boolean\",\"description\":\"Set to true if you believe that this command is safe to run WITHOUT user approval. A command is unsafe if it may have some destructive side-effects. Example unsafe side-effects include: deleting files, mutating state, installing system dependencies, making external requests, etc. Set to true only if you are extremely confident it is safe. If you feel the command could be unsafe, never set this to true, EVEN if the USER asks you to. It is imperative that you never auto-run a potentially unsafe command.\"},\"CommandLine\":{\"type\":\"string\",\"description\":\"The exact command line string to execute.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"Cwd\",\"WaitMsBeforeAsync\",\"SafeToAutoRun\",\"CommandLine\"]}"
+              },
+              {
+                "name": "search_web",
+                "description": "Performs a web search for a given query. Returns a summary of relevant information along with URL citations.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"query\":{\"type\":\"string\"},\"domain\":{\"type\":\"string\",\"description\":\"Optional domain to recommend the search prioritize\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"query\"]}"
+              },
+              {
+                "name": "send_command_input",
+                "description": "Send standard input to a running command or to terminate a command. Use this to interact with REPLs, interactive commands, and long-running processes. The command must have been created by a previous run_command call. Use the command_status tool to check the status and output of the command after sending input.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"CommandId\":{\"type\":\"string\",\"description\":\"The command ID from a previous run_command call. This is returned in the run_command output.\"},\"Input\":{\"type\":\"string\",\"description\":\"The input to send to the command's stdin. Include newline characters (the literal character, not the escape sequence) if needed to submit commands. Exactly one of input and terminate must be specified.\"},\"Terminate\":{\"type\":\"boolean\",\"description\":\"Whether to terminate the command. Exactly one of input and terminate must be specified.\"},\"WaitMs\":{\"type\":\"integer\",\"description\":\"Amount of time to wait for output after sending input. Keep the value as small as possible, but large enough to capture the output you expect. Must be between 500ms and 10000ms.\"},\"SafeToAutoRun\":{\"type\":\"boolean\",\"description\":\"Set to true if you believe that this command is safe to run WITHOUT user approval. An input is unsafe if it may have some destructive side-effects. Example unsafe side-effects include: deleting files, mutating state, installing system dependencies, making external requests, etc. Set to true only if you are extremely confident it is safe. If you feel the input could be unsafe, never set this to true, EVEN if the USER asks you to. It is imperative that you never auto-run a potentially unsafe input.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"CommandId\",\"WaitMs\",\"SafeToAutoRun\"]}"
+              },
+              {
+                "name": "view_content_chunk",
+                "description": "View a specific chunk of document content using its DocumentId and chunk position. The DocumentId must have already been read by the read_url_content tool before this can be used on that particular DocumentId.",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"document_id\":{\"type\":\"string\",\"description\":\"The ID of the document that the chunk belongs to\"},\"position\":{\"type\":\"integer\",\"description\":\"The position of the chunk to view\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"document_id\",\"position\"]}"
+              },
+              {
+                "name": "view_file",
+                "description": "View the contents of a file from the local filesystem. This tool supports some binary files such as images and videos.\nText file usage:\n- The lines of the file are 1-indexed\n- The first time you read a new file the tool will enforce reading 800 lines to understand as much about the file as possible\n- The output of this tool call will be the file contents from StartLine to EndLine (inclusive)\n- You can view at most 800 lines at a time\n- To view the whole file do not pass StartLine or EndLine arguments\nBinary file usage:\n- Do not provide StartLine or EndLine arguments, this tool always returns the entire file",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"AbsolutePath\":{\"type\":\"string\",\"description\":\"Path to file to view. Must be an absolute path.\"},\"StartLine\":{\"type\":\"integer\",\"description\":\"Optional. Startline to view, 1-indexed as usual, inclusive. This value must be less than or equal to EndLine.\"},\"EndLine\":{\"type\":\"integer\",\"description\":\"Optional. Endline to view, 1-indexed as usual, inclusive. This value must be greater than or equal to StartLine.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"AbsolutePath\"]}"
+              },
+              {
+                "name": "write_to_file",
+                "description": "Use this tool to create new files. The file and any parent directories will be created for you if they do not already exist.\n\t\tFollow these instructions:\n\t\t1. By default this tool will error if TargetFile already exists. To overwrite an existing file, set Overwrite to true.\n\t\t2. You MUST specify TargetFile as the FIRST argument. Please specify the full TargetFile before any of the code contents.\n\t\t3. When creating an artifact, make sure to set IsArtifact to true and provide an ArtifactMetadata.\nIMPORTANT: You must generate the following arguments first, before any others: [TargetFile, Overwrite]",
+                "jsonSchemaString": "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"properties\":{\"TargetFile\":{\"type\":\"string\",\"description\":\"The target file to create and write code to.\"},\"Overwrite\":{\"type\":\"boolean\",\"description\":\"Set this to true to overwrite an existing file. WARNING: This will replace the entire file contents. Only use when you explicitly intend to overwrite. Otherwise, use a code edit tool to modify existing files.\"},\"CodeContent\":{\"type\":\"string\",\"description\":\"The code contents to write to the file.\"},\"EmptyFile\":{\"type\":\"boolean\",\"description\":\"Set this to true to create an empty file.\"},\"Description\":{\"type\":\"string\",\"description\":\"Brief, user-facing explanation of what this change did. Focus on non-obvious rationale, design decisions, or important context. Don't just restate what the code does.\"},\"Complexity\":{\"type\":\"integer\",\"description\":\"A 1-10 rating of how important it is for the user to review this change. Rate based on: 1-3 (routine/obvious), 4-6 (worth noting), 7-10 (critical or subtle and warrants explanation).\"},\"IsArtifact\":{\"type\":\"boolean\",\"description\":\"Set this to true when creating an artifact file.\"},\"ArtifactMetadata\":{\"properties\":{\"Summary\":{\"type\":\"string\",\"description\":\"Detailed multi-line summary of the artifact file, after edits have been made. Summary does not need to mention the artifact name and should focus on the contents and purpose of the artifact.\"},\"ArtifactType\":{\"type\":\"string\",\"enum\":[\"implementation_plan\",\"walkthrough\",\"task\",\"other\"],\"description\":\"Type of artifact: 'implementation_plan', 'walkthrough', 'task', or 'other'.\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"Summary\",\"ArtifactType\"],\"description\":\"Metadata for the artifact, required when IsArtifact is true.\"},\"waitForPreviousTools\":{\"type\":\"boolean\",\"description\":\"If true, wait for all previous tool calls from this turn to complete before executing (sequential). If false or omitted, execute this tool immediately (parallel with other tools).\"}},\"additionalProperties\":false,\"type\":\"object\",\"required\":[\"TargetFile\",\"Overwrite\",\"CodeContent\",\"EmptyFile\",\"Description\",\"Complexity\",\"IsArtifact\"]}",
+                "attributionFieldNames": [
+                  "CodeContent"
+                ]
+              }
+            ],
+            "chatStartMetadata": {
+              "createdAt": "2026-03-23T02:03:22.925148Z",
+              "checkpointIndex": -1,
+              "latestStableMessageIndex": 3,
+              "cacheBreakpoints": [
+                {
+                  "index": 3,
+                  "options": {
+                    "type": "CACHE_CONTROL_TYPE_EPHEMERAL"
+                  },
+                  "contentChecksum": "6a6e880c"
+                },
+                {
+                  "index": 1,
+                  "options": {
+                    "type": "CACHE_CONTROL_TYPE_EPHEMERAL"
+                  },
+                  "contentChecksum": "efdeb367"
+                }
+              ],
+              "systemPromptCache": {
+                "options": {
+                  "type": "CACHE_CONTROL_TYPE_EPHEMERAL"
+                },
+                "contentChecksum": "e98895e0"
+              },
+              "timeSinceLastInvocation": "3.580228700s",
+              "contextWindowMetadata": {
+                "estimatedTokensUsed": 31448,
+                "tokenBreakdown": {
+                  "groups": [
+                    {
+                      "name": "System Prompt",
+                      "type": "TOKEN_TYPE_SYSTEM_PROMPT",
+                      "source": "TOKEN_SOURCE_SYSTEM",
+                      "numTokens": 4912,
+                      "children": [
+                        {
+                          "name": "identity",
+                          "numTokens": 222
+                        },
+                        {
+                          "name": "user_information",
+                          "numTokens": 182
+                        },
+                        {
+                          "name": "tool_calling",
+                          "numTokens": 84
+                        },
+                        {
+                          "name": "web_application_development",
+                          "numTokens": 1392
+                        },
+                        {
+                          "name": "ephemeral_message",
+                          "numTokens": 104
+                        },
+                        {
+                          "name": "artifacts",
+                          "numTokens": 2018
+                        },
+                        {
+                          "name": "workflows",
+                          "numTokens": 483
+                        },
+                        {
+                          "name": "communication_style",
+                          "numTokens": 427
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Mcp Tools",
+                      "type": "TOKEN_TYPE_MCP_TOOLS",
+                      "source": "TOKEN_SOURCE_USER",
+                      "numTokens": 173,
+                      "children": [
+                        {
+                          "name": "mcp_servers",
+                          "numTokens": 173
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Rules",
+                      "type": "TOKEN_TYPE_RULES",
+                      "source": "TOKEN_SOURCE_USER",
+                      "numTokens": 23,
+                      "children": [
+                        {
+                          "name": "user_rules",
+                          "numTokens": 23
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Skills",
+                      "type": "TOKEN_TYPE_SKILLS",
+                      "source": "TOKEN_SOURCE_USER",
+                      "numTokens": 315,
+                      "children": [
+                        {
+                          "name": "skills",
+                          "numTokens": 315
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Tools",
+                      "type": "TOKEN_TYPE_TOOLS",
+                      "source": "TOKEN_SOURCE_SYSTEM",
+                      "numTokens": 11614,
+                      "children": [
+                        {
+                          "name": "browser_subagent",
+                          "numTokens": 1185
+                        },
+                        {
+                          "name": "command_status",
+                          "numTokens": 424
+                        },
+                        {
+                          "name": "find_by_name",
+                          "numTokens": 639
+                        },
+                        {
+                          "name": "generate_image",
+                          "numTokens": 511
+                        },
+                        {
+                          "name": "grep_search",
+                          "numTokens": 708
+                        },
+                        {
+                          "name": "list_dir",
+                          "numTokens": 330
+                        },
+                        {
+                          "name": "list_resources",
+                          "numTokens": 174
+                        },
+                        {
+                          "name": "multi_replace_file_content",
+                          "numTokens": 1935
+                        },
+                        {
+                          "name": "read_resource",
+                          "numTokens": 194
+                        },
+                        {
+                          "name": "read_terminal",
+                          "numTokens": 204
+                        },
+                        {
+                          "name": "read_url_content",
+                          "numTokens": 290
+                        },
+                        {
+                          "name": "replace_file_content",
+                          "numTokens": 1566
+                        },
+                        {
+                          "name": "run_command",
+                          "numTokens": 909
+                        },
+                        {
+                          "name": "search_web",
+                          "numTokens": 206
+                        },
+                        {
+                          "name": "send_command_input",
+                          "numTokens": 677
+                        },
+                        {
+                          "name": "view_content_chunk",
+                          "numTokens": 267
+                        },
+                        {
+                          "name": "view_file",
+                          "numTokens": 474
+                        },
+                        {
+                          "name": "write_to_file",
+                          "numTokens": 921
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Mcp Tools",
+                      "type": "TOKEN_TYPE_MCP_TOOLS",
+                      "source": "TOKEN_SOURCE_USER",
+                      "numTokens": 10532,
+                      "children": [
+                        {
+                          "name": "chrome-devtools",
+                          "children": [
+                            {
+                              "name": "mcp_chrome-devtools_click",
+                              "numTokens": 266
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_close_page",
+                              "numTokens": 209
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_drag",
+                              "numTokens": 257
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_emulate",
+                              "numTokens": 518
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_evaluate_script",
+                              "numTokens": 386
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_fill",
+                              "numTokens": 274
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_fill_form",
+                              "numTokens": 311
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_get_console_message",
+                              "numTokens": 225
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_get_network_request",
+                              "numTokens": 344
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_handle_dialog",
+                              "numTokens": 242
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_hover",
+                              "numTokens": 235
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_lighthouse_audit",
+                              "numTokens": 328
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_list_console_messages",
+                              "numTokens": 445
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_list_network_requests",
+                              "numTokens": 450
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_list_pages",
+                              "numTokens": 149
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_navigate_page",
+                              "numTokens": 427
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_new_page",
+                              "numTokens": 377
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_performance_analyze_insight",
+                              "numTokens": 314
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_performance_start_trace",
+                              "numTokens": 414
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_performance_stop_trace",
+                              "numTokens": 247
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_press_key",
+                              "numTokens": 303
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_resize_page",
+                              "numTokens": 217
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_select_page",
+                              "numTokens": 241
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_take_memory_snapshot",
+                              "numTokens": 220
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_take_screenshot",
+                              "numTokens": 442
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_take_snapshot",
+                              "numTokens": 358
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_type_text",
+                              "numTokens": 229
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_upload_file",
+                              "numTokens": 289
+                            },
+                            {
+                              "name": "mcp_chrome-devtools_wait_for",
+                              "numTokens": 263
+                            }
+                          ],
+                          "numTokens": 8980
+                        },
+                        {
+                          "name": "context7",
+                          "children": [
+                            {
+                              "name": "mcp_context7_query-docs",
+                              "numTokens": 571
+                            },
+                            {
+                              "name": "mcp_context7_resolve-library-id",
+                              "numTokens": 981
+                            }
+                          ],
+                          "numTokens": 1552
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Chat Messages",
+                      "type": "TOKEN_TYPE_CHAT_MESSAGES",
+                      "numTokens": 3879,
+                      "children": [
+                        {
+                          "name": "0: USER_INPUT",
+                          "numTokens": 236
+                        },
+                        {
+                          "name": "1: CONVERSATION_HISTORY",
+                          "numTokens": 3227
+                        },
+                        {
+                          "name": "3: PLANNER_RESPONSE",
+                          "numTokens": 76
+                        },
+                        {
+                          "name": "4: LIST_DIRECTORY",
+                          "numTokens": 340
+                        }
+                      ]
+                    }
+                  ],
+                  "totalTokens": 31448
+                }
+              }
+            },
+            "timeToFirstToken": "1.643076s",
+            "streamingDuration": "8.277892500s",
+            "completionConfig": {
+              "numCompletions": "1",
+              "maxTokens": "16384",
+              "maxNewlines": "200",
+              "temperature": 0.4,
+              "firstTemperature": 0.4,
+              "topK": "50",
+              "topP": 1,
+              "stopPatterns": [
+                "<|user|>",
+                "<|bot|>",
+                "<|context_request|>",
+                "<|endoftext|>",
+                "<|end_of_turn|>"
+              ],
+              "fimEotProbThreshold": 1
+            },
+            "promptSections": [
+              {
+                "title": "identity",
+                "content": "<identity>\nYou are Antigravity, a powerful agentic AI coding assistant designed by the Google Deepmind team working on Advanced Agentic Coding.\nYou are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question.\nThe USER will send you requests, which you must always prioritize addressing. Along with each USER request, we will attach additional metadata about their current state, such as what files they have open and where their cursor is.\nThis information may or may not be relevant to the coding task, it is up for you to decide.\n</identity>",
+                "metadata": {
+                  "sourceType": "PROMPT_SECTION_SOURCE_TYPE_TEMPLATE",
+                  "templateKey": "identity"
+                },
+                "tokenType": "TOKEN_TYPE_SYSTEM_PROMPT",
+                "tokenSource": "TOKEN_SOURCE_SYSTEM"
+              },
+              {
+                "title": "user_information",
+                "dynamicContent": "<user_information>\nThe USER's OS version is windows.\nThe user has 1 active workspaces, each defined by a URI and a CorpusName. Multiple URIs potentially map to the same CorpusName. The mapping is shown as follows in the format [URI] -> [CorpusName]:\nc:\\Users\\BiuBiu\\Documents\\my app\\amaya -> nazrielnr/amaya\nCode relating to the user's requests should be written in the locations listed above. Avoid writing project code files to tmp, in the .gemini dir, or directly to the Desktop and similar folders unless explicitly asked.\n</user_information>",
+                "tokenType": "TOKEN_TYPE_SYSTEM_PROMPT",
+                "tokenSource": "TOKEN_SOURCE_SYSTEM"
+              },
+              {
+                "title": "tool_calling",
+                "content": "<tool_calling>\nCall tools as you normally would. The following list provides additional guidance to help you avoid errors:   - **Absolute paths only**. When using tools that accept file path arguments, ALWAYS use the absolute file path.\n</tool_calling>",
+                "metadata": {
+                  "sourceType": "PROMPT_SECTION_SOURCE_TYPE_TEMPLATE",
+                  "templateKey": "tool_calling"
+                },
+                "tokenType": "TOKEN_TYPE_SYSTEM_PROMPT",
+                "tokenSource": "TOKEN_SOURCE_SYSTEM"
+              },
+              {
+                "title": "mcp_servers",
+                "dynamicContent": "<mcp_servers>\nThe Model Context Protocol (MCP) is a standard that connects AI systems with external tools and data sources.\nMCP servers extend your capabilities by providing access to specialized functions, external information, and services.\nThe following MCP servers are available to you. Each server may provide (potentially truncated) additional recommendations and best practices.\n# chrome-devtools\n# context7\nUse this server to retrieve up-to-date documentation and code examples for any library.\n</mcp_servers>",
+                "tokenType": "TOKEN_TYPE_MCP_TOOLS",
+                "tokenSource": "TOKEN_SOURCE_USER"
+              },
+              {
+                "title": "web_application_development",
+                "content": "<web_application_development>\n## Technology Stack,\nYour web applications should be built using the following technologies:,\n1. **Core**: Use HTML for structure and Javascript for logic.\n2. **Styling (CSS)**: Use Vanilla CSS for maximum flexibility and control. Avoid using TailwindCSS unless the USER explicitly requests it; in this case, first confirm which TailwindCSS version to use.\n3. **Web App**: If the USER specifies that they want a more complex web app, use a framework like Next.js or Vite. Only do this if the USER explicitly requests a web app.\n4. **New Project Creation**: If you need to use a framework for a new app, use `npx` with the appropriate script, but there are some rules to follow:,\n   - Use `npx -y` to automatically install the script and its dependencies\n   - You MUST run the command with `--help` flag to see all available options first, \n   - Initialize the app in the current directory with `./` (example: `npx -y create-vite-app@latest ./`),\n   - You should run in non-interactive mode so that the user doesn't need to input anything,\n5. **Running Locally**: When running locally, use `npm run dev` or equivalent dev server. Only build the production bundle if the USER explicitly requests it or you are validating the code for correctness.\n\n# Design Aesthetics,\n1. **Use Rich Aesthetics**: The USER should be wowed at first glance by the design. Use best practices in modern web design (e.g. vibrant colors, dark modes, glassmorphism, and dynamic animations) to create a stunning first impression. Failure to do this is UNACCEPTABLE.\n2. **Prioritize Visual Excellence**: Implement designs that will WOW the user and feel extremely premium:\n\t\t- Avoid generic colors (plain red, blue, green). Use curated, harmonious color palettes (e.g., HSL tailored colors, sleek dark modes).\n   - Using modern typography (e.g., from Google Fonts like Inter, Roboto, or Outfit) instead of browser defaults.\n\t\t- Use smooth gradients,\n\t\t- Add subtle micro-animations for enhanced user experience,\n3. **Use a Dynamic Design**: An interface that feels responsive and alive encourages interaction. Achieve this with hover effects and interactive elements. Micro-animations, in particular, are highly effective for improving user engagement.\n4. **Premium Designs**. Make a design that feels premium and state of the art. Avoid creating simple minimum viable products.\n4. **Don't use placeholders**. If you need an image, use your generate_image tool to create a working demonstration.,\n\n## Implementation Workflow,\nFollow this systematic approach when building web applications:,\n1. **Plan and Understand**:,\n\t\t- Fully understand the user's requirements,\n\t\t- Draw inspiration from modern, beautiful, and dynamic web designs,\n\t\t- Outline the features needed for the initial version,\n2. **Build the Foundation**:,\n\t\t- Start by creating/modifying `index.css`,\n\t\t- Implement the core design system with all tokens and utilities,\n3. **Create Components**:,\n\t\t- Build necessary components using your design system,\n\t\t- Ensure all components use predefined styles, not ad-hoc utilities,\n\t\t- Keep components focused and reusable,\n4. **Assemble Pages**:,\n\t\t- Update the main application to incorporate your design and components,\n\t\t- Ensure proper routing and navigation,\n\t\t- Implement responsive layouts,\n5. **Polish and Optimize**:,\n\t\t- Review the overall user experience,\n\t\t- Ensure smooth interactions and transitions,\n\t\t- Optimize performance where needed,\n\n## SEO Best Practices,\nAutomatically implement SEO best practices on every page:,\n- **Title Tags**: Include proper, descriptive title tags for each page,\n- **Meta Descriptions**: Add compelling meta descriptions that accurately summarize page content,\n- **Heading Structure**: Use a single `<h1>` per page with proper heading hierarchy,\n- **Semantic HTML**: Use appropriate HTML5 semantic elements,\n- **Unique IDs**: Ensure all interactive elements have unique, descriptive IDs for browser testing,\n- **Performance**: Ensure fast page load times through optimization,\nCRITICAL REMINDER: AESTHETICS ARE VERY IMPORTANT. If your web app looks simple and basic then you have FAILED!\n</web_application_development>",
+                "metadata": {
+                  "sourceType": "PROMPT_SECTION_SOURCE_TYPE_RAW"
+                },
+                "tokenType": "TOKEN_TYPE_SYSTEM_PROMPT",
+                "tokenSource": "TOKEN_SOURCE_SYSTEM"
+              },
+              {
+                "title": "ephemeral_message",
+                "content": "<ephemeral_message>\nThere will be an <EPHEMERAL_MESSAGE> appearing in the conversation at times. This is not coming from the user, but instead injected by the system as important information to pay attention to. \nDo not respond to nor acknowledge those messages, but do follow them strictly.\n</ephemeral_message>",
+                "metadata": {
+                  "sourceType": "PROMPT_SECTION_SOURCE_TYPE_TEMPLATE",
+                  "templateKey": "ephemeral_message"
+                },
+                "tokenType": "TOKEN_TYPE_SYSTEM_PROMPT",
+                "tokenSource": "TOKEN_SOURCE_SYSTEM"
+              },
+              {
+                "title": "artifacts",
+                "content": "<artifacts>\nArtifacts are special markdown documents that you can create to present structured information to the user.\nAll artifacts should be written to the artifact directory. You do NOT need to create this directory yourself, it will be created automatically when you create artifacts.\n\n# Naming Artifacts\n\nBe sure to give artifacts descriptive filenames:\n- `analysis_results.md`\n- `research_notes.md`\n- `experiment_results.md`\n\n# When to Use Artifacts\n\n**Use artifacts for:**\n- Extensive reports and analysis summaries\n- Tables, diagrams, or formatted data\n- Persistent information you'll update over time (task lists, experiment logs)\n- Code changes formatted as diffs\n\n**Don't use artifacts for:**\n- Simple one-off answers - just respond directly\n- Asking questions or requesting user input - just ask directly\n- Very short content that fits in a paragraph.\n- Scratch scripts or one-off data files - save these in the /tmp/ directory.\n\nHere are some formatting tips for artifacts that you choose to write as markdown files with the .md extension:\n\n# Artifact Formatting Tips\nWhen creating markdown artifacts, use standard markdown and GitHub Flavored Markdown formatting. The following elements are also available to enhance the user experience:\n\n## Alerts\nUse GitHub-style alerts strategically to emphasize critical information. They will display with distinct colors and icons. Do not place consecutively or nest within other elements:\n  > [!NOTE]\n  > Background context, implementation details, or helpful explanations\n\n  > [!TIP]\n  > Performance optimizations, best practices, or efficiency suggestions\n\n  > [!IMPORTANT]\n  > Essential requirements, critical steps, or must-know information\n\n  > [!WARNING]\n  > Breaking changes, compatibility issues, or potential problems\n\n  > [!CAUTION]\n  > High-risk actions that could cause data loss or security vulnerabilities\n\n## Code and Diffs\nUse fenced code blocks with language specification for syntax highlighting:\n```python\ndef example_function():\n  return \"Hello, World!\"\n```\n\nUse diff blocks to show code changes. Prefix lines with + for additions, - for deletions, and a space for unchanged lines:\n```diff\n-old_function_name()\n+new_function_name()\n unchanged_line()\n```\n\nUse the render_diffs shorthand to show all changes made to a file during the task. Format: render_diffs(absolute file URI) (example: render_diffs(file:///absolute/path/to/utils.py)). Place on its own line.\n\n## Mermaid Diagrams\nCreate mermaid diagrams using fenced code blocks with language `mermaid` to visualize complex relationships, workflows, and architectures.\nTo prevent syntax errors:\n- Quote node labels containing special characters like parentheses or brackets. For example, `id[\"Label (Extra Info)\"]` instead of `id[Label (Extra Info)]`.\n- Avoid HTML tags in labels.\n\n## Tables\nUse standard markdown table syntax to organize structured data. Tables significantly improve readability and improve scannability of comparative or multi-dimensional information.\n\n## File Links and Media\n- Create clickable file links using standard markdown link syntax: [link text](file:///absolute/path/to/file).\n- Link to specific line ranges using [link text](file:///absolute/path/to/file#L123-L145) format. Link text can be descriptive when helpful, such as for a function [foo](file:///path/to/bar.py#L127-143) or for a line range [bar.py:L127-143](file:///path/to/bar.py#L127-143)\n- Embed images and videos with ![caption](/absolute/path/to/file.jpg). Always use absolute paths. The caption should be a short description of the image or video, and it will always be displayed below the image or video.\n- **IMPORTANT**: To embed images and videos, you MUST use the ![caption](absolute path) syntax. Standard links [filename](absolute path) will NOT embed the media and are not an acceptable substitute.\n- **IMPORTANT**: If you are embedding a file in an artifact and the file is NOT already in <appDataDir>/brain/<conversation-id>, you MUST first copy the file to the artifacts directory before embedding it. Only embed files that are located in the artifacts directory.\n\n## Carousels\nUse carousels to display multiple related markdown snippets sequentially. Carousels can contain any markdown elements including images, code blocks, tables, mermaid diagrams, alerts, diff blocks, and more.\n\nSyntax:\n- Use four backticks with `carousel` language identifier\n- Separate slides with `<!-- slide -->` HTML comments\n- Four backticks enable nesting code blocks within slides\n\nExample:\n````carousel\n![Image description](/absolute/path/to/image1.png)\n<!-- slide -->\n![Another image](/absolute/path/to/image2.png)\n<!-- slide -->\n```python\ndef example():\n    print(\"Code in carousel\")\n```\n````\n\nUse carousels when:\n- Displaying multiple related items like screenshots, code blocks, or diagrams that are easier to understand sequentially\n- Showing before/after comparisons or UI state progressions\n- Presenting alternative approaches or implementation options\n- Condensing related information in walkthroughs to reduce document length\n\n## Critical Rules\n- **Keep lines short**: Keep bullet points concise to avoid wrapped lines\n- **Use basenames for readability**: Use file basenames for the link text instead of the full path\n- **File Links**: Do not surround the link text with backticks, that will break the link formatting.\n    - **Correct**: [utils.py](file:///path/to/utils.py) or [foo](file:///path/to/file.py#L123)\n    - **Incorrect**: [`utils.py`](file:///path/to/utils.py) or [`function name`](file:///path/to/file.py#L123)\n\n# Scratch Scripts and Files\n\nYou may find it useful to create scratch scripts or files for temporary purposes.\n\nExamples:\n- One-off scripts to debug code\n- Temporary data files for testing\n\nFor these files, you should store them in the /tmp/ directory instead of the artifacts directory so that they are automatically cleaned up when they are no longer needed.\n\n</artifacts>",
+                "metadata": {
+                  "sourceType": "PROMPT_SECTION_SOURCE_TYPE_TEMPLATE",
+                  "templateKey": "artifacts"
+                },
+                "dynamicContent": "<artifacts>\nArtifact Directory Path: C:\\Users\\BiuBiu\\.gemini\\antigravity\\brain\\4a9113a5-98ed-497f-ad93-d0dec12455a7\n</artifacts>",
+                "tokenType": "TOKEN_TYPE_SYSTEM_PROMPT",
+                "tokenSource": "TOKEN_SOURCE_SYSTEM"
+              },
+              {
+                "title": "user_rules",
+                "dynamicContent": "<user_rules>\nThe user has not defined any custom rules.\n</user_rules>",
+                "tokenType": "TOKEN_TYPE_RULES",
+                "tokenSource": "TOKEN_SOURCE_USER"
+              },
+              {
+                "title": "workflows",
+                "dynamicContent": "<workflows>\nYou have the ability to use and create workflows, which are well-defined steps on how to achieve a particular thing. These workflows are defined as .md files in {.agents,.agent,_agents,_agent}/workflows.\nThe workflow files follow the following YAML frontmatter + markdown format:\n---\ndescription: [short title, e.g. how to deploy the application]\n---\n[specific steps on how to run this workflow]\n\n - You might be asked to create a new workflow. If so, create a new file in {.agents,.agent,_agents,_agent}/workflows/[filename].md (use absolute path) following the format described above. Be very specific with your instructions.\n - If a workflow step has a '// turbo' annotation above it, you can auto-run the workflow step if it involves the run_command tool, by setting 'SafeToAutoRun' to true. This annotation ONLY applies for this single step.\n   - For example if a workflow includes:\n```\n2. Make a folder called foo\n// turbo\n3. Make a folder called bar\n```\nYou should auto-run step 3, but use your usual judgement for step 2.\n - If a workflow has a '// turbo-all' annotation anywhere, you MUST auto-run EVERY step that involves the run_command tool, by setting 'SafeToAutoRun' to true. This annotation applies to EVERY step.\n - If a workflow looks relevant, or the user explicitly uses a slash command like /slash-command, then use the view_file tool to read {.agents,.agent,_agents,_agent}/workflows/slash-command.md.\n\n</workflows>",
+                "tokenType": "TOKEN_TYPE_SYSTEM_PROMPT",
+                "tokenSource": "TOKEN_SOURCE_SYSTEM"
+              },
+              {
+                "title": "skills",
+                "content": "<skills>\nYou can use specialized 'skills' to help you with complex tasks. Each skill has a name and a description listed below.\n\nSkills are folders of instructions, scripts, and resources that extend your capabilities for specialized tasks. Each skill folder contains:\n- **SKILL.md** (required): The main instruction file with YAML frontmatter (name, description) and detailed markdown instructions\n\nMore complex skills may include additional directories and files as needed, for example:\n- **scripts/** - Helper scripts and utilities that extend your capabilities\n- **examples/** - Reference implementations and usage patterns\n- **resources/** - Additional files, templates, or assets the skill may reference\n\nIf a skill seems relevant to your current task, you MUST use the `view_file` tool on the SKILL.md file to read its full instructions before proceeding. Once you have read the instructions, follow them exactly as documented.\n\n</skills>",
+                "metadata": {
+                  "sourceType": "PROMPT_SECTION_SOURCE_TYPE_TEMPLATE",
+                  "templateKey": "skills"
+                },
+                "tokenType": "TOKEN_TYPE_SKILLS",
+                "tokenSource": "TOKEN_SOURCE_USER"
+              },
+              {
+                "title": "communication_style",
+                "content": "<communication_style>\n- **Formatting**. Format your responses in github-style markdown to make your responses easier for the USER to parse. For example, use headers to organize your responses and bolded or italicized text to highlight important keywords. Use backticks to format file, directory, function, and class names. If providing a URL to the user, format this in markdown as well, for example `[label](example.com)`. - **Proactiveness**. As an agent, you are allowed to be proactive, but only in the course of completing the user's task. For example, if the user asks you to add a new component, you can edit the code, verify build and test statuses, and take any other obvious follow-up actions, such as performing additional research. However, avoid surprising the user. For example, if the user asks HOW to approach something, you should answer their question and instead of jumping into editing a file. - **Helpfulness**. Respond like a helpful software engineer who is explaining your work to a friendly collaborator on the project. Acknowledge mistakes or any backtracking you do as a result of new information. - **Ask for clarification**. If you are unsure about the USER's intent, always ask for clarification rather than making assumptions.\n</communication_style>",
+                "metadata": {
+                  "sourceType": "PROMPT_SECTION_SOURCE_TYPE_TEMPLATE",
+                  "templateKey": "communication_style"
+                },
+                "tokenType": "TOKEN_TYPE_SYSTEM_PROMPT",
+                "tokenSource": "TOKEN_SOURCE_SYSTEM"
+              }
+            ],
+            "retryInfos": [
+              {
+                "usage": {
+                  "model": "MODEL_PLACEHOLDER_M35",
+                  "inputTokens": "3557",
+                  "outputTokens": "506",
+                  "responseOutputTokens": "506",
+                  "cacheReadTokens": "21371",
+                  "apiProvider": "API_PROVIDER_ANTHROPIC_VERTEX",
+                  "responseHeader": {
+                    "sessionID": "-3750763034362895579"
+                  },
+                  "responseId": "req_vrtx_011CZKBz5RHJW4aYu3RknAv4"
+                },
+                "traceId": "b35a978e96a90d9f"
+              }
+            ],
+            "responseModel": "claude-sonnet-4-6"
+          },
+          "plannerConfig": {
+            "google": {
+              "plannerMode": "CONVERSATIONAL_PLANNER_MODE_DEFAULT",
+              "evalMode": false,
+              "agenticMode": false
+            },
+            "toolConfig": {
+              "mquery": {
+                "forceDisable": true
+              },
+              "code": {
+                "disableExtensions": [
+                  ".ipynb"
+                ],
+                "allowEditGitignore": true,
+                "enterpriseConfig": {
+                  "enforceWorkspaceValidation": false
+                },
+                "applyEdits": true,
+                "onlyShowIncrementalDiffZone": false,
+                "skipAwaitLintErrors": false,
+                "autoFixLintsConfig": {
+                  "enabled": true
+                },
+                "replaceContentToolConfig": {
+                  "maxFuzzyEditDistanceFraction": 0.001,
+                  "allowPartialReplacementSuccess": true,
+                  "fastApplyFallbackConfig": {
+                    "enabled": false,
+                    "promptUnchangedThreshold": 5,
+                    "contentViewRadiusLines": 200,
+                    "contentEditRadiusLines": 5,
+                    "fastApplyModel": "MODEL_GOOGLE_GEMINI_2_5_FLASH"
+                  },
+                  "toolVariant": "REPLACE_TOOL_VARIANT_SINGLE_MULTI",
+                  "showTriggeredMemories": true,
+                  "disableAllowMultiple": false,
+                  "useLineRange": true
+                },
+                "classifyEdit": false,
+                "provideImportance": false,
+                "useSedEdit": false,
+                "useReplaceContentProposeCode": false
+              },
+              "intent": {
+                "intentModel": "MODEL_GOOGLE_GEMINI_2_5_FLASH",
+                "maxContextTokens": 40000
+              },
+              "grep": {
+                "maxGrepResults": 50,
+                "includeCciInResult": false,
+                "enterpriseConfig": {
+                  "enforceWorkspaceValidation": false
+                },
+                "allowAccessGitignore": true,
+                "useCodeSearch": false,
+                "disableFallbackToLocalExecution": false
+              },
+              "find": {
+                "maxFindResults": 50,
+                "fdPath": "c:/Users/BiuBiu/AppData/Local/Programs/Antigravity/resources/app/extensions/antigravity/bin/fd.exe",
+                "useCodeSearch": false,
+                "disableFallbackToLocalExecution": false
+              },
+              "runCommand": {
+                "maxCharsCommandStdout": 8192,
+                "forceDisable": false,
+                "autoCommandConfig": {
+                  "systemAllowlist": [
+                    "echo",
+                    "ls"
+                  ],
+                  "systemDenylist": [
+                    "rmdir",
+                    "rmdir"
+                  ],
+                  "autoExecutionPolicy": "CASCADE_COMMANDS_AUTO_EXECUTION_OFF"
+                },
+                "enableIdeTerminalExecution": true,
+                "forceGoTerminalExecution": false,
+                "shellName": "powershell",
+                "shellPath": "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                "enterpriseConfig": {
+                  "enforceWorkspaceValidation": false
+                },
+                "forbidSearchCommands": false
+              },
+              "viewFile": {
+                "allowViewGitignore": true,
+                "splitOutlineTool": true,
+                "showTriggeredMemories": true,
+                "enterpriseConfig": {
+                  "enforceWorkspaceValidation": false
+                },
+                "maxLinesPerView": 800,
+                "includeLineNumbers": true,
+                "maxTotalOutlineBytes": 8192,
+                "maxBytesPerOutlineItem": 512,
+                "showFullFileBytes": 8192
+              },
+              "suggestedResponse": {
+                "forceDisable": true
+              },
+              "searchWeb": {
+                "forceDisable": false,
+                "thirdPartyConfig": {
+                  "provider": "THIRD_PARTY_WEB_SEARCH_PROVIDER_GEMINI"
+                }
+              },
+              "mcp": {
+                "forceDisable": false,
+                "maxOutputBytes": 4096
+              },
+              "listDir": {
+                "enterpriseConfig": {
+                  "enforceWorkspaceValidation": false
+                }
+              },
+              "commandStatus": {
+                "useDelta": true,
+                "maxOutputCharacters": 8192,
+                "minOutputCharacters": 1024,
+                "maxWaitDurationSeconds": 300,
+                "outputStabilizationDurationSeconds": 5
+              },
+              "antigravityBrowser": {
+                "enabled": true,
+                "captureBrowserScreenshot": {
+                  "enableSaving": true
+                },
+                "browserSubagent": {
+                  "mode": "BROWSER_SUBAGENT_MODE_SUBAGENT_ONLY",
+                  "browserSubagentModel": "MODEL_PLACEHOLDER_M18",
+                  "useDetailedConverter": true,
+                  "disableOnboarding": false,
+                  "subagentReminderMode": {
+                    "verifyScreenshots": {}
+                  },
+                  "contextConfig": {
+                    "type": "CONTEXT_TYPE_WITH_MARKDOWN_TRAJECTORY_SUMMARY",
+                    "maxChars": 10000
+                  },
+                  "domExtractionConfig": {
+                    "includeCoordinates": true
+                  },
+                  "lowLevelToolsConfig": {
+                    "enableLowLevelToolsInstructions": true,
+                    "enableMouseTools": true
+                  },
+                  "enableScratchpad": true
+                },
+                "clickBrowserPixel": {
+                  "clickFeedback": {
+                    "enabled": true,
+                    "red": 255,
+                    "green": 0,
+                    "blue": 0,
+                    "alpha": 255,
+                    "displayColor": "red",
+                    "radius": 25,
+                    "feedbackType": "FEEDBACK_TYPE_MOUSE_POINTER"
+                  }
+                },
+                "browserStateDiffingConfig": {
+                  "captureAgentActionDiffs": true,
+                  "includeDomTreeInDiffs": false
+                },
+                "browserListNetworkRequestsToolConfig": {
+                  "enabled": true
+                },
+                "browserGetNetworkRequestToolConfig": {
+                  "enabled": true
+                },
+                "toolSetMode": "BROWSER_TOOL_SET_MODE_ALL_INPUT_PIXEL_OUTPUT",
+                "disableOpenUrl": false,
+                "browserJsExecutionPolicy": "BROWSER_JS_EXECUTION_POLICY_DISABLED",
+                "variableWaitTool": true,
+                "domExtractionConfig": {
+                  "includeCoordinates": true
+                },
+                "disableWorkspaceApi": false,
+                "useAntigravityAsBrowserPrompting": false,
+                "enableRefreshTool": false,
+                "disableReadBrowserPage": false,
+                "useExtendedTimeout": false,
+                "logTimeoutErrorsInsteadOfSentry": false,
+                "skipPermissionChecks": false,
+                "displayOnCrd": true
+              },
+              "internalSearch": {
+                "maxResults": 10,
+                "maxContentLength": 5000
+              },
+              "notifyUser": {
+                "artifactReviewMode": "ARTIFACT_REVIEW_MODE_ALWAYS"
+              },
+              "taskBoundary": {
+                "minimumPredictedTaskSize": 3,
+                "targetStatusUpdateFrequency": 5,
+                "noActiveTaskSoftReminderToolThreshold": 2,
+                "noActiveTaskStrictReminderToolThreshold": 5
+              },
+              "finish": {},
+              "notebookEdit": {
+                "enabled": false
+              },
+              "invokeSubagent": {
+                "enabled": false
+              }
+            },
+            "planModel": "MODEL_PLACEHOLDER_M35",
+            "requestedModel": {
+              "model": "MODEL_PLACEHOLDER_M35"
+            },
+            "modelName": "claude-sonnet-4-6",
+            "maxOutputTokens": 16384,
+            "noToolExplanation": true,
+            "noToolSummary": true,
+            "truncationThresholdTokens": 160000,
+            "ephemeralMessagesConfig": {
+              "enabled": true,
+              "persistenceLevel": "EPHEMERAL_MESSAGE_PERSISTENCE_LEVEL_LATEST_ONLY",
+              "browserEphemeralOptions": [
+                "BROWSER_EPHEMERAL_OPTION_SCREENSHOT",
+                "BROWSER_EPHEMERAL_OPTION_DOM"
+              ],
+              "disabledHeuristics": [
+                "bash_command_reminder"
+              ]
+            },
+            "retryConfig": {
+              "modelOutputRetry": {
+                "maxRetries": 4,
+                "forbidToolUse": true
+              },
+              "apiRetry": {
+                "maxRetries": 2,
+                "initialSleepDurationMs": 5000,
+                "exponentialMultiplier": 2,
+                "includeErrorFeedback": true,
+                "range": 0.4
+              }
+            },
+            "knowledgeConfig": {
+              "enabled": false,
+              "model": "MODEL_PLACEHOLDER_M18",
+              "maxContextTokens": 200000,
+              "maxInvocations": 20,
+              "minTurnsBetweenKnowledgeGeneration": 10000,
+              "maxKnowledgeItems": 20,
+              "maxArtifactsPerKi": 20,
+              "maxTitleLength": 100,
+              "maxSummaryLength": 1000
+            },
+            "agenticModeConfig": {
+              "injectArtifactReminderThresholdMap": {
+                "implementation_plan.md": 0,
+                "task.md": 0
+              },
+              "disableArtifactReminders": false
+            },
+            "noWaitForPreviousTools": false
+          },
+          "executionId": "b2e7b9f9-b239-4903-b549-d22461243a44"
+        }
+      ],
+      "executorMetadatas": [
+        {
+          "terminationReason": "EXECUTOR_TERMINATION_REASON_NO_TOOL_CALL",
+          "numGeneratorInvocations": 2,
+          "lastStepIdx": 7,
+          "executionId": "b2e7b9f9-b239-4903-b549-d22461243a44"
+        }
+      ],
+      "source": "CORTEX_TRAJECTORY_SOURCE_CASCADE_CLIENT",
+      "metadata": {
+        "workspaces": [
+          {
+            "workspaceFolderAbsoluteUri": "file:///c:/Users/BiuBiu/Documents/my%20app/amaya",
+            "gitRootAbsoluteUri": "file:///c:/Users/BiuBiu/Documents/my%20app/amaya",
+            "repository": {
+              "computedName": "nazrielnr/amaya",
+              "gitOriginUrl": "https://github.com/nazrielnr/amaya.git"
+            },
+            "branchName": "main"
+          }
+        ],
+        "createdAt": "2026-03-23T02:03:19.290242900Z",
+        "initializationStateId": "9313daf7-68a3-426d-8410-2a29f88f1fd1"
+      }
+    },
+    "status": "CASCADE_RUN_STATUS_IDLE",
+    "numTotalSteps": 8,
+    "numTotalGeneratorMetadata": 2
+  }
+}

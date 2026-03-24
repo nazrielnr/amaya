@@ -1,0 +1,61 @@
+{
+  "event": "state_sync",
+  "data": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "ini logo apa",
+        "metadata": {
+          "startStepIndex": "0",
+          "endStepIndex": "0",
+          "trajectoryId": "86399c89-cbc1-4e69-b5ee-1a46802fe5e9",
+          "cascadeId": "dc34a861-79e1-4c14-aea6-e4ac8318d3df"
+        },
+        "toolExecutions": [],
+        "attachments": []
+      },
+      {
+        "role": "assistant",
+        "content": "Ini adalah logo **Anthropic**, perusahaan kecerdasan buatan (AI) yang mengembangkan asisten AI bernama **Claude**.\n\nLogo ini berbentuk bintang atau tanda bintang (*asterisk*) bergaya organik dengan ujung yang tumpul dan tidak beraturan, yang melambangkan pendekatan mereka yang lebih humanis dan aman terhadap pengembangan AI. warnanya biasanya bernuansa cokelat kemerahan atau terakota.",
+        "metadata": {
+          "startStepIndex": "4",
+          "endStepIndex": "4",
+          "trajectoryId": "86399c89-cbc1-4e69-b5ee-1a46802fe5e9",
+          "cascadeId": "dc34a861-79e1-4c14-aea6-e4ac8318d3df"
+        },
+        "toolExecutions": [
+          {
+            "toolCallId": "thinking-4",
+            "name": "thinking",
+            "arguments": {
+              "thinking": "**Identifying the Logo**\n\nI'm currently focused on identifying the logo the user presented. The image depicts a reddish-orange, stylized star or flower with twelve points and rounded tips. My initial impression is that it resembles a sunburst or a variation of a twelve-pointed star. I'm exploring potential matches based on this visual information.\n\n\n",
+              "thoughtTitle": "Identifying the Logo"
+            },
+            "result": "**Identifying the Logo**\n\nI'm currently focused on identifying the logo the user presented. The image depicts a reddish-orange, stylized star or flower with twelve points and rounded tips. My initial impression is that it resembles a sunburst or a variation of a twelve-pointed star. I'm exploring potential matches based on this visual information.\n\n\n",
+            "isError": false,
+            "status": "SUCCESS",
+            "metadata": {
+              "syntheticThinking": "true",
+              "thoughtTitle": "Identifying the Logo"
+            }
+          }
+        ],
+        "attachments": []
+      }
+    ],
+    "isLoading": false,
+    "isStreaming": false,
+    "currentModel": "",
+    "conversationMode": "planning",
+    "toolExecutions": [],
+    "appName": "Antigravity / Framework",
+    "appVersion": "2.0.0",
+    "currentWorkspace": {
+      "name": "amaya",
+      "path": "c:\\Users\\BiuBiu\\Documents\\my app\\amaya"
+    },
+    "conversationId": "dc34a861-79e1-4c14-aea6-e4ac8318d3df"
+  },
+  "seqId": 45,
+  "serverSessionId": "1773953462267-ab54e49bd0e9a"
+}

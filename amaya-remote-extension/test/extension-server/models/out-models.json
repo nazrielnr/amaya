@@ -1,0 +1,78 @@
+[AntigravityApi] Step 1: Language Server process cmdline...
+[AntigravityApi] LS cmdline: c:\Users\BiuBiu\AppData\Local\Programs\Antigravity\resources\app\extensions\antigravity\bin\language_server_windows_x64.exe --enable_lsp --csrf_token ...
+[AntigravityApi] CSRF token: 31f96809...
+[AntigravityApi] LS ports: 63609, 63602, 53456
+[AntigravityApi] LS HTTP gRPC port: 53456
+[AntigravityApi]   G£ô CmdLine: port=53456 csrf=31f96809...
+[AntigravityApi]   Protocol: HTTP=true HTTPS=false GåÆ HTTP
+[AntigravityApi] Step 6: API key (VS Code Auth)...
+[AntigravityApi]   G£ù Auth: no session
+[AntigravityApi] Step 7: API key (state.vscdb)...
+[AntigravityApi] API key from state.vscdb: ya29.xxxREDACTED...
+[AntigravityApi]   G£ô StateDB: ya29.xxxREDACTED...
+[AntigravityApi] Verifying: HTTP://127.0.0.1:53456...
+[AntigravityApi]   G£ô Verified OK!
+[AntigravityApi] G£à READY GÇö HTTP://127.0.0.1:53456
+Fetching GetCommandModelConfigs directly...
+=== RAW MODEL CONFIGS ===
+{
+  "clientModelConfigs": [
+    {
+      "label": "Gemini 3 Flash",
+      "modelOrAlias": {
+        "model": "MODEL_PLACEHOLDER_M18"
+      },
+      "supportsImages": true,
+      "isRecommended": true,
+      "allowedTiers": [
+        "TEAMS_TIER_PRO",
+        "TEAMS_TIER_TEAMS",
+        "TEAMS_TIER_ENTERPRISE_SELF_HOSTED",
+        "TEAMS_TIER_ENTERPRISE_SAAS",
+        "TEAMS_TIER_HYBRID",
+        "TEAMS_TIER_PRO_ULTIMATE"
+      ],
+      "quotaInfo": {
+        "remainingFraction": 1,
+        "resetTime": "2026-03-08T16:12:33Z"
+      },
+      "supportedMimeTypes": {
+        "application/json": true,
+        "application/pdf": true,
+        "application/rtf": true,
+        "application/x-ipynb+json": true,
+        "application/x-javascript": true,
+        "application/x-python-code": true,
+        "application/x-typescript": true,
+        "audio/webm;codecs=opus": true,
+        "image/heic": true,
+        "image/heif": true,
+        "image/jpeg": true,
+        "image/png": true,
+        "image/webp": true,
+        "text/css": true,
+        "text/csv": true,
+        "text/html": true,
+        "text/javascript": true,
+        "text/markdown": true,
+        "text/plain": true,
+        "text/rtf": true,
+        "text/x-python": true,
+        "text/x-python-script": true,
+        "text/x-typescript": true,
+        "text/xml": true,
+        "video/audio/s16le": true,
+        "video/audio/wav": true,
+        "video/jpeg2000": true,
+        "video/mp4": true,
+        "video/text/timestamp": true,
+        "video/videoframe/jpeg2000": true,
+        "video/webm": true
+      }
+    }
+  ]
+}
+Fetching getCloudcodeModels directly...
+=== CLOUDCODE MODELS ===
+[]
+

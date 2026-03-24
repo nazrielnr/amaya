@@ -1,0 +1,198 @@
+# Reverse Engineering Antigravity Chat API — Full Walkthrough
+
+## Tujuan
+Mendapatkan akses ke **chat history** dan **real-time streaming** Antigravity IDE tanpa mengubah UI, untuk digunakan oleh Amaya Remote sebagai remote display.
+
+---
+
+## Fase 1: Analisis File [.pb](file:///C:/Users/BiuBiu/.gemini/antigravity/user_settings.pb) (❌ Gagal)
+
+### Apa yang dilakukan
+Antigravity menyimpan conversation di `~/.gemini/antigravity/conversations/*.pb`. Kami mencoba mendecodenya secara langsung.
+
+### Hasil
+- **Entropy: 7.96/8.0** → data terenkripsi, bukan sekadar compressed
+- Semua metode dekompresi (gzip, zlib, bz2, lzma) gagal
+- Tidak ada magic bytes yang dikenali
+- **Kesimpulan: File [.pb](file:///C:/Users/BiuBiu/.gemini/antigravity/user_settings.pb) dienkripsi oleh Antigravity sebelum ditulis ke disk**
+
+### Script yang digunakan
+```python
+# c:\tmp\analyze-pb.py — Entropy & compression analysis
+```
+
+---
+
+## Fase 2: Reverse Engineering JavaScript (🔍 Research)
+
+### Apa yang dilakukan
+Membuka bundled JavaScript di:
+```
+%LOCALAPPDATA%\Programs\Antigravity\resources\app\extensions\antigravity\
+├── dist\extension.js      ← Backend logic (Node.js)
+├── out\media\chat.js      ← Chat UI (React webview)
+└── bin\language_server_windows_x64.exe  ← gRPC Server binary
+```
+
+### Temuan Kunci
+1. **`AgentClient`** di [chat.js](file:///C:/Users/BiuBiu/AppData/Local/Programs/Antigravity/resources/app/extensions/antigravity/out/media/chat.js) memanggil: [startConversation()](file:///c:/Users/BiuBiu/Documents/my%20app/amaya/amaya-remote-extension/src/extension.ts#595-640), [getConversation()](file:///c:/Users/BiuBiu/Documents/my%20app/amaya/app/src/main/java/com/amaya/intelligence/service/RemoteSessionClient.kt#118-121), [sendMessage()](file:///c:/Users/BiuBiu/Documents/my%20app/amaya/app/src/main/java/com/amaya/intelligence/ui/chat/ChatViewModel.kt#151-425), [deleteConversation()](file:///c:/Users/BiuBiu/Documents/my%20app/amaya/app/src/main/java/com/amaya/intelligence/ui/chat/ChatViewModel.kt#718-731), `reference()`, [stop()](file:///c:/Users/BiuBiu/Documents/my%20app/amaya/amaya-remote-extension/src/extension.ts#203-214)
+2. Semua komunikasi melalui **Language Server** (binary Go/gRPC di `bin/`)
+3. Schema protobuf menggunakan `exa.language_server_pb.LanguageServerService`
+
+---
+
+## Fase 3: Penemuan Port 53125 (🎯 Breakthrough!)
+
+### Bagaimana ditemukan
+User membuka **Chrome DevTools** (bawaan Antigravity/Electron) → Network tab → mengirim chat "hi" → muncul request ke:
+
+```
+https://127.0.0.1:53125/exa.language_server_pb.LanguageServerService/StartCascade
+```
+
+### Data yang dicapture dari DevTools
+
+**Request Headers:**
+```http
+POST /exa.language_server_pb.LanguageServerService/StartCascade HTTP/2
+Host: 127.0.0.1:53125
+Content-Type: application/json
+connect-protocol-version: 1
+x-codeium-csrf-token: ec778089-b592-47d6-a07b-e08eca4eac0e
+Origin: vscode-file://vscode-app
+```
+
+**Request Body:**
+```json
+{
+  "metadata": {
+    "ideName": "antigravity",
+    "apiKey": "ya29.a0ATkoC...",   // Google OAuth token (expires ~1 hour)
+    "locale": "en",
+    "ideVersion": "1.19.6",
+    "extensionName": "antigravity"
+  },
+  "source": "CORTEX_TRAJECTORY_SOURCE_CASCADE_CLIENT"
+}
+```
+
+**Response Body:**
+```json
+{ "cascadeId": "411f11e9-10ed-4343-8369-49601470d7bb" }
+```
+
+---
+
+## Fase 4: Testing Endpoint (✅ Berhasil!)
+
+### Trial & Error
+| Endpoint | Status | Catatan |
+|----------|--------|---------|
+| `GetConversation` | ❌ 404 | Nama salah |
+| `GetConversationTrajectory` | ❌ 404 | Nama salah |
+| `StartCascade` | ✅ 500 | Server menjawab! ("conversation already exists") |
+| **`GetCascadeTrajectory`** | **✅ 200** | **BINGO! History lengkap!** |
+
+### Kunci Penamaan
+Antigravity menggunakan istilah **"Cascade"** bukan "Conversation" untuk gRPC methods. Ditemukan dengan grep [extension.js](file:///C:/Users/BiuBiu/AppData/Local/Programs/Antigravity/resources/app/extensions/antigravity/dist/extension.js) untuk schema names: `GetCascadeTrajectoryRequestSchema`, `GetCascadeTrajectoryResponseSchema`, dll.
+
+---
+
+## Fase 5: Full Endpoint Discovery (10/11 ✅)
+
+Setelah berhasil koneksi, kami menguji seluruh endpoint yang potensial:
+
+| # | Endpoint | Status | Fungsi |
+|---|----------|--------|--------|
+| 1 | `GetCommandModelConfigs` | ✅ | Daftar model AI + quota + MIME types |
+| 2 | `GetCascadeTrajectory` | ✅ | **Baca full chat history** |
+| 3 | `GetUserTrajectoryDescriptions` | ✅ | List workspace trajectories |
+| 4 | `UpdateCascadeTrajectorySummaries` | ❌ 404 | Tidak tersedia |
+| 5 | `GetCascadeModelConfigs` | ✅ | Config model per cascade |
+| 6 | `GetUnleashData` | ✅ | Feature flags + experiment config |
+| 7 | `GetCascadeTrajectorySteps` | ✅ | Steps tanpa wrapper trajectory |
+| 8 | `GetCascadeTrajectoryGeneratorMetadata` | ✅ | System prompt + model info |
+| 9 | `GetCascadeNuxes` | ✅ | Onboarding tips / announcement |
+| 10 | `GetAgentScripts` | ✅ | Custom agent scripts (kosong) |
+| 11 | `StartCascade` | ✅ | Mulai conversation baru |
+
+### Hasil Baca Semua Conversations
+```
+68 file .pb → 68/68 berhasil dibaca via GetCascadeTrajectory (100% success rate)
+```
+
+---
+
+## Authentication
+
+### Token 1: `x-codeium-csrf-token` (HTTP Header)
+- UUID yang di-generate saat Antigravity start
+- Berlaku selama sesi IDE
+- Mencegah request dari luar browser process
+
+### Token 2: `apiKey` dalam body (Google OAuth)
+- Format: `ya29.a0ATkoC...` (Google OAuth 2.0 Access Token)
+- Expires setiap ~1 jam
+- Di-refresh otomatis oleh Antigravity
+- Dikirim di dalam JSON body `metadata.apiKey`
+
+---
+
+## JSON Schema: Chat History
+
+```json
+{
+  "trajectory": {
+    "trajectoryId": "uuid",
+    "cascadeId": "uuid",
+    "trajectoryType": "CORTEX_TRAJECTORY_TYPE_CASCADE",
+    "steps": [
+      {
+        "type": "CORTEX_STEP_TYPE_USER_INPUT",
+        "status": "CORTEX_STEP_STATUS_DONE",
+        "metadata": {
+          "createdAt": "2026-03-07T21:27:38Z",
+          "source": "CORTEX_STEP_SOURCE_USER_EXPLICIT"
+        },
+        "userInput": {
+          "items": [{ "text": "hi" }],
+          "activeUserState": { /* open files, cursor pos */ },
+          "clientType": "CLIENT_TYPE_CHAT_PANEL"
+        }
+      },
+      {
+        "type": "CORTEX_STEP_TYPE_PLANNER_RESPONSE",
+        "plannerResponse": {
+          "response": "Hello! How can I help you today?...",
+          "thinking": "...",
+          "thinkingDuration": "0.377725400s",
+          "stopReason": "STOP_REASON_STOP_PATTERN"
+        }
+      }
+    ]
+  }
+}
+```
+
+### Step Types
+| Type | Data Key | Isi |
+|------|----------|-----|
+| `USER_INPUT` | `userInput.items[0].text` | Pesan user |
+| `PLANNER_RESPONSE` | `plannerResponse.response` | Jawaban AI |
+| `CONVERSATION_HISTORY` | `conversationHistory` | History sebelumnya |
+| `KNOWLEDGE_ARTIFACTS` | `knowledgeArtifacts` | Artifact yang di-load |
+| `EPHEMERAL_MESSAGE` | `ephemeralMessage` | System message |
+| `CHECKPOINT` | `checkpoint` | Checkpoint state |
+
+---
+
+## Relevansi untuk Amaya Remote
+
+| Kebutuhan | Endpoint | Status |
+|-----------|----------|--------|
+| Baca history chat | `GetCascadeTrajectory` | ✅ Verified |
+| List semua conversations | Scan `*.pb` + `GetCascadeTrajectory` | ✅ Verified |
+| Kirim pesan baru | `SendUserCascadeMessage` | 🔄 Belum dites |
+| Streaming real-time | `StreamCascadeReactiveUpdates` | 🔄 Belum dites |
+| Info model & quota | `GetCommandModelConfigs` | ✅ Verified |
+| System prompt AI | `GetCascadeTrajectoryGeneratorMetadata` | ✅ Verified |

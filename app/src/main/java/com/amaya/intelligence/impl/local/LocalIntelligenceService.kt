@@ -46,6 +46,7 @@ class LocalIntelligenceService @Inject constructor(
 
     private var chatJob: Job? = null
     private var currentConversationId: Long? = null
+    private var currentAssistantMessageId: String? = null
 
     init {
         // Observe conversations from DB
@@ -71,6 +72,7 @@ class LocalIntelligenceService @Inject constructor(
 
     override fun sendMessage(content: String) {
         chatJob?.cancel()
+        currentAssistantMessageId = null
         
         val currentState = _uiState.value
         val userMsg = UiMessage(
@@ -113,7 +115,7 @@ class LocalIntelligenceService @Inject constructor(
         when (event) {
             is AgentEvent.TextDelta -> {
                 ensureAssistantMessage()
-                updateLastAssistantMessage { msg ->
+                updateCurrentAssistantMessage { msg ->
                     val newContent = msg.content + event.text
                     val lastStep = msg.steps.lastOrNull()
                     val newSteps = if (lastStep is MessageStep.Text) {
@@ -139,7 +141,7 @@ class LocalIntelligenceService @Inject constructor(
                     uiMetadata = LocalToolMapper.getUiMetadata(event.name, event.arguments)
                 )
                 ensureAssistantMessage()
-                updateLastAssistantMessage { msg ->
+                updateCurrentAssistantMessage { msg ->
                     msg.copy(
                         toolExecutions = msg.toolExecutions + toolExec,
                         steps = msg.steps + MessageStep.ToolCall(execution = toolExec)
@@ -147,7 +149,7 @@ class LocalIntelligenceService @Inject constructor(
                 }
             }
             is AgentEvent.ToolCallResult -> {
-                updateLastAssistantMessage { msg ->
+                updateCurrentAssistantMessage { msg ->
                     val updatedTools = msg.toolExecutions.map {
                         if (it.toolCallId == event.toolCallId) {
                             it.copy(
@@ -182,26 +184,27 @@ class LocalIntelligenceService @Inject constructor(
 
     private fun ensureAssistantMessage() {
         val assistantMetadata = currentAssistantMetadata()
-        _uiState.update { state ->
-            val msgs = state.messages.toMutableList()
-            val lastIdx = msgs.indexOfLast { it.role == MessageRole.ASSISTANT }
+        val assistantId = currentAssistantMessageId
+        val state = _uiState.value
+        val msgs = state.messages.toMutableList()
+        val currentIdx = assistantId?.let { id -> msgs.indexOfLast { it.id == id } } ?: -1
 
-            if (lastIdx == -1) {
-                state.copy(
-                    messages = msgs + UiMessage(
-                        role = MessageRole.ASSISTANT,
-                        content = "",
-                        metadata = assistantMetadata
-                    )
-                )
-            } else {
-                val existing = msgs[lastIdx]
-                if (existing.metadata.isEmpty() && assistantMetadata.isNotEmpty()) {
-                    msgs[lastIdx] = existing.copy(metadata = assistantMetadata)
-                }
-                state.copy(messages = msgs)
-            }
+        if (currentIdx == -1) {
+            val assistantMsg = UiMessage(
+                role = MessageRole.ASSISTANT,
+                content = "",
+                metadata = assistantMetadata
+            )
+            currentAssistantMessageId = assistantMsg.id
+            _uiState.value = state.copy(messages = msgs + assistantMsg)
+            return
         }
+
+        val existing = msgs[currentIdx]
+        if (existing.metadata.isEmpty() && assistantMetadata.isNotEmpty()) {
+            msgs[currentIdx] = existing.copy(metadata = assistantMetadata)
+        }
+        _uiState.value = state.copy(messages = msgs)
     }
 
     private fun currentAssistantMetadata(): Map<String, String> {
@@ -218,15 +221,17 @@ class LocalIntelligenceService @Inject constructor(
         }
     }
 
-    private fun updateLastAssistantMessage(update: (UiMessage) -> UiMessage) {
-        _uiState.update { state ->
-            val msgs = state.messages.toMutableList()
-            val lastIdx = msgs.indexOfLast { it.role == MessageRole.ASSISTANT }
-            if (lastIdx != -1) {
-                msgs[lastIdx] = update(msgs[lastIdx])
-            }
-            state.copy(messages = msgs)
-        }
+    private fun updateCurrentAssistantMessage(update: (UiMessage) -> UiMessage) {
+        val assistantId = currentAssistantMessageId
+        if (assistantId == null) return
+
+        val state = _uiState.value
+        val msgs = state.messages.toMutableList()
+        val assistantIdx = msgs.indexOfLast { it.id == assistantId }
+        if (assistantIdx == -1) return
+
+        msgs[assistantIdx] = update(msgs[assistantIdx])
+        _uiState.value = state.copy(messages = msgs)
     }
 
     override fun stopGeneration() {
@@ -237,6 +242,7 @@ class LocalIntelligenceService @Inject constructor(
     override fun clearConversation() {
         chatJob?.cancel()
         currentConversationId = null
+        currentAssistantMessageId = null
         _uiState.update { it.copy(
             conversationId = null,
             messages = emptyList(),
@@ -251,6 +257,7 @@ class LocalIntelligenceService @Inject constructor(
             val entity = conversationDao.getConversationById(longId)
             entity?.let { conv ->
                 currentConversationId = conv.id
+                currentAssistantMessageId = null
                 val messages = parseMessagesFromJson(conv.messagesJson)
                 _uiState.update { it.copy(
                     conversationId = conv.id.toString(),

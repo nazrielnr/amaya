@@ -9,6 +9,7 @@ object AgentUiMapper {
         isRemote: Boolean = false,
         tagTitle: String? = null,
         quotaStr: String? = null,
+        quotaLabel: String? = null,
         resetTime: String? = null
     ): AgentSelectorItem {
         val n = agent.name.lowercase()
@@ -26,6 +27,7 @@ object AgentUiMapper {
             modelId = agent.modelId,
             tagTitle = tagTitle,
             quotaStr = quotaStr,
+            quotaLabel = quotaLabel,
             resetTime = resetTime,
             isRemote = isRemote,
             iconType = iconType

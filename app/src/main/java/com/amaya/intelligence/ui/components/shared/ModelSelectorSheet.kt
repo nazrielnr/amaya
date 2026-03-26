@@ -171,13 +171,13 @@ fun ModelSelectorSheet(
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                                if (item.quotaStr != null || item.resetTime != null) {
+                                if (item.quotaLabel != null || item.resetTime != null) {
                                     Column(
                                         verticalArrangement = Arrangement.spacedBy(1.dp)
                                     ) {
-                                        if (item.quotaStr != null) {
+                                        if (item.quotaLabel != null) {
                                             Text(
-                                                "Quota: ${item.quotaStr}",
+                                                "Quota: ${item.quotaLabel}",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )

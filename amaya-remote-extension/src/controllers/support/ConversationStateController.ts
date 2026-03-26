@@ -91,6 +91,7 @@ export class ConversationStateController {
                     label: model.label,
                     isRecommended: model.isRecommended,
                     quota: model.quotaInfo ? (model.quotaInfo.remainingFraction ?? 0.0) : 1.0,
+                    quotaLabel: model.quotaLabel,
                     resetTime: model.quotaInfo?.resetTime || undefined,
                     tagTitle: model.tagTitle,
                     supportsImages: model.supportsImages,

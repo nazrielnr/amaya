@@ -765,6 +765,7 @@ class RemoteSessionClient @Inject constructor(
                             label = m.optString("label", ""),
                             isRecommended = m.optBoolean("isRecommended", false),
                             quota = quota,
+                            quotaLabel = m.optNullableString("quotaLabel"),
                             resetTime = resetTime,
                             tagTitle = m.optNullableString("tagTitle"),
                             supportsImages = m.optBoolean("supportsImages", false)
@@ -1279,6 +1280,7 @@ data class RemoteModelInfo(
     val label: String,
     val isRecommended: Boolean,
     val quota: Double,
+    val quotaLabel: String? = null,
     val resetTime: String? = null,
     val tagTitle: String? = null,
     val supportsImages: Boolean

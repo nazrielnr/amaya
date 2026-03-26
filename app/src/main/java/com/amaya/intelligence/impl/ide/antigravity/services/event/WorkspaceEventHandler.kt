@@ -7,6 +7,7 @@ import com.amaya.intelligence.impl.ide.antigravity.client.*
 import com.amaya.intelligence.impl.ide.antigravity.client.RemoteWorkspace as ClientRemoteWorkspace
 import com.amaya.intelligence.impl.ide.antigravity.services.streaming.StreamingStateManager
 import com.amaya.intelligence.data.local.db.entity.ConversationEntity
+import java.text.NumberFormat
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -116,17 +117,20 @@ class WorkspaceEventHandler(
     
     fun handleModelsList(event: RemoteEvent.ModelsList) {
         val models = event.models.map { m ->
+            val quotaLabel = m.quotaLabel ?: formatQuotaLabel(m.quota)
             ModelInfo(
                 id = m.id,
                 label = m.label,
                 isRecommended = m.isRecommended,
                 quota = m.quota,
+                quotaLabel = quotaLabel,
                 resetTime = m.resetTime,
                 tagTitle = m.tagTitle,
                 supportsImages = m.supportsImages
             )
         }
         val selectorItems = event.models.map { m ->
+            val quotaLabel = m.quotaLabel ?: formatQuotaLabel(m.quota)
             AgentUiMapper.mapToSelectorItem(
                 AgentConfig(
                     id = m.id,
@@ -135,7 +139,8 @@ class WorkspaceEventHandler(
                 ),
                 isRemote = true,
                 tagTitle = m.tagTitle,
-                quotaStr = if (m.quota > 0.0) m.quota.toString() else null,
+                quotaStr = m.quota.toString(),
+                quotaLabel = quotaLabel,
                 resetTime = m.resetTime
             )
         }
@@ -163,6 +168,14 @@ class WorkspaceEventHandler(
             type = type,
             size = size
         )
+    }
+
+    private fun formatQuotaLabel(remainingFraction: Double): String? {
+        if (remainingFraction <= 0.0) return "0%"
+
+        return NumberFormat.getPercentInstance().apply {
+            maximumFractionDigits = 0
+        }.format(remainingFraction)
     }
 
     private fun ClientRemoteWorkspace.toDomainWorkspace(): RemoteWorkspace {

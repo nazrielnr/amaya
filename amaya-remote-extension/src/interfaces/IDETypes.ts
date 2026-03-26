@@ -12,6 +12,7 @@ export interface IDEModel {
     supportsImages?: boolean; // Whether the model can handle image attachments
     isRecommended?: boolean;  // UI hint
     tagTitle?: string;
+    quotaLabel?: string;
     quotaInfo?: {
         remainingFraction?: number;
         resetTime?: string;

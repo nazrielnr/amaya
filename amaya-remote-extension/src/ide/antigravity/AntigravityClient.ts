@@ -310,6 +310,7 @@ export class AntigravityClient implements IIDEClient {
                         supportsImages: c.supportsImages || false,
                         isRecommended: c.isRecommended || false,
                         tagTitle: c.tagTitle,
+                        quotaLabel: this.formatQuotaLabel(c.quotaInfo?.remainingFraction),
                         quotaInfo: c.quotaInfo ? {
                             remainingFraction: c.quotaInfo.remainingFraction,
                             resetTime: formattedResetTime
@@ -319,6 +320,16 @@ export class AntigravityClient implements IIDEClient {
         }
 
         return configs;
+    }
+
+    private formatQuotaLabel(remainingFraction?: number): string | undefined {
+        if (remainingFraction === undefined) return undefined;
+        if (remainingFraction <= 0) return '0%';
+
+        return new Intl.NumberFormat('en-US', {
+            style: 'percent',
+            maximumFractionDigits: 0,
+        }).format(remainingFraction);
     }
 
     async getConversationIds(): Promise<string[]> {

@@ -33,6 +33,7 @@ data class ModelInfo(
     val label: String,
     val isRecommended: Boolean = false,
     val quota: Double = 0.0,
+    val quotaLabel: String? = null,
     val resetTime: String? = null,
     val tagTitle: String? = null,
     val supportsImages: Boolean = false
@@ -125,6 +126,7 @@ data class AgentSelectorItem(
     val modelId: String,
     val tagTitle: String? = null,
     val quotaStr: String? = null,
+    val quotaLabel: String? = null,
     val resetTime: String? = null,
     val isRemote: Boolean = false,
     val iconType: String = "default" // "gpt", "gemini", "claude", "default"

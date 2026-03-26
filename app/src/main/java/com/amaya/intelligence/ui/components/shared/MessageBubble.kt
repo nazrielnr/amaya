@@ -93,12 +93,12 @@ fun MessageBubble(
         Row(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Agent Icon
-            val agentName = message.metadata["agent_name"] ?: ""
+            // Agent Icon (theme-aware)
             val modelId = message.metadata["model_id"] ?: ""
-            val iconRes = AgentIcon.get(agentName, modelId)
-            
-            if (iconRes != 0) {
+            val isDark = isSystemInDarkTheme()
+            val iconSpec = AgentIcon.resolve(modelId, isDark)
+
+            if (iconSpec != null) {
                 Box(
                     modifier = Modifier
                         .padding(top = 4.dp)
@@ -108,10 +108,10 @@ fun MessageBubble(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(id = iconRes),
+                        painter = painterResource(id = iconSpec.resId),
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
-                        tint = androidx.compose.ui.graphics.Color.Unspecified
+                        tint = if (iconSpec.tintable) MaterialTheme.colorScheme.onSurface else androidx.compose.ui.graphics.Color.Unspecified
                     )
                 }
                 Spacer(Modifier.width(12.dp))

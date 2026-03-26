@@ -129,7 +129,7 @@ data class AgentSelectorItem(
     val quotaLabel: String? = null,
     val resetTime: String? = null,
     val isRemote: Boolean = false,
-    val iconType: String = "default" // "gpt", "gemini", "claude", "default"
+    val iconType: String = "default" // "openai", "grok", "groq", "kimi", "zai", "deepseek", "meta", "minimax", "mistral", "qwen", "gemini", "claude", "default"
 )
 
 // ── Workspace & Projects ──────────────────────────────────────────────────

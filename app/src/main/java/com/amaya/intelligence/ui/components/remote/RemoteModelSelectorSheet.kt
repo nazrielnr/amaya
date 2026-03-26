@@ -9,9 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.domain.models.AgentSelectorItem
+import com.amaya.intelligence.ui.components.shared.AgentIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,14 +104,24 @@ private fun RemoteAgentItem(
                 .padding(horizontal = 12.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.SmartToy,
-                contentDescription = null,
-                tint = if (isSelected)
-                    MaterialTheme.colorScheme.primary
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            val iconSpec = AgentIcon.resolveByType(agent.iconType, isSystemInDarkTheme())
+
+            if (iconSpec != null) {
+                Icon(
+                    painter = painterResource(id = iconSpec.resId),
+                    contentDescription = null,
+                    tint = if (iconSpec.tintable) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.SmartToy,
+                    contentDescription = null,
+                    tint = if (isSelected)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                     Text(

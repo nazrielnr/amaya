@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.data.remote.api.AgentConfig
@@ -19,7 +18,6 @@ import com.amaya.intelligence.ui.screens.settings.shared.SettingsSectionCard
 @Composable
 fun AgentList(
     agentConfigs: List<AgentConfig>,
-    iconPalettes: List<Brush>,
     onAgentClick: (AgentConfig) -> Unit,
     onToggleEnabled: (AgentConfig, Boolean) -> Unit,
     topPadding: androidx.compose.ui.unit.Dp = 72.dp,
@@ -73,10 +71,8 @@ fun AgentList(
             item {
                 SettingsSectionCard(title = "Enabled") {
                     enabledAgents.forEachIndexed { index, config ->
-                        val paletteIndex = enabledAgents.indexOf(config) % iconPalettes.size
                         AgentCard(
                             config = config,
-                            iconBrush = iconPalettes[paletteIndex],
                             onClick = { onAgentClick(config) },
                             onToggleEnabled = { enabled -> onToggleEnabled(config, enabled) }
                         )
@@ -95,10 +91,8 @@ fun AgentList(
             item {
                 SettingsSectionCard(title = "Disabled") {
                     disabledAgents.forEachIndexed { index, config ->
-                        val paletteIndex = (disabledAgents.indexOf(config) + 4) % iconPalettes.size
                         AgentCard(
                             config = config,
-                            iconBrush = iconPalettes[paletteIndex],
                             onClick = { onAgentClick(config) },
                             onToggleEnabled = { enabled -> onToggleEnabled(config, enabled) }
                         )

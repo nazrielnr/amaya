@@ -125,21 +125,16 @@ fun ModelSelectorSheet(
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                val iconRes = when(item.iconType) {
-                                    "gpt" -> if (isDark) com.amaya.intelligence.R.drawable.ic_chatgpt_dark else com.amaya.intelligence.R.drawable.ic_chatgpt_light
-                                    "gemini" -> com.amaya.intelligence.R.drawable.ic_gemini
-                                    "claude" -> com.amaya.intelligence.R.drawable.ic_claude
-                                    else -> 0
-                                }
+                                val iconSpec = AgentIcon.resolveByType(item.iconType, isDark)
 
                                 if (missingModel) {
                                     Icon(Icons.Default.Warning, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error)
-                                } else if (iconRes != 0) {
+                                } else if (iconSpec != null) {
                                     Icon(
-                                        painterResource(id = iconRes),
+                                        painterResource(id = iconSpec.resId),
                                         contentDescription = null,
                                         modifier = Modifier.size(24.dp),
-                                        tint = Color.Unspecified
+                                        tint = if (iconSpec.tintable) MaterialTheme.colorScheme.onSurface else Color.Unspecified
                                     )
                                 } else {
                                     Icon(

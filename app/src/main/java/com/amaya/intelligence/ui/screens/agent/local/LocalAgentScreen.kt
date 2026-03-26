@@ -20,7 +20,6 @@ import com.amaya.intelligence.data.remote.api.AiSettingsManager
 import com.amaya.intelligence.ui.components.shared.SettingsBackButton
 import com.amaya.intelligence.ui.screens.agent.shared.AgentEditSheet
 import com.amaya.intelligence.ui.screens.agent.shared.AgentList
-import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,8 +33,6 @@ fun LocalAgentScreen(
     val settings by aiSettingsManager.settingsFlow.collectAsState(
         initial = com.amaya.intelligence.data.remote.api.AiSettings()
     )
-    val gradients = LocalAmayaGradients.current
-
     var editingConfig by remember { mutableStateOf<AgentConfig?>(null) }
     var editingIsNew by remember { mutableStateOf(false) }
     val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 72.dp
@@ -47,7 +44,6 @@ fun LocalAgentScreen(
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             AgentList(
                 agentConfigs = settings.agentConfigs,
-                iconPalettes = gradients.iconPalettes,
                 onAgentClick = { config ->
                     editingConfig = config
                     editingIsNew = false
@@ -69,7 +65,7 @@ fun LocalAgentScreen(
                     .fillMaxWidth()
                     .height(170.dp)
                     .align(Alignment.TopCenter)
-                    .background(gradients.topScrim)
+                    .background(com.amaya.intelligence.ui.theme.LocalAmayaGradients.current.topScrim)
             )
 
             // Header Overlay

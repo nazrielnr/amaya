@@ -12,14 +12,7 @@ object AgentUiMapper {
         quotaLabel: String? = null,
         resetTime: String? = null
     ): AgentSelectorItem {
-        val n = agent.name.lowercase()
-        val m = agent.modelId.lowercase()
-        val iconType = when {
-            n.contains("gpt") || m.contains("gpt") -> "gpt"
-            n.contains("gemini") || m.contains("gemini") -> "gemini"
-            n.contains("claude") || m.contains("claude") -> "claude"
-            else -> "default"
-        }
+        val iconType = AgentMapper.getIconType(agent.modelId) ?: "default"
         
         return AgentSelectorItem(
             id = agent.id,

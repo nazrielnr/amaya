@@ -2,8 +2,8 @@
 
 This folder is split into two main areas:
 
-- `language-server/` for direct Antigravity language server calls, captures, and offline analysis.
-- `extension-server/` for WebSocket-based extension server tests and mock server flows.
+- `antigravity/language-server/` for direct Antigravity language server calls, captures, and offline analysis.
+- `antigravity/extension-server/` for WebSocket-based extension server tests and mock server flows.
 
 ## Tree
 ```text

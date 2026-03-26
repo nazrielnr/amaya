@@ -1,9 +1,11 @@
 {
   "name": "amaya-remote",
   "displayName": "Amaya Remote Session",
-  "description": "Bridge between Amaya (Android) and Antigravity IDE - direct gRPC-Web API relay via WebSocket",
+  "description": "High-performance bridge between Amaya (Android) and your development environment - enabling remote workspace interaction via WebSocket",
+  "icon": "icon.png",
   "version": "0.2.0",
-  "publisher": "amaya",
+  "publisher": "nazrielnr",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.80.0"
   },

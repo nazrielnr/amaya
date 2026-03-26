@@ -23,7 +23,7 @@ This monorepo contains the following primary directories:
   Kotlin-based Android application containing the main chat interface (`ChatScreen`), local database (`Room`), and networking layer.
 
 - `amaya-remote-extension/`  
-  TypeScript-based IDE integration (currently targeting VS Code) that provides workspace access and execution capabilities via WebSocket communication.
+  TypeScript-based IDE integration (currently targeting VS Code) that provides workspace access and execution capabilities via WebSocket communication. See [Extension README](./amaya-remote-extension/README.md) for details.
 
 ## Capabilities
 

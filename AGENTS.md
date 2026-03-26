@@ -7,6 +7,11 @@
   - `app/` for the Android app.
 - Read the nearest AGENTS file before making changes in a subdirectory.
 
+## Build
+- ./gradlew installDebug
+- ./gradlew assembleDebug
+- npx @vscode/vsce package
+
 ## General Rules
 - Keep changes minimal and local to the requested area.
 - Do not modify unrelated modules.

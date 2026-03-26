@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -46,22 +45,7 @@ fun McpFormatGuide(
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             Text("Required JSON-RPC methods:", style = MaterialTheme.typography.labelMedium)
             Text(
-                "• tools/list  — discover available tools\n• tools/call  — invoke a specific tool",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Normal,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            Text("Request headers sent by Amaya:", style = MaterialTheme.typography.labelMedium)
-            Text(
-                "• Content-Type: application/json\n• Accept: application/json, text/event-stream\n• (+ any custom headers you add)",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            Text("Tool naming inside AI:", style = MaterialTheme.typography.labelMedium)
-            Text(
-                "mcp__{name}__{toolName}\n\nWhere {name} is the server name you set above.",
+                "• tools/list  - discover available tools\n• tools/call  - invoke a specific tool",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -81,12 +65,6 @@ fun McpFormatGuide(
                 "}",
                 style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            Text(
-                "⚠ Servers with enabled: false will be skipped entirely — their tools won't appear in AI.",
-                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

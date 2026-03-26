@@ -47,8 +47,16 @@ fun LocalMcpScreen(
     }
 
     var showAddSheet by remember { mutableStateOf(false) }
-    var editingServer by remember { mutableStateOf<McpServerConfig?>(null) }
+    var editorJson by remember { mutableStateOf(settings.mcpConfigJson) }
     val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 72.dp
+
+    fun openEditor() {
+        scope.launch {
+            val latestJson = aiSettingsManager.loadMcpConfigFromFixedPath()
+            editorJson = latestJson ?: settings.mcpConfigJson
+            showAddSheet = true
+        }
+    }
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
@@ -57,26 +65,8 @@ fun LocalMcpScreen(
                     context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
                 }
                 if (!json.isNullOrBlank()) {
-                    val imported = McpConfig.fromJson(json)
-                    if (imported.servers.isEmpty()) {
-                        snackbarHostState.showSnackbar("No valid MCP servers found in file")
-                        return@launch
-                    }
-                    val existing = mcpConfig.servers.toMutableList()
-                    var added = 0; var updated = 0
-                    imported.servers.forEach { importedServer ->
-                        val idx = existing.indexOfFirst { it.name == importedServer.name }
-                        if (idx >= 0) { existing[idx] = importedServer; updated++ }
-                        else { existing.add(importedServer); added++ }
-                    }
-                    aiSettingsManager.setMcpConfigJson(McpConfig(existing).toJson())
-                    val msg = buildString {
-                        if (added > 0) append("$added added")
-                        if (added > 0 && updated > 0) append(", ")
-                        if (updated > 0) append("$updated updated")
-                        append(" ✓")
-                    }
-                    snackbarHostState.showSnackbar("Imported: $msg")
+                    aiSettingsManager.setMcpConfigJson(json)
+                    snackbarHostState.showSnackbar("mcp.json imported")
                 }
             }
         }
@@ -90,10 +80,7 @@ fun LocalMcpScreen(
             McpServerList(
                 servers = mcpConfig.servers,
                 iconPalettes = gradients.iconPalettes,
-                onServerClick = { server ->
-                    editingServer = server
-                    showAddSheet = true
-                },
+                onServerClick = { openEditor() },
                 onToggleEnabled = { server, enabled ->
                     scope.launch {
                         val updated = mcpConfig.servers.map {
@@ -138,7 +125,7 @@ fun LocalMcpScreen(
                             .size(36.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-                            .clickable { showAddSheet = true },
+                            .clickable { openEditor() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -160,21 +147,14 @@ fun LocalMcpScreen(
 
     if (showAddSheet) {
         McpEditSheet(
-            existing = editingServer,
-            existingNames = mcpConfig.servers.map { it.name }.filter { it != editingServer?.name },
-            onDismiss = { showAddSheet = false; editingServer = null },
-            onSave = { server ->
+            initialJson = editorJson,
+            onDismiss = { showAddSheet = false },
+            onSave = { json ->
                 showAddSheet = false
                 scope.launch {
-                    val updated = if (editingServer != null) {
-                        mcpConfig.servers.map { if (it.name == editingServer!!.name) server else it }
-                    } else {
-                        mcpConfig.servers + server
-                    }
-                    aiSettingsManager.setMcpConfigJson(McpConfig(updated).toJson())
-                    snackbarHostState.showSnackbar("${server.name} saved ✓")
+                    aiSettingsManager.setMcpConfigJson(json)
+                    snackbarHostState.showSnackbar("mcp.json saved ✓")
                 }
-                editingServer = null
             }
         )
     }

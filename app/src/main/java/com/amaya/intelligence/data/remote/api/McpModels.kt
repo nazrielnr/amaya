@@ -10,7 +10,62 @@ data class McpServerConfig(
     val serverUrl: String = "",
     val headers: Map<String, String> = emptyMap(),
     val enabled: Boolean = true
-)
+) {
+    fun toRawJson(pretty: Boolean = true): String {
+        val serverObj = JSONObject().apply {
+            put("serverUrl", serverUrl)
+            if (headers.isNotEmpty()) {
+                put("headers", JSONObject(headers))
+            }
+            put("enabled", enabled)
+        }
+        return if (pretty) serverObj.toString(2) else serverObj.toString()
+    }
+
+    companion object {
+        fun fromRawJson(name: String, rawJson: String): McpServerConfig? {
+            val root = try {
+                JSONObject(rawJson)
+            } catch (_: Exception) {
+                return null
+            }
+
+            val resolvedName: String
+            val serverObj = if (root.has("mcpServers")) {
+                val serversObj = root.optJSONObject("mcpServers") ?: return null
+                if (name.isNotBlank()) {
+                    resolvedName = name
+                    serversObj.optJSONObject(name) ?: return null
+                } else {
+                    if (serversObj.length() != 1) return null
+                    val key = serversObj.keys().next()
+                    resolvedName = key
+                    serversObj.optJSONObject(key) ?: return null
+                }
+            } else {
+                if (name.isBlank()) return null
+                resolvedName = name
+                root
+            }
+
+            val headers = mutableMapOf<String, String>()
+            serverObj.optJSONObject("headers")?.let { headersObj ->
+                val headerKeys = headersObj.keys()
+                while (headerKeys.hasNext()) {
+                    val key = headerKeys.next()
+                    headers[key] = headersObj.optString(key, "")
+                }
+            }
+
+            return McpServerConfig(
+                name = resolvedName,
+                serverUrl = serverObj.optString("serverUrl", ""),
+                headers = headers,
+                enabled = serverObj.optBoolean("enabled", true)
+            )
+        }
+    }
+}
 
 data class McpConfig(
     val servers: List<McpServerConfig> = emptyList()

@@ -29,6 +29,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun ChatBottomSection(
     modifier: Modifier = Modifier,
+    inputText: String,
+    onInputTextChange: (String) -> Unit,
     isRemoteMode: Boolean,
     uiState: ChatUiState,
     connectionState: ConnectionState,
@@ -122,9 +124,11 @@ fun ChatBottomSection(
             }
         }
         if (uiState.messages.isEmpty() && !uiState.isLoading && !isRemoteMode) {
-            ScrollablePills(onPromptClick = onSendMessage)
+            ScrollablePills(onPromptClick = onInputTextChange)
         }
         ChatInput(
+            text = inputText,
+            onTextChange = onInputTextChange,
             resetKey = uiState.conversationId,
             isStreaming = uiState.isStreaming,
             attachedFilePath = attachedPath,

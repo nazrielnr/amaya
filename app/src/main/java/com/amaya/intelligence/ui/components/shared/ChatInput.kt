@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun ChatInput(
+    text: String,
+    onTextChange: (String) -> Unit,
     resetKey: Any? = null,
     isStreaming: Boolean,
     attachedFilePath: String? = null,
@@ -38,7 +40,6 @@ fun ChatInput(
     onSendMessage: (String) -> Unit,
     onStopGeneration: () -> Unit
 ) {
-    var text by remember(resetKey) { mutableStateOf("") }
     val isDark = isSystemInDarkTheme()
     val hasAttachment = attachedFilePath != null || attachedImageBase64 != null
     var showAttachMenu by remember { mutableStateOf(false) }
@@ -232,7 +233,7 @@ fun ChatInput(
 
                     BasicTextField(
                         value = text,
-                        onValueChange = { text = it },
+                        onValueChange = onTextChange,
                         modifier = Modifier.weight(1f),
                         maxLines = 5,
                         textStyle = MaterialTheme.typography.bodyMedium.copy(
@@ -268,7 +269,7 @@ fun ChatInput(
                                     onStopGeneration()
                                 } else if (text.isNotBlank() || hasAttachment) {
                                     val msg = text.trim()
-                                    text = ""
+                                    onTextChange("")
                                     onSendMessage(msg)
                                 }
                             },

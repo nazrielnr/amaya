@@ -125,6 +125,9 @@ fun ChatScreen(
         }
     }
 
+    // Lifted input text state
+    var inputText by remember(uiState.conversationId) { mutableStateOf("") }
+
     // Use server IP from extension if available, otherwise fallback to device local IP
     val serverIp = uiState.serverIp ?: localIp
 
@@ -402,6 +405,7 @@ fun ChatScreen(
                     headerDp = headerDp,
                     bottomDp = bottomDp,
                     drawerOpen = drawerOpen,
+                    onInputTextChange = { inputText = it },
                     onSendMessage = doSendMessage,
                     onNavigateToWorkspace = onNavigateToWorkspace,
                     workspaces = workspaces
@@ -591,6 +595,8 @@ fun ChatScreen(
             // Bottom section
             ChatBottomSection(
                 modifier = Modifier.align(Alignment.BottomStart),
+                inputText = inputText,
+                onInputTextChange = { inputText = it },
                 isRemoteMode = isRemoteMode,
                 uiState = uiState,
                 connectionState = connectionState,

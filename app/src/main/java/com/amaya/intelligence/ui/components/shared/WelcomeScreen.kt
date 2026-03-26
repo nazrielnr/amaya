@@ -78,6 +78,32 @@ fun WelcomeScreen(
                     )
                 }
             }
+        } else {
+            Surface(
+                onClick = onNewProjectClick,
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.clickable { onNewProjectClick() }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.AccountTree,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        "Select Workspace\u2026",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
     }
 }
@@ -92,12 +118,11 @@ fun ScrollablePills(
 
     val pills = listOf(
         PillItem(Icons.Default.Description, "Summarize", "Summarize this document"),
-        PillItem(Icons.Default.Email, "Draft email", "Draft an email"),
+        PillItem(Icons.Default.Email, "Draft email", "Draft an email to "),
         PillItem(Icons.Default.Lightbulb, "Explain", "Explain this concept"),
         PillItem(Icons.Default.Code, "Write code", "Write a script"),
         PillItem(Icons.Default.Edit, "Rewrite", "Rewrite this text"),
         PillItem(Icons.Default.Search, "Research", "Research this topic"),
-        PillItem(Icons.Default.Translate, "Translate", "Translate this text"),
         PillItem(Icons.Default.CheckCircle, "Review", "Review this code")
     )
 

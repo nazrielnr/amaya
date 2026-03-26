@@ -195,14 +195,24 @@ fun ChatDrawerContent(
             }
 
             // Footer actions (fixed at bottom)
-            Row(
+            Surface(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 12.dp)
-                    .navigationBarsPadding(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .fillMaxWidth(),
+                color = drawerBg
             ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                        thickness = 1.dp
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 12.dp)
+                            .navigationBarsPadding(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                 Surface(
                     onClick = {
                         onNavigateToSettings()
@@ -283,6 +293,8 @@ fun ChatDrawerContent(
             }
         }
     }
+}
+}
 
     // Delete confirmation dialog
     conversationToDelete?.let { conv ->
@@ -406,7 +418,7 @@ private fun DrawerSearchContent(
                 .weight(1f)
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(1.dp),
-            contentPadding = PaddingValues(bottom = 12.dp)
+            contentPadding = PaddingValues(bottom = 80.dp)
         ) {
             when {
                 conversations.isEmpty() -> item(key = "empty") {
@@ -668,14 +680,13 @@ private fun DrawerNormalContent(
             Spacer(Modifier.height(6.dp))
         }
 
-        // Conversation list
         LazyColumn(
             state = conversationListState,
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(1.dp),
-            contentPadding = PaddingValues(bottom = 12.dp)
+            contentPadding = PaddingValues(bottom = 80.dp)
         ) {
             when {
                 uiState.isLoadingConversations -> {

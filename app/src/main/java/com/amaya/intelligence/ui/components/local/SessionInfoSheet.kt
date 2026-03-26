@@ -40,7 +40,7 @@ fun SessionInfoSheet(
             HorizontalDivider()
 
             SessionInfoRow(
-                icon = Icons.Default.AutoAwesome,
+                icon = Icons.Default.Error,
                 label = "Tokens used",
                 value = if (totalTokens > 0) ContextWindowUtils.formatTokenCount(totalTokens) else "0",
                 valueColor = when {

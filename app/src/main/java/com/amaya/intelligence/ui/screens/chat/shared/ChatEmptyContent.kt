@@ -24,6 +24,7 @@ fun ChatEmptyContent(
     headerDp: Dp,
     bottomDp: Dp,
     drawerOpen: Boolean,
+    onInputTextChange: (String) -> Unit,
     onSendMessage: (String) -> Unit,
     onNavigateToWorkspace: () -> Unit,
     workspaces: List<RemoteWorkspace>
@@ -58,7 +59,7 @@ fun ChatEmptyContent(
                 ConversationSkeleton()
             } else {
                 WelcomeScreen(
-                    onPromptClick = onSendMessage,
+                    onPromptClick = onInputTextChange,
                     currentWorkspace = uiState.workspacePath,
                     onNewProjectClick = onNavigateToWorkspace,
                     workspaces = workspaces,

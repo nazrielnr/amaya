@@ -1,7 +1,5 @@
 package com.amaya.intelligence.impl.ide.antigravity
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Code
 import com.amaya.intelligence.domain.ai.IdeProvider
 import com.amaya.intelligence.domain.models.IdeCapabilities
 import com.amaya.intelligence.domain.models.IdeInfo
@@ -18,7 +16,6 @@ object AntigravityProvider : IdeProvider {
         id = ideId,
         displayName = "Antigravity",
         description = "Google DeepMind AI IDE",
-        icon = Icons.Default.Code,
         capabilities = IdeCapabilities(
             supportsStreaming = true,
             supportsThinking = true,

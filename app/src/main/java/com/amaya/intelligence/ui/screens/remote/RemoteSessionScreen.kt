@@ -46,6 +46,9 @@ import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import com.amaya.intelligence.ui.components.shared.SettingsBackButton
 import com.amaya.intelligence.ui.res.UiStrings
 import com.amaya.intelligence.ui.res.UiDefaults
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.amaya.intelligence.impl.common.mappers.RemoteIdeIcon
 
 /**
  * Remote Session screen — IDE selector + IP/Port input.
@@ -64,6 +67,7 @@ fun RemoteSessionScreen(
     val errorMessage by client.errorMessage.collectAsState()
     val serverInfo by client.serverInfo.collectAsState()
     val gradients = LocalAmayaGradients.current
+    val isDark = isSystemInDarkTheme()
 
     var ipAddress by remember { mutableStateOf("192.168.1.") }
     var port by remember { mutableStateOf("8765") }
@@ -181,12 +185,11 @@ fun RemoteSessionScreen(
                     val allIdes = remember { IdeProviderFactory.getAll().filter { it.info.capabilities.requiresConnection } }
                     allIdes.forEachIndexed { index, provider ->
                         val info = provider.info
-                        val iconBrush = gradients.iconPalettes.getOrElse(index % gradients.iconPalettes.size) { gradients.iconPalettes.first() }
+                        val iconSpec = RemoteIdeIcon.resolve(info.id, isDark)
                         IdeCard(
                             name = info.displayName,
                             description = info.description,
-                            icon = info.icon ?: Icons.Default.Terminal,
-                            iconBrush = iconBrush,
+                            iconSpec = iconSpec,
                             isSelected = selectedIde == info.id,
                             enabled = provider.isEnabled,
                             onClick = { 
@@ -277,8 +280,7 @@ fun RemoteSessionScreen(
 private fun IdeCard(
     name: String,
     description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconBrush: Brush,
+    iconSpec: RemoteIdeIcon.Spec?,
     isSelected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit
@@ -290,9 +292,9 @@ private fun IdeCard(
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
         shape = RoundedCornerShape(24.dp),
         color = when {
-            isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-            !enabled -> if (isDark) Color.White.copy(alpha = 0.03f) else Color.Black.copy(alpha = 0.02f)
-            else -> if (isDark) MaterialTheme.colorScheme.surfaceContainerHigh else Color.White
+            isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (isDark) 0.85f else 0.72f)
+            !enabled -> MaterialTheme.colorScheme.surfaceContainerLow
+            else -> MaterialTheme.colorScheme.surfaceContainerHigh
         },
         border = if (isSelected) androidx.compose.foundation.BorderStroke(
             1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -308,15 +310,39 @@ private fun IdeCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (enabled) iconBrush else SolidColor(MaterialTheme.colorScheme.surfaceContainerLow)),
+                    .background(
+                        when {
+                            isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            else -> MaterialTheme.colorScheme.surface.copy(alpha = if (isDark) 0.85f else 1f)
+                        }
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    icon, null,
-                    modifier = Modifier.size(24.dp),
-                    tint = if (!enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-                           else Color.White
-                )
+                val tint = when {
+                    !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f)
+                    iconSpec?.tintable == true -> MaterialTheme.colorScheme.onSurface
+                    else -> Color.Unspecified
+                }
+                when {
+                    iconSpec?.resId != null -> Icon(
+                        painter = painterResource(id = iconSpec.resId),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = tint
+                    )
+                    iconSpec?.imageVector != null -> Icon(
+                        imageVector = iconSpec.imageVector,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = tint
+                    )
+                    else -> Icon(
+                        Icons.Default.Terminal,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = tint
+                    )
+                }
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(

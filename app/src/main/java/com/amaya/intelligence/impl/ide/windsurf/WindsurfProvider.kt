@@ -1,7 +1,5 @@
 package com.amaya.intelligence.impl.ide.windsurf
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Air
 import com.amaya.intelligence.domain.ai.IdeProvider
 import com.amaya.intelligence.domain.models.IdeCapabilities
 import com.amaya.intelligence.domain.models.IdeInfo
@@ -17,7 +15,6 @@ object WindsurfProvider : IdeProvider {
         id = ideId,
         displayName = "Windsurf",
         description = "Windsurf IDE",
-        icon = Icons.Default.Air,
         capabilities = IdeCapabilities(
             requiresConnection = true
         )

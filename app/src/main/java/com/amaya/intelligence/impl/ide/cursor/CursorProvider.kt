@@ -1,7 +1,5 @@
 package com.amaya.intelligence.impl.ide.cursor
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Terminal
 import com.amaya.intelligence.domain.ai.IdeProvider
 import com.amaya.intelligence.domain.models.IdeCapabilities
 import com.amaya.intelligence.domain.models.IdeInfo
@@ -17,7 +15,6 @@ object CursorProvider : IdeProvider {
         id = ideId,
         displayName = "Cursor",
         description = "Cursor AI Code Editor",
-        icon = Icons.Default.Terminal,
         capabilities = IdeCapabilities(
             requiresConnection = true
         )

@@ -10,6 +10,16 @@ android {
     namespace = "com.amaya.intelligence"
     compileSdk = 35
 
+    sourceSets {
+        getByName("main") {
+            res.srcDirs(
+                "src/main/res",
+                "src/main/res-agent",
+                "src/main/res-remote"
+            )
+        }
+    }
+
     defaultConfig {
         applicationId = "com.amaya.intelligence"
         minSdk = 26

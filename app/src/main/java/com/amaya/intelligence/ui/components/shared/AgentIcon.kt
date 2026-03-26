@@ -23,23 +23,23 @@ object AgentIcon {
 
     fun resolveByType(iconType: String?, isDarkTheme: Boolean): Spec? {
         return when (iconType) {
-            "openai" -> Spec(if (isDarkTheme) R.drawable.ic_openai_dark else R.drawable.ic_openai_light, true)
+            "openai" -> Spec(R.drawable.ic_openai, true)
             "grok" -> Spec(R.drawable.ic_grok, true)
             "groq" -> Spec(R.drawable.ic_groq, true)
-            "kimi" -> Spec(if (isDarkTheme) R.drawable.ic_kimi_dark else R.drawable.ic_kimi_light, false)
+            "kimi" -> Spec(R.drawable.ic_kimi, true)
             "zai" -> Spec(R.drawable.ic_zai, true)
-            "deepseek" -> Spec(R.drawable.ic_deepseek, false)
-            "meta" -> Spec(R.drawable.ic_meta, false)
-            "minimax" -> Spec(R.drawable.ic_minimax, false)
-            "mistral" -> Spec(R.drawable.ic_mistral, false)
-            "qwen" -> Spec(R.drawable.ic_qwen, false)
-            "gemini" -> Spec(R.drawable.ic_gemini, false)
-            "claude" -> Spec(R.drawable.ic_claude, false)
+            "deepseek" -> Spec(R.drawable.ic_deepseek, true)
+            "meta" -> Spec(R.drawable.ic_meta, true)
+            "minimax" -> Spec(R.drawable.ic_minimax, true)
+            "mistral" -> Spec(R.drawable.ic_mistral, true)
+            "qwen" -> Spec(R.drawable.ic_qwen, true)
+            "gemini" -> Spec(R.drawable.ic_gemini, true)
+            "claude" -> Spec(R.drawable.ic_claude, true)
             else -> null
         }
     }
 
     fun isTintable(iconType: String?): Boolean {
-        return iconType in setOf("openai", "grok", "groq", "zai")
+        return resolveByType(iconType, false) != null
     }
 }

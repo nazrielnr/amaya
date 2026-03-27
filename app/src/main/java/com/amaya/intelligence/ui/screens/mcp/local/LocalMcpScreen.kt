@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.data.remote.api.AiSettingsManager
@@ -35,6 +36,7 @@ fun LocalMcpScreen(
     aiSettingsManager: AiSettingsManager
 ) {
     val scope = rememberCoroutineScope()
+    val maxSheetHeight = (0.98f * LocalConfiguration.current.screenHeightDp).dp
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val settings by aiSettingsManager.settingsFlow.collectAsState(
@@ -148,6 +150,7 @@ fun LocalMcpScreen(
     if (showAddSheet) {
         McpEditSheet(
             initialJson = editorJson,
+            maxSheetHeight = maxSheetHeight,
             onDismiss = { showAddSheet = false },
             onSave = { json ->
                 showAddSheet = false

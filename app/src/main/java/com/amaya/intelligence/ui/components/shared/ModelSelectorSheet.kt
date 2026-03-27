@@ -42,7 +42,7 @@ fun ModelSelectorSheet(
     val sheetState = rememberLockedModalBottomSheetState()
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
-    val maxSheetHeight = (0.75f * LocalConfiguration.current.screenHeightDp).dp
+    val maxSheetHeight = (0.98f * LocalConfiguration.current.screenHeightDp).dp
     
     LaunchedEffect(Unit) {
         onRefresh?.invoke()
@@ -62,7 +62,7 @@ fun ModelSelectorSheet(
         properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = null,
-        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape()
+        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape(sheetState)
     ) {
         val gradients = LocalAmayaGradients.current
         
@@ -234,7 +234,7 @@ fun ModelSelectorSheet(
                         modifier = Modifier
                             .width(32.dp).height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha()))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha(sheetState)))
                     )
                 }
                 Box(

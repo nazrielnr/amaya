@@ -518,7 +518,7 @@ private fun ConnectionSetupSheet(
     onDismiss: () -> Unit
 ) {
     var showScanner by remember { mutableStateOf(false) }
-    val maxSheetHeight = 0.75f * androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
+    val maxSheetHeight = (0.98f * androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp).dp
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
@@ -530,7 +530,7 @@ private fun ConnectionSetupSheet(
         properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = null,
-        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape()
+        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape(sheetState)
     ) {
         val gradients = LocalAmayaGradients.current
         Box(
@@ -641,7 +641,7 @@ private fun ConnectionSetupSheet(
                         modifier = Modifier
                             .width(32.dp).height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha()))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha(sheetState)))
                     )
                 }
                 Box(

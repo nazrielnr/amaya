@@ -113,7 +113,7 @@ fun LocalAgentScreen(
 
     // BottomSheet drawer for add/edit
     editingConfig?.let { currentConfig ->
-        val maxSheetHeight = (0.75f * LocalConfiguration.current.screenHeightDp).dp
+        val maxSheetHeight = (0.98f * LocalConfiguration.current.screenHeightDp).dp
         val sheetState = rememberLockedModalBottomSheetState()
         BackHandler {
             editingConfig = null

@@ -47,16 +47,34 @@ class UpdateRepository @Inject constructor(
 
     private fun isVersionNewer(latest: String, current: String): Boolean {
         if (latest == current) return false
-        val latestParts = latest.split('.').mapNotNull { it.toIntOrNull() }
-        val currentParts = current.split('.').mapNotNull { it.toIntOrNull() }
         
-        val length = maxOf(latestParts.size, currentParts.size)
+        // Split version into numeric parts and suffix (e.g., "1.0.0-alpha" -> ["1.0.0", "alpha"])
+        val latestParts = latest.split('-', limit = 2)
+        val currentParts = current.split('-', limit = 2)
+        
+        val latestNumeric = latestParts[0].split('.').mapNotNull { it.toIntOrNull() }
+        val currentNumeric = currentParts[0].split('.').mapNotNull { it.toIntOrNull() }
+        
+        // 1. Compare numeric segments
+        val length = maxOf(latestNumeric.size, currentNumeric.size)
         for (i in 0 until length) {
-            val l = latestParts.getOrElse(i) { 0 }
-            val c = currentParts.getOrElse(i) { 0 }
+            val l = latestNumeric.getOrElse(i) { 0 }
+            val c = currentNumeric.getOrElse(i) { 0 }
             if (l > c) return true
             if (l < c) return false
         }
-        return false
+        
+        // 2. Numeric parts are equal, compare suffixes
+        val latestSuffix = latestParts.getOrNull(1)
+        val currentSuffix = currentParts.getOrNull(1)
+        
+        return when {
+            // No suffix is newer than any suffix (e.g., 1.0.0 > 1.0.0-rc)
+            latestSuffix == null && currentSuffix != null -> true
+            latestSuffix != null && currentSuffix == null -> false
+            // Both have suffixes, compare lexicographically (alpha < beta < rc)
+            latestSuffix != null && currentSuffix != null -> latestSuffix > currentSuffix
+            else -> false
+        }
     }
 }

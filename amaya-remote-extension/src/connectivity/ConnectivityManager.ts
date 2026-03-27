@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as qr from 'qrcode';
-import * as ip from 'ip';
 import * as os from 'os';
 import { execSync } from 'child_process';
 

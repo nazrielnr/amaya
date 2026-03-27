@@ -193,17 +193,13 @@ fun LocalhostLinkBottomSheet(
                         try {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Localhost URL", url)
-                            if (clipboard != null) {
-                                clipboard.setPrimaryClip(clip)
-                                copySuccess = true
-                                copyError = null
-                                onCopyLink?.invoke(url)
-                                scope.launch {
-                                    kotlinx.coroutines.delay(2000)
-                                    copySuccess = false
-                                }
-                            } else {
-                                copyError = "Clipboard not available"
+                            clipboard.setPrimaryClip(clip)
+                            copySuccess = true
+                            copyError = null
+                            onCopyLink?.invoke(url)
+                            scope.launch {
+                                kotlinx.coroutines.delay(2000)
+                                copySuccess = false
                             }
                         } catch (e: Exception) {
                             copyError = "Failed to copy: ${e.message}"

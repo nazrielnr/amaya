@@ -19,7 +19,7 @@ if "%DIRNAME%"=="" set DIRNAME=.
 for %%i in ("%DIRNAME%") do set APP_HOME=%%~fi
 
 set APP_BASE_NAME=%~n0
-set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
+set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m" "--enable-native-access=ALL-UNNAMED"
 
 @rem Find java.exe
 if defined JAVA_HOME goto findJavaFromJavaHome

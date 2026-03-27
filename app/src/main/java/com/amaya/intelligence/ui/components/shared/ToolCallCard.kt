@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -743,11 +744,11 @@ fun mapToolIcon(icon: ToolInfoIcon): ImageVector {
         ToolInfoIcon.SEARCH    -> Icons.Default.Search
         ToolInfoIcon.WEB_READ  -> Icons.Default.Language
         ToolInfoIcon.MESSAGE   -> Icons.Default.ChatBubble
-        ToolInfoIcon.LIST      -> Icons.Default.FormatListBulleted
-        ToolInfoIcon.FIND      -> Icons.Default.ManageSearch
+        ToolInfoIcon.LIST      -> Icons.AutoMirrored.Filled.FormatListBulleted
+        ToolInfoIcon.FIND      -> Icons.AutoMirrored.Filled.ManageSearch
         ToolInfoIcon.TASK      -> Icons.Default.Flag
         ToolInfoIcon.BROWSER   -> Icons.Default.Language
-        ToolInfoIcon.DOCS      -> Icons.Default.MenuBook
+        ToolInfoIcon.DOCS      -> Icons.AutoMirrored.Filled.MenuBook
         ToolInfoIcon.GENERATE  -> Icons.Default.AutoAwesome
         ToolInfoIcon.FILE      -> Icons.Default.Description
         ToolInfoIcon.FOLDER    -> Icons.Default.Folder

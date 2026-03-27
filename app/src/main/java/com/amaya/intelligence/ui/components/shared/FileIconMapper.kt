@@ -1,6 +1,7 @@
 package com.amaya.intelligence.ui.components.shared
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -17,6 +18,6 @@ fun getFileIcon(fileName: String): ImageVector {
         "mp3", "wav", "flac" -> Icons.Default.MusicNote
         "pdf" -> Icons.Default.PictureAsPdf
         "zip", "tar", "gz", "7z", "rar" -> Icons.Default.Archive
-        else -> Icons.Default.InsertDriveFile
+        else -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
 }

@@ -4,6 +4,7 @@ import com.amaya.intelligence.domain.models.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -155,7 +156,7 @@ fun ToolArgumentsPreview(
                     if (id.isNotBlank() || chars != null || wait != "0") {
                         MetaRow("Sync: ${wait}s wait", Icons.Default.AccessTime, metaColor)
                         if (!chars.isNullOrBlank()) {
-                            MetaRow("Buffer: $chars chars", Icons.Default.Subject, metaColor)
+                            MetaRow("Buffer: $chars chars", Icons.AutoMirrored.Filled.Subject, metaColor)
                         }
                         if (id.isNotBlank()) {
                             MetaRow("ID: ${id.take(12)}...", Icons.Default.Fingerprint, metaColor.copy(alpha = 0.4f))

@@ -95,8 +95,15 @@ fun MessageBubble(
         ) {
             // Agent Icon (theme-aware)
             val modelId = message.metadata["model_id"] ?: ""
+            val agentName = message.metadata["agent_name"]
+            val isRemote = message.metadata["source"] == "remote"
             val isDark = isSystemInDarkTheme()
-            val iconSpec = AgentIcon.resolve(modelId, isDark)
+            val iconSpec = AgentIcon.resolve(
+                modelId = modelId,
+                name = agentName,
+                isRemote = isRemote,
+                isDarkTheme = isDark
+            )
 
             if (iconSpec != null) {
                 Box(

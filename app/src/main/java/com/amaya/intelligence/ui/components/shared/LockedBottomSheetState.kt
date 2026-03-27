@@ -12,6 +12,20 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Shape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,3 +54,34 @@ private val ConsumeAllNestedScrollConnection = object : NestedScrollConnection {
 }
 
 fun Modifier.ignoreNestedScrollForBottomSheet() = this.nestedScroll(ConsumeAllNestedScrollConnection)
+
+@Composable
+fun isImeVisible(): Boolean {
+    val density = LocalDensity.current
+    return WindowInsets.ime.getBottom(density) > 0
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun responsiveBottomSheetShape(): Shape {
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
+    val cornerSize by animateDpAsState(
+        targetValue = if (imeVisible) 0.dp else 28.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "sheet_corner_animation"
+    )
+    return RoundedCornerShape(topStart = cornerSize, topEnd = cornerSize)
+}
+
+@Composable
+fun responsiveDragHandleAlpha(): Float {
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
+    val alpha by animateFloatAsState(
+        targetValue = if (imeVisible) 0f else 0.4f,
+        animationSpec = tween(durationMillis = 250),
+        label = "drag_handle_alpha_animation"
+    )
+    return alpha
+}

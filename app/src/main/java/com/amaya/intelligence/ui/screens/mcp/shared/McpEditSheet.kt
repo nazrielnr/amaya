@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
 import com.amaya.intelligence.ui.components.shared.SettingsBackButton
 import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
 import com.amaya.intelligence.ui.theme.LocalAmayaGradients
@@ -70,7 +71,8 @@ fun McpEditSheet(
         sheetState = sheetState,
         properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null
+        dragHandle = null,
+        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape()
     ) {
         val gradients = LocalAmayaGradients.current
         Box(
@@ -109,14 +111,27 @@ fun McpEditSheet(
 
                 Button(
                     onClick = {
-                        onSave(rawJson.trim())
+                        scope.launch {
+                            sheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                onSave(rawJson.trim())
+                            }
+                        }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
                     enabled = isValid
                 ) {
-                    Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Save")
+                    Icon(Icons.Default.Save, null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        "Save Config",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
@@ -125,7 +140,7 @@ fun McpEditSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .background(gradients.topScrim)
+                    .background(gradients.modalTopScrim)
                     .verticalScroll(rememberScrollState())
             ) {
                 Box(
@@ -136,21 +151,21 @@ fun McpEditSheet(
                         modifier = Modifier
                             .width(32.dp).height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha()))
                     )
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "New MCP",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                    )
+                Box(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "MCP Configuration",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
                 Box(
                     modifier = Modifier
+                        .align(Alignment.CenterEnd)
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(

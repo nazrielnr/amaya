@@ -2,20 +2,25 @@ package com.amaya.intelligence.ui.components.remote
 
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
 import com.amaya.intelligence.ui.components.shared.ignoreNestedScrollForBottomSheet
@@ -29,12 +34,15 @@ fun RemoteSessionInfoSheet(
     onDisconnect: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val sheetState = rememberLockedModalBottomSheetState()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = null,
+        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape()
     ) {
         val gradients = LocalAmayaGradients.current
         val scrollState = rememberScrollState()
@@ -73,15 +81,30 @@ fun RemoteSessionInfoSheet(
                 Spacer(Modifier.height(8.dp))
 
                 Button(
-                    onClick = onDisconnect,
+                    onClick = {
+                        scope.launch {
+                            sheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                onDisconnect()
+                            }
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
                 ) {
-                    Icon(Icons.Default.LinkOff, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Disconnect")
+                    Icon(androidx.compose.material.icons.Icons.Default.LinkOff, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        "Disconnect",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
@@ -90,7 +113,7 @@ fun RemoteSessionInfoSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .background(gradients.topScrim)
+                    .background(gradients.modalTopScrim)
                     .verticalScroll(rememberScrollState())
             ) {
                 Box(
@@ -101,21 +124,36 @@ fun RemoteSessionInfoSheet(
                         modifier = Modifier
                             .width(32.dp).height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha()))
                     )
                 }
-                Row(
+                Box(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.Cloud,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                    Text(
+                        "Remote Session",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
-                    Text("Remote Session", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                    .compositeOver(MaterialTheme.colorScheme.background)
+                            )
+                            .clickable {
+                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) onDismiss()
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }

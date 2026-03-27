@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.amaya.intelligence.domain.models.AgentSelectorItem
 import com.amaya.intelligence.ui.components.shared.AgentIcon
-import com.amaya.intelligence.ui.components.shared.SettingsBackButton
 import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
 import com.amaya.intelligence.ui.components.shared.ignoreNestedScrollForBottomSheet
@@ -44,22 +43,13 @@ fun RemoteModelSelectorSheet(
     val scope = rememberCoroutineScope()
     val maxSheetHeight = (0.75f * LocalConfiguration.current.screenHeightDp).dp
     
-    val dismissAction = {
-        scope.launch {
-            sheetState.hide()
-        }.invokeOnCompletion {
-            if (!sheetState.isVisible) {
-                onDismiss()
-            }
-        }
-        Unit
-    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null
+        dragHandle = null,
+        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape()
     ) {
         val gradients = LocalAmayaGradients.current
         
@@ -79,7 +69,7 @@ fun RemoteModelSelectorSheet(
                     .padding(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Spacer(Modifier.height(90.dp)) // Reserve space for the header
+                Spacer(Modifier.height(90.dp))
 
                 if (agentItems.isEmpty()) {
                     Text(
@@ -92,7 +82,15 @@ fun RemoteModelSelectorSheet(
                         RemoteAgentItem(
                             agent = agent,
                             isSelected = agent.id == activeAgentId,
-                            onClick = { onSelect(agent) }
+                            onClick = { 
+                                scope.launch {
+                                    sheetState.hide()
+                                }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) {
+                                        onSelect(agent)
+                                    }
+                                }
+                            }
                         )
                     }
                 }
@@ -103,7 +101,7 @@ fun RemoteModelSelectorSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .background(gradients.topScrim)
+                    .background(gradients.modalTopScrim)
                     .verticalScroll(rememberScrollState())
             ) {
                 Box(
@@ -114,43 +112,32 @@ fun RemoteModelSelectorSheet(
                         modifier = Modifier
                             .width(32.dp).height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha()))
                     )
                 }
-                Row(
+                Box(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.Cloud,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(16.dp))
                     Text(
-                        text = "Remote Agents",
+                        "Remote Select Agent",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
+                        fontWeight = FontWeight.Bold
                     )
-                    if (serverName != null) {
-                        Text(
-                            text = serverName,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
                     Box(
                         modifier = Modifier
+                            .align(Alignment.CenterEnd)
                             .size(36.dp)
                             .clip(CircleShape)
                             .background(
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                                     .compositeOver(MaterialTheme.colorScheme.background)
                             )
-                            .clickable(onClick = dismissAction),
+                            .clickable {
+                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) onDismiss()
+                                }
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
@@ -173,7 +160,8 @@ private fun RemoteAgentItem(
         color = if (isSelected) 
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
         else 
-            Color.Transparent
+            Color.Transparent,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
@@ -187,12 +175,14 @@ private fun RemoteAgentItem(
                 Icon(
                     painter = painterResource(id = iconSpec.resId),
                     contentDescription = null,
+                    modifier = Modifier.size(24.dp),
                     tint = if (iconSpec.tintable) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified
                 )
             } else {
                 Icon(
                     imageVector = Icons.Default.SmartToy,
                     contentDescription = null,
+                    modifier = Modifier.size(20.dp),
                     tint = if (isSelected)
                         MaterialTheme.colorScheme.primary
                     else

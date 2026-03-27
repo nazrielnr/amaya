@@ -3,6 +3,7 @@ import * as WebSocket from 'ws';
 import { createIDEServices, parseIDEProvider, IDEProviderId } from './ide/IDEBootstrap';
 import { MessageHandler } from './controllers/MessageHandler';
 import { AppState } from './types';
+import { ConnectivityManager } from './connectivity/ConnectivityManager';
 
 // ── State ────────────────────────────────────────────────────────
 
@@ -32,70 +33,69 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
         console.log('[Amaya Remote] Activating with Modular OOP Architecture...');
 
-    currentProvider = parseIDEProvider(
-        vscode.workspace.getConfiguration('amayaRemote').get<string>('provider', 'antigravity')
-    );
-    ideServices = createIDEServices(currentProvider);
-    api = ideServices.api;
-    commandExecutor = ideServices.commandExecutor;
-    runStatusMapper = ideServices.runStatusMapper;
+        currentProvider = parseIDEProvider(
+            vscode.workspace.getConfiguration('amayaRemote').get<string>('provider', 'antigravity')
+        );
+        ideServices = createIDEServices(currentProvider);
+        api = ideServices.api;
+        commandExecutor = ideServices.commandExecutor;
+        runStatusMapper = ideServices.runStatusMapper;
 
-    statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    context.subscriptions.push(statusBar);
-    updateStatusBar();
+        statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+        context.subscriptions.push(statusBar);
+        updateStatusBar();
 
-    // Register commands
-    context.subscriptions.push(
-        vscode.commands.registerCommand('amayaRemote.startServer', () => startServer()),
-        vscode.commands.registerCommand('amayaRemote.stopServer', () => stopServer()),
-        vscode.commands.registerCommand('amayaRemote.setCredentials', () => promptCredentials()),
-        vscode.commands.registerCommand('amayaRemote.diagnose', async () => {
-            const diag = api.getDiagnostics();
-            vscode.window.showInformationMessage(
-                `Amaya Remote Diagnostics:\n${diag}`,
-                'Re-initialize', 'Set Credentials'
-            ).then(async (choice) => {
-                if (choice === 'Re-initialize') {
-                    const ok = await api.initialize();
-                    if (ok) {
-                        vscode.window.showInformationMessage(`✅ Connected to ${api.getBackendName()}!\n${api.getDiagnostics()}`);
-                    } else {
-                        vscode.window.showInformationMessage(`❌ Still failed.\n${api.getDiagnostics()}`);
+        // Register commands
+        context.subscriptions.push(
+            vscode.commands.registerCommand('amayaRemote.startServer', () => startServer()),
+            vscode.commands.registerCommand('amayaRemote.stopServer', () => stopServer()),
+            vscode.commands.registerCommand('amayaRemote.setCredentials', () => promptCredentials()),
+            vscode.commands.registerCommand('amayaRemote.diagnose', async () => {
+                const diag = api.getDiagnostics();
+                vscode.window.showInformationMessage(
+                    `Amaya Remote Diagnostics:\n${diag}`,
+                    'Re-initialize', 'Set Credentials'
+                ).then(async (choice) => {
+                    if (choice === 'Re-initialize') {
+                        const ok = await api.initialize();
+                        if (ok) {
+                            vscode.window.showInformationMessage(`✅ Connected to ${api.getBackendName()}!\n${api.getDiagnostics()}`);
+                        } else {
+                            vscode.window.showInformationMessage(`❌ Still failed.\n${api.getDiagnostics()}`);
+                        }
+                    } else if (choice === 'Set Credentials') {
+                        promptCredentials();
                     }
-                } else if (choice === 'Set Credentials') {
-                    promptCredentials();
-                }
+                });
+            }),
+        );
+
+        // Auto-initialize API with retry
+        let ok = false;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            console.log(`[Amaya Remote] Init attempt ${attempt}/3...`);
+            ok = await api.initialize();
+            if (ok) {
+                console.log(`[Amaya Remote] ✅ IDE client initialized! (IDE: ${api.getBackendName()})`);
+                vscode.window.showInformationMessage(`Amaya Remote: Connected to ${api.getBackendName()}`);
+                break;
+            }
+            if (attempt < 3) {
+                console.log(`[Amaya Remote] Waiting 5s before retry...`);
+                await new Promise(r => setTimeout(r, 5000));
+            }
+        }
+
+        if (!ok) {
+            vscode.window.showWarningMessage(
+                `Amaya Remote: Cannot connect to underlying Language Server (${api.getBackendName()}). Server will not start until initialized.`,
+                'Set Credentials', 'Diagnose'
+            ).then((choice) => {
+                if (choice === 'Set Credentials') { promptCredentials(); }
+                else if (choice === 'Diagnose') { vscode.commands.executeCommand('amayaRemote.diagnose'); }
             });
-        }),
-    );
-
-    // Auto-initialize API with retry
-    let ok = false;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-        console.log(`[Amaya Remote] Init attempt ${attempt}/3...`);
-        ok = await api.initialize();
-        if (ok) {
-            console.log(`[Amaya Remote] ✅ IDE client initialized! (IDE: ${api.getBackendName()})`);
-            vscode.window.showInformationMessage(`Amaya Remote: Connected to ${api.getBackendName()}`);
-            break;
+            return; // Don't auto-start if initialization failed
         }
-        if (attempt < 3) {
-            console.log(`[Amaya Remote] Waiting 5s before retry...`);
-            await new Promise(r => setTimeout(r, 5000));
-        }
-    }
-
-    if (!ok) {
-                        vscode.window.showInformationMessage(`✅ Connected to ${api.getBackendName()} (${currentProvider})!\n${api.getDiagnostics()}`);
-        vscode.window.showWarningMessage(
-            'Amaya Remote: Cannot connect to underlying Language Server. Server will not start until initialized.',
-            'Set Credentials', 'Diagnose'
-        ).then((choice) => {
-            if (choice === 'Set Credentials') { promptCredentials(); }
-            else if (choice === 'Diagnose') { vscode.commands.executeCommand('amayaRemote.diagnose'); }
-        });
-        return; // Don't auto-start if initialization failed
-    }
 
         // Auto-start if configured
         const autoStart = vscode.workspace.getConfiguration('amayaRemote').get<boolean>('autoStart', false);
@@ -126,10 +126,6 @@ async function promptCredentials() {
 }
 
 // ── WebSocket Server ─────────────────────────────────────────────
-
-import { ConnectivityManager } from './connectivity/ConnectivityManager';
-
-// ... existing code ...
 
 async function startServer() {
     // Check if API is initialized first

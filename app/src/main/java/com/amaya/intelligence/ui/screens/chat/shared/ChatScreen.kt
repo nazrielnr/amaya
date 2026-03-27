@@ -53,6 +53,7 @@ import com.amaya.intelligence.ui.components.local.SessionInfoSheet
 import com.amaya.intelligence.ui.components.local.TodoPill
 import com.amaya.intelligence.ui.components.local.TodoSheet
 import com.amaya.intelligence.utils.NetworkUtils
+import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -463,17 +464,7 @@ fun ChatScreen(
                     .fillMaxWidth()
                     .height(160.dp)
                     .align(Alignment.TopStart)
-                    .drawBehind {
-                        drawRect(
-                            brush = Brush.verticalGradient(
-                                colorStops = arrayOf(
-                                    0.0f to bgColor.copy(alpha = 0.98f),
-                                    0.55f to bgColor.copy(alpha = 0.80f),
-                                    1.0f to bgColor.copy(alpha = 0.0f)
-                                )
-                            )
-                        )
-                    }
+                    .background(LocalAmayaGradients.current.topScrim)
             )
 
             // TopAppBar
@@ -512,7 +503,7 @@ fun ChatScreen(
                                 .padding(start = 8.dp)
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 .clickable {
                                     keyboardController?.hide()
                                     scope.launch { drawerState.open() }

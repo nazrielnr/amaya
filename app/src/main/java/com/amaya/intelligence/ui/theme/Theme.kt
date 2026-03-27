@@ -179,6 +179,7 @@ val CardShape = RoundedCornerShape(40.dp)
 class AmayaGradients(
     val iconPalettes: List<Brush>,
     val topScrim: Brush,
+    val modalTopScrim: Brush,
     val bottomScrim: Brush
 )
 
@@ -205,16 +206,45 @@ fun amayaGradients(darkTheme: Boolean): AmayaGradients {
     return AmayaGradients(
         iconPalettes = palettes,
         topScrim = Brush.verticalGradient(
-            0.0f to bgColor.copy(alpha = 0.98f),
-            0.4f to bgColor.copy(alpha = 0.88f),
-            0.7f to bgColor.copy(alpha = 0.40f),
+            0.0f to bgColor.copy(alpha = 1.00f),
+            0.10f to bgColor.copy(alpha = 0.98f),
+            0.20f to bgColor.copy(alpha = 0.95f),
+            0.35f to bgColor.copy(alpha = 0.90f),
+            0.50f to bgColor.copy(alpha = 0.80f),
+            0.60f to bgColor.copy(alpha = 0.70f),
+            0.70f to bgColor.copy(alpha = 0.55f),
+            0.80f to bgColor.copy(alpha = 0.38f),
+            0.88f to bgColor.copy(alpha = 0.25f),
+            0.94f to bgColor.copy(alpha = 0.12f),
+            0.98f to bgColor.copy(alpha = 0.05f),
+            1.0f to Color.Transparent
+        ),
+        modalTopScrim = Brush.verticalGradient(
+            0.0f to bgColor.copy(alpha = 1.00f),
+            0.15f to bgColor.copy(alpha = 0.98f),
+            0.30f to bgColor.copy(alpha = 0.96f),
+            0.45f to bgColor.copy(alpha = 0.93f),
+            0.60f to bgColor.copy(alpha = 0.85f),
+            0.70f to bgColor.copy(alpha = 0.75f),
+            0.80f to bgColor.copy(alpha = 0.60f),
+            0.88f to bgColor.copy(alpha = 0.45f),
+            0.94f to bgColor.copy(alpha = 0.25f),
+            0.98f to bgColor.copy(alpha = 0.10f),
             1.0f to Color.Transparent
         ),
         bottomScrim = Brush.verticalGradient(
             0.0f to Color.Transparent,
-            0.3f to bgColor.copy(alpha = 0.40f),
-            0.6f to bgColor.copy(alpha = 0.88f),
-            1.0f to bgColor.copy(alpha = 0.98f)
+            0.05f to bgColor.copy(alpha = 0.05f),
+            0.10f to bgColor.copy(alpha = 0.10f),
+            0.18f to bgColor.copy(alpha = 0.18f),
+            0.28f to bgColor.copy(alpha = 0.30f),
+            0.40f to bgColor.copy(alpha = 0.45f),
+            0.52f to bgColor.copy(alpha = 0.60f),
+            0.65f to bgColor.copy(alpha = 0.75f),
+            0.78f to bgColor.copy(alpha = 0.88f),
+            0.88f to bgColor.copy(alpha = 0.94f),
+            0.95f to bgColor.copy(alpha = 0.97f),
+            1.0f to bgColor.copy(alpha = 1.00f)
         )
     )
 }

@@ -17,8 +17,20 @@ object AgentIcon {
         return AgentMapper.getIconType(modelId)
     }
 
-    fun resolve(modelId: String, isDarkTheme: Boolean): Spec? {
-        return resolveByType(getType(modelId), isDarkTheme)
+    fun resolve(
+        modelId: String,
+        isDarkTheme: Boolean,
+        name: String? = null,
+        isRemote: Boolean = false
+    ): Spec? {
+        var iconType = getType(modelId)
+        
+        // Remote-only fallback: if modelId is unrecognized, try matching the agent name.
+        if (iconType == null && isRemote && !name.isNullOrBlank()) {
+            iconType = getType(name)
+        }
+        
+        return resolveByType(iconType, isDarkTheme)
     }
 
     fun resolveByType(iconType: String?, isDarkTheme: Boolean): Spec? {

@@ -99,7 +99,8 @@ fun CronJobEditSheet(
         sheetState = sheetState,
         properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null
+        dragHandle = null,
+        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape()
     ) {
         val gradients = LocalAmayaGradients.current
         Box(
@@ -202,23 +203,36 @@ fun CronJobEditSheet(
 
                 Button(
                     onClick = {
-                        onAdd(
-                            CronJobEntity(
-                                title = title.trim().ifBlank { "Reminder" },
-                                prompt = prompt.trim(),
-                                triggerTimeMillis = selectedCalendar.timeInMillis,
-                                recurringType = recurringType,
-                                isActive = true,
-                                sessionMode = sessionMode
-                            )
-                        )
+                        scope.launch {
+                            sheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                onAdd(
+                                    CronJobEntity(
+                                        title = title.trim().ifBlank { "Reminder" },
+                                        prompt = prompt.trim(),
+                                        triggerTimeMillis = selectedCalendar.timeInMillis,
+                                        recurringType = recurringType,
+                                        isActive = true,
+                                        sessionMode = sessionMode
+                                    )
+                                )
+                            }
+                        }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
                     enabled = selectedCalendar.timeInMillis > System.currentTimeMillis()
                 ) {
-                    Icon(Icons.Default.AlarmAdd, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Set Reminder")
+                    Icon(Icons.Default.AlarmAdd, null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        "Set Reminder",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
@@ -227,7 +241,7 @@ fun CronJobEditSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
-                .background(gradients.topScrim)
+                .background(gradients.modalTopScrim)
                 .verticalScroll(rememberScrollState())
         ) {
             Box(
@@ -238,22 +252,21 @@ fun CronJobEditSheet(
                     modifier = Modifier
                         .width(32.dp).height(4.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha()))
                 )
             }
-            Row(
+            Box(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                contentAlignment = Alignment.Center
             ) {
-                    Text(
-                        "New Reminder",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                Text(
+                    "New Reminder Plan",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
                 Box(
                     modifier = Modifier
+                        .align(Alignment.CenterEnd)
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(
@@ -267,5 +280,6 @@ fun CronJobEditSheet(
                 }
             }
         }
+    }
     }
 }

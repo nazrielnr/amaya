@@ -82,7 +82,8 @@ fun AgentEditSheet(
         sheetState = sheetState,
         properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null
+        dragHandle = null,
+        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape()
     ) {
         Box(
             modifier = modifier
@@ -99,199 +100,212 @@ fun AgentEditSheet(
                     .padding(bottom = 40.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-            Spacer(Modifier.height(90.dp)) // Reserve Space for Header Overlap
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text(UiStrings.Labels.NAME) },
-                placeholder = { Text("Enter agent name") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.Label, null, modifier = Modifier.size(18.dp)) }
-            )
-
-            ExposedDropdownMenuBox(
-                expanded = providerExpanded,
-                onExpandedChange = { providerExpanded = it }
-            ) {
+                Spacer(Modifier.height(90.dp))
                 OutlinedTextField(
-                    value = providerType.lowercase().replaceFirstChar { it.uppercaseChar() },
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Provider") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(UiStrings.Labels.NAME) },
+                    placeholder = { Text("Enter agent name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
                     shape = RoundedCornerShape(12.dp),
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    leadingIcon = { Icon(Icons.Default.Label, null, modifier = Modifier.size(18.dp)) }
                 )
-                ExposedDropdownMenu(
+
+                ExposedDropdownMenuBox(
                     expanded = providerExpanded,
-                    onDismissRequest = { providerExpanded = false },
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
+                    onExpandedChange = { providerExpanded = it }
                 ) {
-                    providerOptions.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(option.lowercase().replaceFirstChar { it.uppercaseChar() }) },
-                            onClick = { providerType = option; providerExpanded = false },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    OutlinedTextField(
+                        value = providerType.lowercase().replaceFirstChar { it.uppercaseChar() },
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Provider") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = providerExpanded,
+                        onDismissRequest = { providerExpanded = false },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
+                    ) {
+                        providerOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option.lowercase().replaceFirstChar { it.uppercaseChar() }) },
+                                onClick = { providerType = option; providerExpanded = false },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = key,
+                    onValueChange = { key = it },
+                    label = { Text(UiStrings.Agents.API_KEY) },
+                    placeholder = { Text("Enter API key") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+                    leadingIcon = { Icon(Icons.Default.Key, null, modifier = Modifier.size(18.dp)) },
+                    trailingIcon = {
+                        IconButton(onClick = { showKey = !showKey }) {
+                            Icon(
+                                if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                )
+
+                OutlinedTextField(
+                    value = baseUrl,
+                    onValueChange = { baseUrl = it },
+                    label = { Text(UiStrings.Agents.BASE_URL) },
+                    placeholder = { Text("Enter base URL") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    leadingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(18.dp)) }
+                )
+
+                OutlinedTextField(
+                    value = modelId,
+                    onValueChange = { modelId = it },
+                    label = { Text(UiStrings.Agents.MODEL_ID) },
+                    placeholder = { Text("Enter model ID") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    leadingIcon = { Icon(Icons.Default.Psychology, null, modifier = Modifier.size(18.dp)) }
+                )
+
+                OutlinedTextField(
+                    value = maxTokensStr,
+                    onValueChange = { v -> if (v.all { it.isDigit() }) maxTokensStr = v },
+                    label = { Text("Max Tokens") },
+                    placeholder = { Text("Enter max tokens") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    leadingIcon = { Icon(Icons.Default.Tune, null, modifier = Modifier.size(18.dp)) }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text("Enabled", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            if (enabled) "Agent available to AI" else "Agent will be skipped",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(checked = enabled, onCheckedChange = { enabled = it })
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (onDelete != null) {
+                        OutlinedButton(
+                            onClick = { showDeleteConfirm = true },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(Icons.Default.Delete, null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                "Delete",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    
+                    Button(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        onClick = {
+                            scope.launch {
+                                sheetState.hide()
+                            }.invokeOnCompletion {
+                                if (!sheetState.isVisible) {
+                                    onSave(
+                                        config.copy(
+                                            name = name.trim(),
+                                            providerType = providerType,
+                                            baseUrl = baseUrl.trim(),
+                                            modelId = modelId.trim(),
+                                            enabled = enabled,
+                                            maxTokens = maxTokensStr.toIntOrNull()?.coerceIn(256, 64000) ?: config.maxTokens
+                                        ),
+                                        key.trim()
+                                    )
+                                }
+                            }
+                        },
+                        enabled = isValid
+                    ) {
+                        Icon(Icons.Default.Save, null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            "Save",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
 
-            OutlinedTextField(
-                value = key,
-                onValueChange = { key = it },
-                label = { Text(UiStrings.Agents.API_KEY) },
-                placeholder = { Text("Enter API key") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-                leadingIcon = { Icon(Icons.Default.Key, null, modifier = Modifier.size(18.dp)) },
-                trailingIcon = {
-                    IconButton(onClick = { showKey = !showKey }) {
-                        Icon(
-                            if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            )
-
-            OutlinedTextField(
-                value = baseUrl,
-                onValueChange = { baseUrl = it },
-                label = { Text(UiStrings.Agents.BASE_URL) },
-                placeholder = { Text("Enter base URL") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(18.dp)) }
-            )
-
-            OutlinedTextField(
-                value = modelId,
-                onValueChange = { modelId = it },
-                label = { Text(UiStrings.Agents.MODEL_ID) },
-                placeholder = { Text("Enter model ID") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.Psychology, null, modifier = Modifier.size(18.dp)) }
-            )
-
-            OutlinedTextField(
-                value = maxTokensStr,
-                onValueChange = { v -> if (v.all { it.isDigit() }) maxTokensStr = v },
-                label = { Text("Max Tokens") },
-                placeholder = { Text("Enter max tokens") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                leadingIcon = { Icon(Icons.Default.Tune, null, modifier = Modifier.size(18.dp)) }
-            )
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            // Top Layer: Blurred Header Overlay
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .background(gradients.modalTopScrim)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Column {
-                    Text("Enabled", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        if (enabled) "Agent available to AI" else "Agent will be skipped",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(32.dp).height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha()))
                     )
                 }
-                Switch(checked = enabled, onCheckedChange = { enabled = it })
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (onDelete != null) {
-                    OutlinedButton(
-                        onClick = { showDeleteConfirm = true },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Delete")
-                    }
-                }
-                Spacer(Modifier.weight(1f))
-                Button(
-                    onClick = {
-                        onSave(
-                            config.copy(
-                                name = name.trim(),
-                                providerType = providerType,
-                                baseUrl = baseUrl.trim(),
-                                modelId = modelId.trim(),
-                                enabled = enabled,
-                                maxTokens = maxTokensStr.toIntOrNull()?.coerceIn(256, 64000) ?: config.copy().maxTokens
-                            ),
-                            key.trim()
-                        )
-                    },
-                    enabled = isValid
-                ) {
-                    Icon(Icons.Default.Save, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Save")
-                }
-            }
-        }
-
-        // Top Layer: Blurred Header Overlay
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .background(gradients.topScrim)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+                Box(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .width(32.dp).height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                Text(
+                    if (isNew) "New Agent" else "Edit Agent",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        if (isNew) Icons.Default.Add else Icons.Default.Edit,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        if (isNew) "New Agent" else "Edit Agent",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
                 Box(
                     modifier = Modifier
+                        .align(Alignment.CenterEnd)
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(
@@ -304,25 +318,34 @@ fun AgentEditSheet(
                     Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
                 }
             }
+            }
+
+            if (showDeleteConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteConfirm = false },
+                    icon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                    title = { Text("Delete Agent?") },
+                    text = { Text("\"${config.name.ifBlank { "This agent" }}\" will be permanently deleted.") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = { 
+                                showDeleteConfirm = false
+                                scope.launch {
+                                    sheetState.hide()
+                                }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) {
+                                        onDelete?.invoke()
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) { Text("Delete") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+                    }
+                )
+            }
         }
     }
-
-    if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            icon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("Delete Agent?") },
-            text = { Text("\"${config.name.ifBlank { "This agent" }}\" will be permanently deleted.") },
-            confirmButton = {
-                TextButton(
-                    onClick = { showDeleteConfirm = false; onDelete?.invoke() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
-            }
-        )
-    }
-}
 }

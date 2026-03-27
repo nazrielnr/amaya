@@ -206,13 +206,13 @@ class LocalIntelligenceService @Inject constructor(
         }
         _uiState.value = state.copy(messages = msgs)
     }
-
     private fun currentAssistantMetadata(): Map<String, String> {
         val state = _uiState.value
         val agent = state.agentConfigs.firstOrNull { it.id == state.activeAgentId }
             ?: state.agentConfigs.firstOrNull()
 
         return buildMap {
+            put("source", "local")
             agent?.name?.takeIf { it.isNotBlank() }?.let { put("agent_name", it) }
             agent?.modelId?.takeIf { it.isNotBlank() }?.let { put("model_id", it) }
             if (!containsKey("agent_name")) {

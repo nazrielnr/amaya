@@ -51,6 +51,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.amaya.intelligence.impl.common.mappers.RemoteIdeIcon
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.launch
 
 /**
  * Remote Session screen — IDE selector + IP/Port input.
@@ -70,6 +71,7 @@ fun RemoteSessionScreen(
     val serverInfo by client.serverInfo.collectAsState()
     val gradients = LocalAmayaGradients.current
     val isDark = isSystemInDarkTheme()
+    val scope = rememberCoroutineScope()
 
     var ipAddress by remember { mutableStateOf("") }
     var port by remember { mutableStateOf("") }
@@ -520,22 +522,15 @@ private fun ConnectionSetupSheet(
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
-    val isDark = isSystemInDarkTheme()
-    val statusBarPx = WindowInsets.statusBars.getTop(androidx.compose.ui.platform.LocalDensity.current)
-    val cornerSize by remember {
-        derivedStateOf {
-            val offset = try { sheetState.requireOffset() } catch (e: Exception) { 1000f }
-            if (offset <= statusBarPx + 1f) 0.dp else 28.dp
-        }
-    }
+    val scope = rememberCoroutineScope()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = cornerSize, topEnd = cornerSize),
-        dragHandle = null
+        dragHandle = null,
+        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape()
     ) {
         val gradients = LocalAmayaGradients.current
         Box(
@@ -598,7 +593,15 @@ private fun ConnectionSetupSheet(
                 Spacer(Modifier.height(8.dp))
 
                 Button(
-                    onClick = onConnect,
+                    onClick = {
+                        scope.launch {
+                            sheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                onConnect()
+                            }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -612,7 +615,11 @@ private fun ConnectionSetupSheet(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text(UiStrings.Connection.CONNECT, fontWeight = FontWeight.Bold)
+                        Text(
+                            UiStrings.Connection.CONNECT,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -622,7 +629,7 @@ private fun ConnectionSetupSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .background(gradients.topScrim)
+                    .background(gradients.modalTopScrim)
                     .verticalScroll(rememberScrollState())
                     .heightIn(min = 110.dp) // Ensure substantial drag surface area
             ) {
@@ -634,31 +641,32 @@ private fun ConnectionSetupSheet(
                         modifier = Modifier
                             .width(32.dp).height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha()))
                     )
                 }
-                Row(
+                Box(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(UiStrings.Connection.CONNECTION_SETUP, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    val scope = rememberCoroutineScope()
-                    val dismissAction = {
-                        scope.launch { sheetState.hide() }.invokeOnCompletion {
-                            onDismiss()
-                        }
-                        Unit
-                    }
+                    Text(
+                        UiStrings.Connection.CONNECTION_SETUP,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                     Box(
                         modifier = Modifier
+                            .align(Alignment.CenterEnd)
                             .size(36.dp)
                             .clip(CircleShape)
                             .background(
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                                     .compositeOver(MaterialTheme.colorScheme.background)
                             )
-                            .clickable(onClick = dismissAction),
+                            .clickable {
+                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) onDismiss()
+                                }
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
@@ -668,4 +676,3 @@ private fun ConnectionSetupSheet(
         }
     }
 }
-

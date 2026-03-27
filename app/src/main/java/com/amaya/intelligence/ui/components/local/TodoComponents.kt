@@ -2,6 +2,7 @@ package com.amaya.intelligence.ui.components.local
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -20,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
 import com.amaya.intelligence.ui.components.shared.ignoreNestedScrollForBottomSheet
 import com.amaya.intelligence.ui.theme.LocalAmayaGradients
@@ -117,13 +120,15 @@ fun TodoSheet(
         label = "todo_sheet_shimmer_x"
     )
 
+    val scope = rememberCoroutineScope()
     val sheetState = rememberLockedModalBottomSheetState()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState       = sheetState,
         properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor   = MaterialTheme.colorScheme.surface,
-        dragHandle       = null
+        dragHandle       = null,
+        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape()
     ) {
         val gradients = LocalAmayaGradients.current
         val done = items.count { it.status == TodoStatus.COMPLETED }
@@ -159,7 +164,7 @@ fun TodoSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .background(gradients.topScrim)
+                    .background(gradients.modalTopScrim)
                     .verticalScroll(rememberScrollState())
             ) {
                 Box(
@@ -170,18 +175,17 @@ fun TodoSheet(
                         modifier = Modifier
                             .width(32.dp).height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha()))
                     )
                 }
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
                         .padding(bottom = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             "Task Plan",
                             style = MaterialTheme.typography.titleLarge,
@@ -194,21 +198,23 @@ fun TodoSheet(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Surface(
-                        shape = CircleShape,
-                        color = if (done == total && total > 0)
-                            Color(0xFF4CAF50).copy(alpha = 0.15f)
-                        else MaterialTheme.colorScheme.primaryContainer
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                    .compositeOver(MaterialTheme.colorScheme.background)
+                            )
+                            .clickable {
+                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) onDismiss()
+                                }
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            "$done/$total",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = if (done == total && total > 0)
-                                Color(0xFF4CAF50)
-                            else MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                        )
+                        Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
                     }
                 }
             }

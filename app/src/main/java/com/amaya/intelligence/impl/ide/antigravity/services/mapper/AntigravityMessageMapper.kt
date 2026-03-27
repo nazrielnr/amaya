@@ -99,7 +99,7 @@ object AntigravityMessageMapper {
                     thinking = null,
                     isThinking = false,
                     intent = msg.intent,
-                    metadata = msg.metadata,
+                    metadata = msg.metadata + mapOf("source" to "remote"),
                     toolExecutions = mappedRemoteTools,
                     steps = msgSteps,
                     attachments = msg.attachments

@@ -23,6 +23,7 @@ import com.amaya.intelligence.domain.models.ChatUiState
 import com.amaya.intelligence.domain.models.ConnectionState
 import com.amaya.intelligence.ui.components.shared.ChatInput
 import com.amaya.intelligence.ui.components.shared.ScrollablePills
+import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -68,20 +69,11 @@ fun ChatBottomSection(
             .fillMaxWidth()
             .then(if (!drawerOpen) Modifier.imePadding() else Modifier)
             .onSizeChanged { onInputBarHeightChange(it.height) }
-            .drawBehind {
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0.0f to bgColor.copy(alpha = 0.0f),
-                            0.20f to bgColor.copy(alpha = 0.30f),
-                            0.45f to bgColor.copy(alpha = 0.75f),
-                            0.65f to bgColor.copy(alpha = 0.92f),
-                            1.0f to bgColor.copy(alpha = 1.0f)
-                        )
-                    )
-                )
-            }
+            .background(LocalAmayaGradients.current.bottomScrim)
     ) {
+        // Transparent spacer to "push" the blur starting point higher without moving layout
+        Spacer(Modifier.height(48.dp))
+
         AnimatedVisibility(visible = uiState.error != null) {
             Surface(
                 color = MaterialTheme.colorScheme.errorContainer,

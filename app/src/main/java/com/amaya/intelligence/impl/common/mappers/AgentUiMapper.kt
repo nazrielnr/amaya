@@ -12,7 +12,14 @@ object AgentUiMapper {
         quotaLabel: String? = null,
         resetTime: String? = null
     ): AgentSelectorItem {
-        val iconType = AgentMapper.getIconType(agent.modelId) ?: "default"
+        var iconType = AgentMapper.getIconType(agent.modelId)
+        
+        // Fallback for remote agents: if modelId is unrecognized, try matching the agent name.
+        if (iconType == null && isRemote) {
+            iconType = AgentMapper.getIconType(agent.name)
+        }
+        
+        val finalIconType = iconType ?: "default"
         
         return AgentSelectorItem(
             id = agent.id,
@@ -23,7 +30,7 @@ object AgentUiMapper {
             quotaLabel = quotaLabel,
             resetTime = resetTime,
             isRemote = isRemote,
-            iconType = iconType
+            iconType = finalIconType
         )
     }
 }

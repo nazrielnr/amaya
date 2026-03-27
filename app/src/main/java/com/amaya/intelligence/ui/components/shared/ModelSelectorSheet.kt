@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,7 +22,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import com.amaya.intelligence.domain.models.AgentSelectorItem
 import com.amaya.intelligence.ui.theme.LocalAmayaGradients
@@ -46,17 +44,6 @@ fun ModelSelectorSheet(
     val scope = rememberCoroutineScope()
     val maxSheetHeight = (0.75f * LocalConfiguration.current.screenHeightDp).dp
     
-    val dismissAction = {
-        scope.launch {
-            sheetState.hide()
-        }.invokeOnCompletion {
-            if (!sheetState.isVisible) {
-                onDismiss()
-            }
-        }
-        Unit
-    }
-
     LaunchedEffect(Unit) {
         onRefresh?.invoke()
     }
@@ -74,7 +61,8 @@ fun ModelSelectorSheet(
         sheetState = sheetState,
         properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null
+        dragHandle = null,
+        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape()
     ) {
         val gradients = LocalAmayaGradients.current
         
@@ -94,7 +82,7 @@ fun ModelSelectorSheet(
                     .padding(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Spacer(Modifier.height(90.dp)) // Reserve space for the header overlay
+                Spacer(Modifier.height(90.dp))
 
                 if (agentItems.isEmpty()) {
                     Row(
@@ -122,9 +110,16 @@ fun ModelSelectorSheet(
                         val isDark = isSystemInDarkTheme()
 
                         Surface(
-                            onClick = { onSelect(item) },
+                            onClick = {
+                                scope.launch {
+                                    sheetState.hide()
+                                }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) {
+                                        onSelect(item)
+                                    }
+                                }
+                            },
                             shape = RoundedCornerShape(14.dp),
-
                             color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                                     else Color.Transparent,
                             modifier = Modifier.fillMaxWidth()
@@ -228,7 +223,7 @@ fun ModelSelectorSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .background(gradients.topScrim)
+                    .background(gradients.modalTopScrim)
                     .verticalScroll(rememberScrollState())
             ) {
                 Box(
@@ -239,28 +234,28 @@ fun ModelSelectorSheet(
                         modifier = Modifier
                             .width(32.dp).height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha()))
                     )
                 }
-                Row(
+                Box(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         "Select Agent",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
+                        fontWeight = FontWeight.Bold
                     )
                     Box(
                         modifier = Modifier
+                            .align(Alignment.CenterEnd)
                             .size(36.dp)
                             .clip(CircleShape)
                             .background(
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                                     .compositeOver(MaterialTheme.colorScheme.background)
                             )
-                            .clickable(onClick = dismissAction),
+                            .clickable { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))

@@ -3,17 +3,24 @@ package com.amaya.intelligence.ui.components.shared
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.launch
 import com.amaya.intelligence.domain.models.ConversationMode
 import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
@@ -26,12 +33,16 @@ fun ConversationModeSheet(
     onSelect: (ConversationMode) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val sheetState = rememberLockedModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-            sheetState = rememberLockedModalBottomSheetState(),
-            properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
+        sheetState = sheetState,
+        properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = null
+        dragHandle = null,
+        shape = com.amaya.intelligence.ui.components.shared.responsiveBottomSheetShape()
     ) {
         val gradients = LocalAmayaGradients.current
         val scrollState = rememberScrollState()
@@ -47,25 +58,35 @@ fun ConversationModeSheet(
                     .padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Spacer(Modifier.height(90.dp)) // Reserve space for the header
+                Spacer(Modifier.height(90.dp))
 
-                // Planning Mode Item
                 ConversationModeItem(
                     title = "Planning",
                     description = "Agent can plan before executing tasks. Use for deep research, complex tasks, or collaborative work",
                     isSelected = currentMode == ConversationMode.PLANNING,
                     onClick = {
-                        onSelect(ConversationMode.PLANNING)
+                        scope.launch {
+                            sheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                onSelect(ConversationMode.PLANNING)
+                            }
+                        }
                     }
                 )
 
-                // Fast Mode Item
                 ConversationModeItem(
                     title = "Fast",
                     description = "Agent will execute tasks directly. Use for simple tasks that can be completed faster",
                     isSelected = currentMode == ConversationMode.FAST,
                     onClick = {
-                        onSelect(ConversationMode.FAST)
+                        scope.launch {
+                            sheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                onSelect(ConversationMode.FAST)
+                            }
+                        }
                     }
                 )
             }
@@ -75,7 +96,7 @@ fun ConversationModeSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .background(gradients.topScrim)
+                    .background(gradients.modalTopScrim)
                     .verticalScroll(rememberScrollState())
             ) {
                 Box(
@@ -86,15 +107,36 @@ fun ConversationModeSheet(
                         modifier = Modifier
                             .width(32.dp).height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = com.amaya.intelligence.ui.components.shared.responsiveDragHandleAlpha()))
                     )
                 }
-                Row(
+                Box(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text("Conversation mode", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Conversation Mode",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                    .compositeOver(MaterialTheme.colorScheme.background)
+                            )
+                            .clickable {
+                                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                    if (!sheetState.isVisible) onDismiss()
+                                }
+                            }
+                            .align(Alignment.CenterEnd),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }

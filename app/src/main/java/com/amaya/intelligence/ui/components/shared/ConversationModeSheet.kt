@@ -12,7 +12,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.amaya.intelligence.domain.models.ConversationMode
+import com.amaya.intelligence.ui.theme.LocalAmayaGradients
+import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
+import com.amaya.intelligence.ui.components.shared.ignoreNestedScrollForBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,54 +28,75 @@ fun ConversationModeSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            sheetState = rememberLockedModalBottomSheetState(),
+            properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = {
+        dragHandle = null
+    ) {
+        val gradients = LocalAmayaGradients.current
+        val scrollState = rememberScrollState()
+
+        Box(modifier = Modifier.fillMaxWidth().weight(1f, fill = false)) {
+            // Bottom Layer: Scrolling Content
             Column(
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .ignoreNestedScrollForBottomSheet()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(
-                    modifier = Modifier.width(36.dp).height(4.dp).clip(RoundedCornerShape(2.dp))
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                Spacer(Modifier.height(90.dp)) // Reserve space for the header
+
+                // Planning Mode Item
+                ConversationModeItem(
+                    title = "Planning",
+                    description = "Agent can plan before executing tasks. Use for deep research, complex tasks, or collaborative work",
+                    isSelected = currentMode == ConversationMode.PLANNING,
+                    onClick = {
+                        onSelect(ConversationMode.PLANNING)
+                    }
+                )
+
+                // Fast Mode Item
+                ConversationModeItem(
+                    title = "Fast",
+                    description = "Agent will execute tasks directly. Use for simple tasks that can be completed faster",
+                    isSelected = currentMode == ConversationMode.FAST,
+                    onClick = {
+                        onSelect(ConversationMode.FAST)
+                    }
                 )
             }
-        }
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Text(
-                "Conversation mode",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
-            )
 
-            // Planning Mode Item
-            ConversationModeItem(
-                title = "Planning",
-                description = "Agent can plan before executing tasks. Use for deep research, complex tasks, or collaborative work",
-                isSelected = currentMode == ConversationMode.PLANNING,
-                onClick = {
-                    onSelect(ConversationMode.PLANNING)
+            // Top Layer: Blurred Header Overlay
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .background(gradients.topScrim)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(32.dp).height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                    )
                 }
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Fast Mode Item
-            ConversationModeItem(
-                title = "Fast",
-                description = "Agent will execute tasks directly. Use for simple tasks that can be completed faster",
-                isSelected = currentMode == ConversationMode.FAST,
-                onClick = {
-                    onSelect(ConversationMode.FAST)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Conversation mode", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 }
-            )
-
-            Spacer(Modifier.height(32.dp))
+            }
         }
     }
 }

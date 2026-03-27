@@ -17,13 +17,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.data.remote.api.AgentConfig
+import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
 import com.amaya.intelligence.ui.res.UiStrings
+import com.amaya.intelligence.ui.theme.LocalAmayaGradients
+import com.amaya.intelligence.ui.components.shared.ignoreNestedScrollForBottomSheet
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,251 +43,266 @@ fun AgentEditSheet(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
-    
     var name by remember(config.id) { mutableStateOf(config.name) }
     var providerType by remember(config.id) { mutableStateOf(config.providerType) }
     var baseUrl by remember(config.id) { mutableStateOf(config.baseUrl) }
     var modelId by remember(config.id) { mutableStateOf(config.modelId) }
     var key by remember(config.id) { mutableStateOf(apiKey) }
     var enabled by remember(config.id) { mutableStateOf(config.enabled) }
-    var maxTokensStr by remember(config.id) { mutableStateOf(config.maxTokens.toString()) }
+    var maxTokensStr by remember(config.id, isNew) {
+        mutableStateOf(if (isNew) "" else config.maxTokens.toString())
+    }
     var showKey by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var providerExpanded by remember { mutableStateOf(false) }
+    val providerOptions = listOf("OPENAI", "ANTHROPIC", "GEMINI", "CUSTOM")
+    val nameError = name.trim().isBlank()
+    val apiKeyError = key.trim().isBlank()
+    val baseUrlError = baseUrl.trim().isBlank()
+    val modelIdError = modelId.trim().isBlank()
+    val isValid = !nameError && !apiKeyError && !baseUrlError && !modelIdError
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(max = maxSheetHeight)
-            .verticalScroll(scrollState)
-            .padding(horizontal = 24.dp)
-            .padding(top = 8.dp, bottom = 40.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    val sheetState = rememberLockedModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    val gradients = LocalAmayaGradients.current
+    
+    val dismissAction = {
+        scope.launch {
+            sheetState.hide()
+        }.invokeOnCompletion {
+            if (!sheetState.isVisible) {
+                onDismiss()
+            }
+        }
+        Unit
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = null
     ) {
-        // Header row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .heightIn(max = maxSheetHeight)
+                .weight(1f, fill = false)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (isNew) Icons.Default.Add else Icons.Default.Edit,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    if (isNew) "New Agent" else "Edit Agent",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-            Box(
+            Column(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                            .compositeOver(MaterialTheme.colorScheme.background)
-                    )
-                    .clickable(onClick = onDismiss),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .ignoreNestedScrollForBottomSheet()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
-            }
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-        // Name
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text(UiStrings.Labels.NAME) },
-            placeholder = { Text(UiStrings.Placeholders.AGENT_NAME_EXAMPLE) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            leadingIcon = { Icon(Icons.Default.Label, null, modifier = Modifier.size(18.dp)) }
-        )
-
-        // Provider type dropdown
-        var providerExpanded by remember { mutableStateOf(false) }
-        val providerOptions = listOf("OPENAI", "ANTHROPIC", "GEMINI", "CUSTOM")
-        ExposedDropdownMenuBox(
-            expanded = providerExpanded,
-            onExpandedChange = { providerExpanded = it }
-        ) {
+            Spacer(Modifier.height(90.dp)) // Reserve Space for Header Overlap
             OutlinedTextField(
-                value = providerType.lowercase().replaceFirstChar { it.uppercaseChar() },
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Provider") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerExpanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(UiStrings.Labels.NAME) },
+                placeholder = { Text("Enter agent name") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
                 shape = RoundedCornerShape(12.dp),
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                leadingIcon = { Icon(Icons.Default.Label, null, modifier = Modifier.size(18.dp)) }
             )
-            ExposedDropdownMenu(
+
+            ExposedDropdownMenuBox(
                 expanded = providerExpanded,
-                onDismissRequest = { providerExpanded = false },
-                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
+                onExpandedChange = { providerExpanded = it }
             ) {
-                providerOptions.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option.lowercase().replaceFirstChar { it.uppercaseChar() }) },
-                        onClick = { providerType = option; providerExpanded = false },
-                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                    )
+                OutlinedTextField(
+                    value = providerType.lowercase().replaceFirstChar { it.uppercaseChar() },
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Provider") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerExpanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                )
+                ExposedDropdownMenu(
+                    expanded = providerExpanded,
+                    onDismissRequest = { providerExpanded = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+                    providerOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option.lowercase().replaceFirstChar { it.uppercaseChar() }) },
+                            onClick = { providerType = option; providerExpanded = false },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
                 }
             }
-        }
 
-        // API Key
-        OutlinedTextField(
-            value = key,
-            onValueChange = { key = it },
-            label = { Text(UiStrings.Agents.API_KEY) },
-            placeholder = { Text(UiStrings.Placeholders.API_KEY_EXAMPLE) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-            leadingIcon = { Icon(Icons.Default.Key, null, modifier = Modifier.size(18.dp)) },
-            trailingIcon = {
-                IconButton(onClick = { showKey = !showKey }) {
-                    Icon(
-                        if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        null,
-                        modifier = Modifier.size(18.dp)
-                    )
+            OutlinedTextField(
+                value = key,
+                onValueChange = { key = it },
+                label = { Text(UiStrings.Agents.API_KEY) },
+                placeholder = { Text("Enter API key") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+                leadingIcon = { Icon(Icons.Default.Key, null, modifier = Modifier.size(18.dp)) },
+                trailingIcon = {
+                    IconButton(onClick = { showKey = !showKey }) {
+                        Icon(
+                            if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
-            }
-        )
+            )
 
-        // Base URL (only for OPENAI-compatible / CUSTOM)
-        if (providerType == "OPENAI" || providerType == "CUSTOM") {
             OutlinedTextField(
                 value = baseUrl,
                 onValueChange = { baseUrl = it },
                 label = { Text(UiStrings.Agents.BASE_URL) },
-                placeholder = { Text(UiStrings.Placeholders.BASE_URL_EXAMPLE) },
+                placeholder = { Text("Enter base URL") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 leadingIcon = { Icon(Icons.Default.Link, null, modifier = Modifier.size(18.dp)) }
             )
+
+            OutlinedTextField(
+                value = modelId,
+                onValueChange = { modelId = it },
+                label = { Text(UiStrings.Agents.MODEL_ID) },
+                placeholder = { Text("Enter model ID") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                leadingIcon = { Icon(Icons.Default.Psychology, null, modifier = Modifier.size(18.dp)) }
+            )
+
+            OutlinedTextField(
+                value = maxTokensStr,
+                onValueChange = { v -> if (v.all { it.isDigit() }) maxTokensStr = v },
+                label = { Text("Max Tokens") },
+                placeholder = { Text("Enter max tokens") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                leadingIcon = { Icon(Icons.Default.Tune, null, modifier = Modifier.size(18.dp)) }
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Enabled", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        if (enabled) "Agent available to AI" else "Agent will be skipped",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(checked = enabled, onCheckedChange = { enabled = it })
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (onDelete != null) {
+                    OutlinedButton(
+                        onClick = { showDeleteConfirm = true },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Delete")
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                Button(
+                    onClick = {
+                        onSave(
+                            config.copy(
+                                name = name.trim(),
+                                providerType = providerType,
+                                baseUrl = baseUrl.trim(),
+                                modelId = modelId.trim(),
+                                enabled = enabled,
+                                maxTokens = maxTokensStr.toIntOrNull()?.coerceIn(256, 64000) ?: config.copy().maxTokens
+                            ),
+                            key.trim()
+                        )
+                    },
+                    enabled = isValid
+                ) {
+                    Icon(Icons.Default.Save, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Save")
+                }
+            }
         }
 
-        // Model ID
-        OutlinedTextField(
-            value = modelId,
-            onValueChange = { modelId = it },
-            label = { Text(UiStrings.Agents.MODEL_ID) },
-            placeholder = { Text(UiStrings.Placeholders.MODEL_ID_EXAMPLE) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            leadingIcon = { Icon(Icons.Default.Psychology, null, modifier = Modifier.size(18.dp)) }
-        )
-
-        // Max Tokens
-        OutlinedTextField(
-            value = maxTokensStr,
-            onValueChange = { v -> if (v.all { it.isDigit() }) maxTokensStr = v },
-            label = { Text("Max Tokens") },
-            placeholder = { Text("8192") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            leadingIcon = { Icon(Icons.Default.Tune, null, modifier = Modifier.size(18.dp)) },
-            supportingText = { Text("Max output tokens (default: 8192, Anthropic supports up to 16000)") }
-        )
-
-        // Enabled toggle
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        // Top Layer: Blurred Header Overlay
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .background(gradients.topScrim)
+                .verticalScroll(rememberScrollState())
         ) {
-            Column {
-                Text("Enabled", style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    if (enabled) "Agent available to AI" else "Agent will be skipped",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(32.dp).height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                 )
             }
-            Switch(checked = enabled, onCheckedChange = { enabled = it })
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-        // Validation errors
-        val nameError = name.trim().isBlank()
-        val modelIdError = modelId.trim().isBlank()
-        if (nameError || modelIdError) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (nameError) {
-                    Text(
-                        "• Agent name is required",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-                if (modelIdError) {
-                    Text(
-                        "• Model ID is required (e.g. gpt-4o, claude-sonnet-4-20250514)",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        }
-
-        // Save + Delete row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (onDelete != null) {
-                OutlinedButton(
-                    onClick = { showDeleteConfirm = true },
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Delete")
-                }
-            }
-            Spacer(Modifier.weight(1f))
-            Button(
-                onClick = {
-                    val finalBaseUrl = when (providerType) {
-                        "ANTHROPIC", "GEMINI" -> ""
-                        else -> baseUrl.trim()
-                    }
-                    onSave(
-                        config.copy(
-                            name = name.trim(),
-                            providerType = providerType,
-                            baseUrl = finalBaseUrl,
-                            modelId = modelId.trim(),
-                            enabled = enabled,
-                            maxTokens = maxTokensStr.toIntOrNull()?.coerceIn(256, 64000) ?: 8192
-                        ),
-                        key.trim()
-                    )
-                },
-                enabled = name.isNotBlank() && modelId.isNotBlank()
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Save, null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Save")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (isNew) Icons.Default.Add else Icons.Default.Edit,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        if (isNew) "New Agent" else "Edit Agent",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                .compositeOver(MaterialTheme.colorScheme.background)
+                        )
+                        .clickable(onClick = dismissAction),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
+                }
             }
         }
     }
@@ -304,4 +324,5 @@ fun AgentEditSheet(
             }
         )
     }
+}
 }

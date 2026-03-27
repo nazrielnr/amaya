@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.data.remote.api.AgentConfig
 import com.amaya.intelligence.data.remote.api.AiSettingsManager
 import com.amaya.intelligence.ui.components.shared.SettingsBackButton
+import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
 import com.amaya.intelligence.ui.screens.agent.shared.AgentEditSheet
 import com.amaya.intelligence.ui.screens.agent.shared.AgentList
 import kotlinx.coroutines.launch
@@ -112,40 +113,26 @@ fun LocalAgentScreen(
 
     // BottomSheet drawer for add/edit
     editingConfig?.let { currentConfig ->
-        val sheetScope = rememberCoroutineScope()
         val maxSheetHeight = (0.75f * LocalConfiguration.current.screenHeightDp).dp
-        val sheetState = rememberModalBottomSheetState(
-            skipPartiallyExpanded = true
-        )
+        val sheetState = rememberLockedModalBottomSheetState()
         BackHandler {
-            sheetScope.launch {
-                sheetState.hide()
-                editingConfig = null
-            }
+            editingConfig = null
         }
         val currentApiKey = remember(currentConfig.id) {
             if (editingIsNew) "" else aiSettingsManager.getAgentApiKey(currentConfig.id)
         }
 
-        ModalBottomSheet(
-            onDismissRequest = { editingConfig = null },
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            AgentEditSheet(
-                config = currentConfig,
-                apiKey = currentApiKey,
-                isNew = editingIsNew,
-                maxSheetHeight = maxSheetHeight,
-                onDismiss = {
-                    sheetScope.launch {
-                        sheetState.hide()
-                        editingConfig = null
-                    }
-                },
-                onSave = { updatedConfig, key ->
-                    editingConfig = null
-                    scope.launch {
+        AgentEditSheet(
+            config = currentConfig,
+            apiKey = currentApiKey,
+            isNew = editingIsNew,
+            maxSheetHeight = maxSheetHeight,
+            onDismiss = {
+                editingConfig = null
+            },
+            onSave = { updatedConfig, key ->
+                editingConfig = null
+                scope.launch {
                         aiSettingsManager.saveAgentConfig(updatedConfig, key)
                         if (updatedConfig.id == settings.activeAgentId) {
                             aiSettingsManager.setActiveAgent(updatedConfig.id, updatedConfig.modelId)
@@ -162,7 +149,6 @@ fun LocalAgentScreen(
                         }
                     }
                 }
-            )
-        }
+        )
     }
 }

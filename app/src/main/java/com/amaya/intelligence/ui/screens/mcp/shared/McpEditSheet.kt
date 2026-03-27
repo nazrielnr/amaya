@@ -2,11 +2,11 @@ package com.amaya.intelligence.ui.screens.mcp.shared
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,6 +17,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.amaya.intelligence.ui.components.shared.SettingsBackButton
+import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
+import com.amaya.intelligence.ui.theme.LocalAmayaGradients
+import com.amaya.intelligence.ui.components.shared.ignoreNestedScrollForBottomSheet
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,8 +31,20 @@ fun McpEditSheet(
     onSave: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberLockedModalBottomSheetState()
     val scrollState = rememberScrollState()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    
+    val dismissAction = {
+        scope.launch {
+            sheetState.hide()
+        }.invokeOnCompletion {
+            if (!sheetState.isVisible) {
+                onDismiss()
+            }
+        }
+        Unit
+    }
 
     var rawJson by remember {
         mutableStateOf(
@@ -51,25 +68,87 @@ fun McpEditSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface
+        properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = null
     ) {
-        Column(
+        val gradients = LocalAmayaGradients.current
+        Box(
             modifier = modifier
                 .fillMaxWidth()
-                .verticalScroll(scrollState)
-                .padding(horizontal = 24.dp)
-                .padding(top = 8.dp, bottom = 40.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .weight(1f, fill = false)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Bottom Layer: Scrolling Content
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .ignoreNestedScrollForBottomSheet()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    "New MCP",
-                    style = MaterialTheme.typography.titleMedium
+                Spacer(Modifier.height(90.dp)) // Reserve space for the header
+                OutlinedTextField(
+                    value = rawJson,
+                    onValueChange = { rawJson = it },
+                    placeholder = {
+                        Text(
+                            "{\n  \"mcpServers\": {\n    \"my-server\": {\n      \"serverUrl\": \"https://mcp.example.com/mcp\",\n      \"headers\": {},\n      \"enabled\": true\n    }\n  }\n}",
+                            fontFamily = FontFamily.Monospace
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 10,
+                    maxLines = 24,
+                    shape = RoundedCornerShape(12.dp),
+                    isError = rawJsonError != null,
+                    supportingText = rawJsonError?.let { { Text(it) } },
+                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
                 )
+
+                Button(
+                    onClick = {
+                        onSave(rawJson.trim())
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = isValid
+                ) {
+                    Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Save")
+                }
+            }
+
+            // Top Layer: Blurred Header Overlay
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .background(gradients.topScrim)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(32.dp).height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "New MCP",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -78,42 +157,13 @@ fun McpEditSheet(
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                                 .compositeOver(MaterialTheme.colorScheme.background)
                         )
-                        .clickable(onClick = onDismiss),
+                        .clickable(onClick = dismissAction),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
                 }
             }
-
-            OutlinedTextField(
-                value = rawJson,
-                onValueChange = { rawJson = it },
-                placeholder = {
-                    Text(
-                        "{\n  \"mcpServers\": {\n    \"my-server\": {\n      \"serverUrl\": \"https://mcp.example.com/mcp\",\n      \"headers\": {},\n      \"enabled\": true\n    }\n  }\n}",
-                        fontFamily = FontFamily.Monospace
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 10,
-                maxLines = 24,
-                shape = RoundedCornerShape(12.dp),
-                isError = rawJsonError != null,
-                supportingText = rawJsonError?.let { { Text(it) } },
-                textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
-            )
-
-            Button(
-                onClick = {
-                    onSave(rawJson.trim())
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = isValid
-            ) {
-                Icon(Icons.Default.Save, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Save")
-            }
         }
     }
+}
 }

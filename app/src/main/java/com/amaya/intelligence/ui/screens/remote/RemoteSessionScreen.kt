@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import com.amaya.intelligence.ui.components.shared.ignoreNestedScrollForBottomSheet
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -49,6 +50,7 @@ import com.amaya.intelligence.ui.res.UiDefaults
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.amaya.intelligence.impl.common.mappers.RemoteIdeIcon
+import kotlinx.coroutines.launch
 
 /**
  * Remote Session screen — IDE selector + IP/Port input.
@@ -69,8 +71,8 @@ fun RemoteSessionScreen(
     val gradients = LocalAmayaGradients.current
     val isDark = isSystemInDarkTheme()
 
-    var ipAddress by remember { mutableStateOf("192.168.1.") }
-    var port by remember { mutableStateOf("8765") }
+    var ipAddress by remember { mutableStateOf("") }
+    var port by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Currently only Antigravity — expand in the future
@@ -194,8 +196,6 @@ fun RemoteSessionScreen(
                             enabled = provider.isEnabled,
                             onClick = { 
                                 selectedIde = info.id
-                                ipAddress = info.defaultIpPrefix
-                                port = info.defaultPort.toString()
                                 showConnectionSheet = true
                             }
                         )
@@ -267,7 +267,7 @@ fun RemoteSessionScreen(
                     isConnecting = isConnecting,
                     onConnect = {
                         showConnectionSheet = false
-                        client.connect(ipAddress, port.toIntOrNull() ?: 8765)
+                        port.toIntOrNull()?.let { client.connect(ipAddress, it) }
                     },
                     onDismiss = { showConnectionSheet = false }
                 )
@@ -516,13 +516,9 @@ private fun ConnectionSetupSheet(
     onDismiss: () -> Unit
 ) {
     var showScanner by remember { mutableStateOf(false) }
-    val sheetScrollState = rememberScrollState()
     val maxSheetHeight = 0.75f * androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
     val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { target ->
-            target != SheetValue.Hidden
-        }
+        skipPartiallyExpanded = true
     )
     val isDark = isSystemInDarkTheme()
     val statusBarPx = WindowInsets.statusBars.getTop(androidx.compose.ui.platform.LocalDensity.current)
@@ -536,97 +532,137 @@ private fun ConnectionSetupSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = cornerSize, topEnd = cornerSize)
+        shape = RoundedCornerShape(topStart = cornerSize, topEnd = cornerSize),
+        dragHandle = null
     ) {
-        Column(
+        val gradients = LocalAmayaGradients.current
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = maxSheetHeight)
-                .verticalScroll(sheetScrollState)
-                .padding(horizontal = 24.dp)
-                .padding(top = 8.dp, bottom = 40.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .weight(1f, fill = false)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Bottom Layer: Scrolling Content
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .ignoreNestedScrollForBottomSheet()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(UiStrings.Connection.CONNECTION_SETUP, style = MaterialTheme.typography.titleMedium)
-                Box(
+                Spacer(Modifier.height(90.dp)) // Reduced spacer for tighter layout
+                if (showScanner) {
+                    QrScannerOverlay(
+                        onScan = { data ->
+                            val uri = android.net.Uri.parse(data)
+                            uri.getQueryParameter("ip")?.let { onIpChange(it) }
+                            uri.getQueryParameter("port")?.let { onPortChange(it) }
+                            showScanner = false
+                        },
+                        onClose = { showScanner = false }
+                    )
+                }
+
+                OutlinedTextField(
+                    value = ipAddress,
+                    onValueChange = onIpChange,
+                    label = { Text(UiStrings.Connection.IP_ADDRESS) },
+                    placeholder = { Text("Enter IP address") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    leadingIcon = { Icon(Icons.Default.Wifi, null, modifier = Modifier.size(18.dp)) },
+                    trailingIcon = {
+                        IconButton(onClick = { showScanner = true }) {
+                            Icon(Icons.Default.QrCodeScanner, null, modifier = Modifier.size(18.dp))
+                        }
+                    },
+                    enabled = !isConnecting
+                )
+
+                OutlinedTextField(
+                    value = port,
+                    onValueChange = onPortChange,
+                    label = { Text(UiStrings.Connection.PORT) },
+                    placeholder = { Text("Enter port") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    leadingIcon = { Icon(Icons.Default.Adjust, null, modifier = Modifier.size(18.dp)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    enabled = !isConnecting
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Button(
+                    onClick = onConnect,
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                                .compositeOver(MaterialTheme.colorScheme.background)
-                        )
-                        .clickable(onClick = onDismiss),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = ipAddress.isNotBlank() && port.toIntOrNull() != null && !isConnecting
                 ) {
-                    Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
+                    if (isConnecting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(UiStrings.Connection.CONNECT, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
-            if (showScanner) {
-                QrScannerOverlay(
-                    onScan = { data ->
-                        val uri = android.net.Uri.parse(data)
-                        uri.getQueryParameter("ip")?.let { onIpChange(it) }
-                        uri.getQueryParameter("port")?.let { onPortChange(it) }
-                        showScanner = false
-                    },
-                    onClose = { showScanner = false }
-                )
-            }
-
-            OutlinedTextField(
-                value = ipAddress,
-                onValueChange = onIpChange, // Wait, user code has onIpChange here. I'll fix.
-                label = { Text(UiStrings.Connection.IP_ADDRESS) },
-                placeholder = { Text(UiStrings.Placeholders.IP_EXAMPLE) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.Wifi, null, modifier = Modifier.size(18.dp)) },
-                trailingIcon = {
-                    IconButton(onClick = { showScanner = true }) {
-                        Icon(Icons.Default.QrCodeScanner, null, modifier = Modifier.size(18.dp))
-                    }
-                },
-                enabled = !isConnecting
-            )
-
-            OutlinedTextField(
-                value = port,
-                onValueChange = onPortChange,
-                label = { Text(UiStrings.Connection.PORT) },
-                placeholder = { Text(UiStrings.Placeholders.PORT_EXAMPLE) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.Adjust, null, modifier = Modifier.size(18.dp)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                enabled = !isConnecting
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Button(
-                onClick = onConnect,
+            // Top Layer: Blurred Header Overlay
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                enabled = ipAddress.isNotBlank() && port.isNotBlank() && !isConnecting
+                    .align(Alignment.TopCenter)
+                    .background(gradients.topScrim)
+                    .verticalScroll(rememberScrollState())
+                    .heightIn(min = 110.dp) // Ensure substantial drag surface area
             ) {
-                if (isConnecting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(32.dp).height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                     )
-                } else {
-                    Text(UiStrings.Connection.CONNECT, fontWeight = FontWeight.Bold)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(UiStrings.Connection.CONNECTION_SETUP, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    val scope = rememberCoroutineScope()
+                    val dismissAction = {
+                        scope.launch { sheetState.hide() }.invokeOnCompletion {
+                            onDismiss()
+                        }
+                        Unit
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                    .compositeOver(MaterialTheme.colorScheme.background)
+                            )
+                            .clickable(onClick = dismissAction),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }

@@ -5,11 +5,11 @@ import android.app.TimePickerDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -18,12 +18,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.data.local.db.entity.CronJobEntity
 import com.amaya.intelligence.data.local.db.entity.CronRecurringType
 import com.amaya.intelligence.data.local.db.entity.CronSessionMode
+import com.amaya.intelligence.ui.components.shared.SettingsBackButton
+import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
+import com.amaya.intelligence.ui.components.shared.ignoreNestedScrollForBottomSheet
+import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import com.amaya.intelligence.ui.res.UiStrings
 import kotlinx.coroutines.launch
 import java.util.*
@@ -36,16 +41,24 @@ fun CronJobEditSheet(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val scrollState = rememberScrollState()
     val maxSheetHeight = (0.75f * LocalConfiguration.current.screenHeightDp).dp
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberLockedModalBottomSheetState()
+    val scrollState = rememberScrollState()
 
-    BackHandler {
+    val dismissAction = {
         scope.launch {
             sheetState.hide()
-            onDismiss()
+        }.invokeOnCompletion {
+            if (!sheetState.isVisible) {
+                onDismiss()
+            }
         }
+        Unit
+    }
+
+    BackHandler {
+        dismissAction()
     }
 
     var title by remember { mutableStateOf("") }
@@ -84,23 +97,161 @@ fun CronJobEditSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface
+        properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = null
     ) {
-        Column(
+        val gradients = LocalAmayaGradients.current
+        Box(
             modifier = modifier
                 .fillMaxWidth()
                 .heightIn(max = maxSheetHeight)
-                .verticalScroll(scrollState)
-                .padding(horizontal = 24.dp)
-                .padding(top = 8.dp, bottom = 40.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .weight(1f, fill = false)
         ) {
+            // Bottom Layer: Scrolling Content
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .ignoreNestedScrollForBottomSheet()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Spacer(Modifier.height(90.dp)) // Reserve space for the header
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(UiStrings.Labels.TITLE) },
+                    placeholder = { Text(UiStrings.Placeholders.TITLE_EXAMPLE) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    leadingIcon = { Icon(Icons.Default.Label, null, modifier = Modifier.size(18.dp)) }
+                )
+
+                OutlinedTextField(
+                    value = prompt,
+                    onValueChange = { prompt = it },
+                    label = { Text(UiStrings.CronJob.MESSAGE_REMINDER) },
+                    placeholder = { Text(UiStrings.Placeholders.REMINDER_MESSAGE_EXAMPLE) },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3,
+                    shape = RoundedCornerShape(12.dp),
+                    leadingIcon = { Icon(Icons.Default.ChatBubbleOutline, null, modifier = Modifier.size(18.dp)) }
+                )
+
+                OutlinedCard(
+                    onClick = { pickDateTime() },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Schedule, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            fmtDisplay.format(selectedCalendar.time),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Text("Repeat", style = MaterialTheme.typography.labelLarge)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    CronRecurringType.entries.forEachIndexed { index, type ->
+                        SegmentedButton(
+                            selected = recurringType == type,
+                            onClick = { recurringType = type },
+                            shape = SegmentedButtonDefaults.itemShape(index, CronRecurringType.entries.size)
+                        ) {
+                            Text(type.name.lowercase().replaceFirstChar { it.uppercase() })
+                        }
+                    }
+                }
+
+                Text("When reminder fires", style = MaterialTheme.typography.labelLarge)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = sessionMode == CronSessionMode.CONTINUE,
+                        onClick = { sessionMode = CronSessionMode.CONTINUE },
+                        shape = SegmentedButtonDefaults.itemShape(0, 2),
+                        icon = { Icon(Icons.Default.Forum, null, modifier = Modifier.size(14.dp)) }
+                    ) {
+                        Text("Continue session")
+                    }
+                    SegmentedButton(
+                        selected = sessionMode == CronSessionMode.NEW,
+                        onClick = { sessionMode = CronSessionMode.NEW },
+                        shape = SegmentedButtonDefaults.itemShape(1, 2),
+                        icon = { Icon(Icons.Default.AddComment, null, modifier = Modifier.size(14.dp)) }
+                    ) {
+                        Text("New session")
+                    }
+                }
+                Text(
+                    if (sessionMode == CronSessionMode.CONTINUE)
+                        "AI reply will be added to the current chat session"
+                    else
+                        "AI reply will open a fresh conversation each time",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Button(
+                    onClick = {
+                        onAdd(
+                            CronJobEntity(
+                                title = title.trim().ifBlank { "Reminder" },
+                                prompt = prompt.trim(),
+                                triggerTimeMillis = selectedCalendar.timeInMillis,
+                                recurringType = recurringType,
+                                isActive = true,
+                                sessionMode = sessionMode
+                            )
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = selectedCalendar.timeInMillis > System.currentTimeMillis()
+                ) {
+                    Icon(Icons.Default.AlarmAdd, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Set Reminder")
+                }
+            }
+
+        // Top Layer: Blurred Header Overlay
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .background(gradients.topScrim)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(32.dp).height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                )
+            }
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("New Reminder", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "New Reminder",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -109,113 +260,11 @@ fun CronJobEditSheet(
                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                                 .compositeOver(MaterialTheme.colorScheme.background)
                         )
-                        .clickable(onClick = onDismiss),
+                        .clickable(onClick = dismissAction),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Close, "Dismiss", modifier = Modifier.size(20.dp))
                 }
-            }
-
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text(UiStrings.Labels.TITLE) },
-                placeholder = { Text(UiStrings.Placeholders.TITLE_EXAMPLE) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.Label, null, modifier = Modifier.size(18.dp)) }
-            )
-
-            OutlinedTextField(
-                value = prompt,
-                onValueChange = { prompt = it },
-                label = { Text(UiStrings.CronJob.MESSAGE_REMINDER) },
-                placeholder = { Text(UiStrings.Placeholders.REMINDER_MESSAGE_EXAMPLE) },
-                modifier = Modifier.fillMaxWidth(),
-                maxLines = 3,
-                shape = RoundedCornerShape(12.dp),
-                leadingIcon = { Icon(Icons.Default.ChatBubbleOutline, null, modifier = Modifier.size(18.dp)) }
-            )
-
-            OutlinedCard(
-                onClick = { pickDateTime() },
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Schedule, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        fmtDisplay.format(selectedCalendar.time),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-
-            Text("Repeat", style = MaterialTheme.typography.labelLarge)
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                CronRecurringType.entries.forEachIndexed { index, type ->
-                    SegmentedButton(
-                        selected = recurringType == type,
-                        onClick = { recurringType = type },
-                        shape = SegmentedButtonDefaults.itemShape(index, CronRecurringType.entries.size)
-                    ) {
-                        Text(type.name.lowercase().replaceFirstChar { it.uppercase() })
-                    }
-                }
-            }
-
-            Text("When reminder fires", style = MaterialTheme.typography.labelLarge)
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                SegmentedButton(
-                    selected = sessionMode == CronSessionMode.CONTINUE,
-                    onClick = { sessionMode = CronSessionMode.CONTINUE },
-                    shape = SegmentedButtonDefaults.itemShape(0, 2),
-                    icon = { Icon(Icons.Default.Forum, null, modifier = Modifier.size(14.dp)) }
-                ) {
-                    Text("Continue session")
-                }
-                SegmentedButton(
-                    selected = sessionMode == CronSessionMode.NEW,
-                    onClick = { sessionMode = CronSessionMode.NEW },
-                    shape = SegmentedButtonDefaults.itemShape(1, 2),
-                    icon = { Icon(Icons.Default.AddComment, null, modifier = Modifier.size(14.dp)) }
-                ) {
-                    Text("New session")
-                }
-            }
-            Text(
-                if (sessionMode == CronSessionMode.CONTINUE)
-                    "AI reply will be added to the current chat session"
-                else
-                    "AI reply will open a fresh conversation each time",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Button(
-                onClick = {
-                    onAdd(
-                        CronJobEntity(
-                            title             = title.trim().ifBlank { "Reminder" },
-                            prompt            = prompt.trim(),
-                            triggerTimeMillis = selectedCalendar.timeInMillis,
-                            recurringType     = recurringType,
-                            isActive          = true,
-                            sessionMode       = sessionMode
-                        )
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = selectedCalendar.timeInMillis > System.currentTimeMillis()
-            ) {
-                Icon(Icons.Default.AlarmAdd, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Set Reminder")
             }
         }
     }

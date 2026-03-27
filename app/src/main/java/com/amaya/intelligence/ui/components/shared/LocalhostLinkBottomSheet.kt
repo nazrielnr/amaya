@@ -8,7 +8,10 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,8 +23,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import com.amaya.intelligence.ui.components.shared.ignoreNestedScrollForBottomSheet
+import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -134,7 +140,7 @@ fun LocalhostLinkBottomSheet(
     onCopyLink: ((String) -> Unit)? = null,
     onOpenLink: ((String) -> Unit)? = null
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberLockedModalBottomSheetState()
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val scope = rememberCoroutineScope()
@@ -148,86 +154,122 @@ fun LocalhostLinkBottomSheet(
             onDismiss()
         },
         sheetState = sheetState,
+        properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
         containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
+        dragHandle = null,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
-        Column(
+        val gradients = LocalAmayaGradients.current
+        val scrollState = rememberScrollState()
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp)
-                .animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .animateContentSize()
+                .weight(1f, fill = false)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            // Bottom Layer: Scrolling Content
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .ignoreNestedScrollForBottomSheet()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.OpenInBrowser,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-                Text(
-                    text = "Localhost Redirect",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                Spacer(Modifier.height(90.dp)) // Reserve space for the header
+
+                LocalhostWarningSection(linkInfo = linkInfo, localIp = localIp)
+
+                LocalhostUrlDisplay(url = linkInfo.fullUrl)
+
+                LocalhostActionButtons(
+                    url = linkInfo.fullUrl,
+                    onCopy = { url ->
+                        try {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("Localhost URL", url)
+                            if (clipboard != null) {
+                                clipboard.setPrimaryClip(clip)
+                                copySuccess = true
+                                copyError = null
+                                onCopyLink?.invoke(url)
+                                scope.launch {
+                                    kotlinx.coroutines.delay(2000)
+                                    copySuccess = false
+                                }
+                            } else {
+                                copyError = "Clipboard not available"
+                            }
+                        } catch (e: Exception) {
+                            copyError = "Failed to copy: ${e.message}"
+                            copySuccess = false
+                        }
+                    },
+                    onOpen = { url ->
+                        try {
+                            uriHandler.openUri(url)
+                            onOpenLink?.invoke(url)
+                            onDismiss()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "No browser found to open link", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    copySuccess = copySuccess,
+                    copyError = copyError
                 )
             }
 
-            LocalhostWarningSection(linkInfo = linkInfo, localIp = localIp)
-
-            LocalhostUrlDisplay(url = linkInfo.fullUrl)
-
-            LocalhostActionButtons(
-                url = linkInfo.fullUrl,
-                onCopy = { url ->
-                    try {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("Localhost URL", url)
-                        if (clipboard != null) {
-                            clipboard.setPrimaryClip(clip)
-                            copySuccess = true
-                            copyError = null
-                            onCopyLink?.invoke(url)
-                            scope.launch {
-                                kotlinx.coroutines.delay(2000)
-                                copySuccess = false
-                            }
-                        } else {
-                            copyError = "Clipboard not available"
+            // Top Layer: Blurred Header Overlay
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .background(gradients.topScrim)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(32.dp).height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 24.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.OpenInBrowser,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
-                    } catch (e: Exception) {
-                        copyError = "Failed to copy: ${e.message}"
-                        copySuccess = false
                     }
-                },
-                onOpen = { url ->
-                    try {
-                        uriHandler.openUri(url)
-                        onOpenLink?.invoke(url)
-                        scope.launch {
-                            sheetState.hide()
-                            onDismiss()
-                        }
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "No browser found to open link", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                copySuccess = copySuccess,
-                copyError = copyError
-            )
+                    Text(
+                        text = "Localhost Redirect",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
         }
     }
 }

@@ -3,7 +3,9 @@ package com.amaya.intelligence.ui.components.local
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,7 +18,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
+import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
+import com.amaya.intelligence.ui.components.shared.ignoreNestedScrollForBottomSheet
+import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import com.amaya.intelligence.tools.TodoItem
 import com.amaya.intelligence.tools.TodoStatus
 
@@ -111,62 +117,99 @@ fun TodoSheet(
         label = "todo_sheet_shimmer_x"
     )
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberLockedModalBottomSheetState()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState       = sheetState,
-        containerColor   = MaterialTheme.colorScheme.surface
+        properties = com.amaya.intelligence.ui.components.shared.lockedModalBottomSheetProperties(),
+        containerColor   = MaterialTheme.colorScheme.surface,
+        dragHandle       = null
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 48.dp)
+        val gradients = LocalAmayaGradients.current
+        val done = items.count { it.status == TodoStatus.COMPLETED }
+        val total = items.size
+
+        Box(
+            modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
         ) {
-            val done  = items.count { it.status == TodoStatus.COMPLETED }
-            val total = items.size
-            Row(
-                modifier              = Modifier.fillMaxWidth().padding(bottom = 20.dp),
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            // Bottom Layer: Scrolling Content
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .ignoreNestedScrollForBottomSheet()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 48.dp)
             ) {
-                Column {
-                    Text("Task Plan",
-                        style      = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color      = MaterialTheme.colorScheme.onSurface)
-                    Text("$done of $total completed",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Surface(
-                    shape = CircleShape,
-                    color = if (done == total && total > 0)
-                                Color(0xFF4CAF50).copy(alpha = 0.15f)
-                            else MaterialTheme.colorScheme.primaryContainer
-                ) {
-                    Text("$done/$total",
-                        style      = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color      = if (done == total && total > 0)
-                                         Color(0xFF4CAF50)
-                                     else MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier   = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+                Spacer(Modifier.height(90.dp)) // Reserve space for the header overlay
+                
+                items.forEach { item ->
+                    TodoItemRow(item = item, shimmerProgress = shimmerProgress)
+                    if (item != items.last()) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f),
+                            modifier = Modifier.padding(start = 44.dp)
+                        )
+                    }
                 }
             }
 
-            HorizontalDivider(
-                color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            items.forEach { item ->
-                TodoItemRow(item = item, shimmerProgress = shimmerProgress)
-                if (item != items.last()) {
-                    HorizontalDivider(
-                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f),
-                        modifier = Modifier.padding(start = 44.dp)
+            // Top Layer: Blurred Header Overlay
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .background(gradients.topScrim)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(32.dp).height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                     )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            "Task Plan",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "$done of $total completed",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Surface(
+                        shape = CircleShape,
+                        color = if (done == total && total > 0)
+                            Color(0xFF4CAF50).copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            "$done/$total",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (done == total && total > 0)
+                                Color(0xFF4CAF50)
+                            else MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                        )
+                    }
                 }
             }
         }

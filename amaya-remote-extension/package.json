@@ -3,7 +3,7 @@
   "displayName": "Amaya Remote Session",
   "description": "High-performance bridge between Amaya (Android) and your development environment - enabling remote workspace interaction via WebSocket",
   "icon": "icon.png",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "publisher": "nazrielnr",
   "license": "MIT",
   "engines": {

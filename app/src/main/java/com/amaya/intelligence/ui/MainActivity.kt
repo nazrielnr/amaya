@@ -289,6 +289,22 @@ private fun AppContent(
                 navController.navigate("chat") { popUpTo("permission") { inclusive = true } }
             }
         }
+
+        // Global Update Check on Startup
+        val updateViewModel: com.amaya.intelligence.ui.screens.settings.shared.UpdateViewModel = hiltViewModel()
+        val updateState by updateViewModel.uiState.collectAsState()
+
+        LaunchedEffect(Unit) {
+            updateViewModel.checkForUpdate(manual = false)
+        }
+
+        if (updateState is com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.UpdateAvailable) {
+            val info = (updateState as com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.UpdateAvailable).info
+            com.amaya.intelligence.ui.components.shared.UpdateInfoSheet(
+                info = info,
+                onDismiss = { updateViewModel.dismiss() }
+            )
+        }
     }
 }
 

@@ -53,4 +53,18 @@ object NetworkModule {
     ): com.amaya.intelligence.impl.ide.antigravity.client.RemoteSessionClient {
         return com.amaya.intelligence.impl.ide.antigravity.client.RemoteSessionClient(context)
     }
+
+    @Provides
+    @Singleton
+    fun provideGitHubUpdateService(
+        httpClient: okhttp3.OkHttpClient,
+        moshi: com.squareup.moshi.Moshi
+    ): com.amaya.intelligence.data.remote.api.GitHubUpdateService {
+        return retrofit2.Retrofit.Builder()
+            .baseUrl("https://api.github.com/")
+            .client(httpClient)
+            .addConverterFactory(retrofit2.converter.moshi.MoshiConverterFactory.create(moshi))
+            .build()
+            .create(com.amaya.intelligence.data.remote.api.GitHubUpdateService::class.java)
+    }
 }

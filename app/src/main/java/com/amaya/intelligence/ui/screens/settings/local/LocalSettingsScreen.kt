@@ -23,6 +23,7 @@ import com.amaya.intelligence.ui.res.UiStrings
 import com.amaya.intelligence.ui.screens.settings.shared.SettingsItemCard
 import com.amaya.intelligence.ui.screens.settings.shared.SettingsSectionCard
 import com.amaya.intelligence.ui.theme.LocalAmayaGradients
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -183,16 +184,61 @@ fun LocalSettingsScreen(
                         modifier = Modifier.padding(start = 78.dp, end = 20.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
                     )
+                    val context = androidx.compose.ui.platform.LocalContext.current
                     SettingsItemCard(
                         icon = Icons.Default.Info,
                         iconBrush = gradients.iconPalettes[7],
                         title = UiStrings.Settings.HELP_FEEDBACK,
                         subtitle = UiStrings.Settings.HELP_FEEDBACK_SUBTITLE,
-                        isFirst = false, isLast = true,
+                        isFirst = false, isLast = false,
                         onClick = {
-                            scope.launch { snackbarHostState.showSnackbar("Help & Feedback coming soon!") }
+                            val intent = android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://github.com/nazrielnr/amaya/pulls")
+                            )
+                            context.startActivity(intent)
                         }
                     )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 78.dp, end = 20.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                    )
+                    val updateViewModel: com.amaya.intelligence.ui.screens.settings.shared.UpdateViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+                    val updateState by updateViewModel.uiState.collectAsState()
+                    
+                    SettingsItemCard(
+                        icon = Icons.Default.SystemUpdate,
+                        iconBrush = gradients.iconPalettes[0], // Reuse first palette for update
+                        title = UiStrings.Settings.CHECK_FOR_UPDATE,
+                        subtitle = when (updateState) {
+                            is com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.Checking -> UiStrings.Settings.CHECKING_UPDATE
+                            is com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.UpToDate -> UiStrings.Settings.UP_TO_DATE
+                            is com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.UpdateAvailable -> "New version available"
+                            else -> "Tap to check for new releases"
+                        },
+                        isFirst = false, isLast = true,
+                        onClick = { updateViewModel.checkForUpdate() }
+                    )
+
+                    // Show update info sheet if available
+                    if (updateState is com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.UpdateAvailable) {
+                        val info = (updateState as com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.UpdateAvailable).info
+                        com.amaya.intelligence.ui.components.shared.UpdateInfoSheet(
+                            info = info,
+                            onDismiss = { updateViewModel.dismiss() }
+                        )
+                    }
+
+                    // Show up-to-date snackbar
+                    LaunchedEffect(updateState) {
+                        if (updateState is com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.UpToDate) {
+                            snackbarHostState.showSnackbar(UiStrings.Settings.UP_TO_DATE)
+                            updateViewModel.dismiss()
+                        } else if (updateState is com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.Error) {
+                            snackbarHostState.showSnackbar((updateState as com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.Error).message)
+                            updateViewModel.dismiss()
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(64.dp))

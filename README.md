@@ -29,7 +29,7 @@ This monorepo contains the following primary directories:
 
 ### Local AI & Personalization
 
-- **Anthropic support (experimental)**: dedicated support for Anthropic models (non-tested).
+- **Anthropic support [experimental]**: dedicated support for Anthropic models (non-tested), because i don't have money for access Anthropic API lol
 - **OpenAI-compatible support**: works with OpenAI-style APIs.
 - **Personalization modes**:
   - **Simple mode**: style, tone, characteristics, and user preferences.
@@ -53,7 +53,7 @@ This monorepo contains the following primary directories:
   - Model selection
 - **Provider compatibility**: Anthropic and OpenAI-compatible backends.
 
-### Remote Workspace & IDE Integration
+### Remote Workspace & IDE Integration [BETA]
 
 - **Workspace access**: directly read, analyze, and modify project files through IDE integration.
 - **Unified parsing pipeline**: all AI outputs are normalized into a consistent structure:
@@ -67,19 +67,21 @@ This monorepo contains the following primary directories:
 
 ## IDE Support Roadmap
 
-- **Google Antigravity [BETA]**
+- **Google Antigravity**
   - Generate code directly from mobile
-  - Code diff support for reviewing (currenly read-only)
+  - Code diff support for reviewing (currenly read-only on tool call write_file)
   - Conversation history support
   - AI model list with quota tracking and reset time
   - Conversation modes (planning / fast)
   - Terminal command approval system (accept / decline before execution)
+  - Send images from mobile to IDE
   - Full parsing support across all models:
     - tool calls
     - thinking/reasoning
     - text streaming
 
-The IDE integration is designed to be editor-agnostic, with additional integrations planned.
+## Limitations
+This currently only support Google Antigravity IDE. The extension will not work with other IDEs. Maybe in the future I will add support for other IDEs.
 
 ## Documentation & Contribution
 

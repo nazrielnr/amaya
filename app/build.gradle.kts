@@ -1,10 +1,12 @@
-﻿plugins {
+plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
+
+import java.util.Properties
 
 android {
     namespace = "com.amaya.intelligence"
@@ -35,6 +37,23 @@ android {
         }
     }
 
+    val keystorePropertiesFile = rootProject.file(".env.local")
+    val keystoreProperties = Properties()
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(keystorePropertiesFile.inputStream())
+    }
+
+    signingConfigs {
+        create("release") {
+            if (keystoreProperties.containsKey("AMAYA_KEYSTORE_PASSWORD")) {
+                storeFile = file("../release.keystore")
+                storePassword = keystoreProperties["AMAYA_KEYSTORE_PASSWORD"] as String
+                keyAlias = keystoreProperties["AMAYA_KEY_ALIAS"] as String
+                keyPassword = keystoreProperties["AMAYA_KEYSTORE_PASSWORD"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -43,6 +62,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (keystoreProperties.containsKey("AMAYA_KEYSTORE_PASSWORD")) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isMinifyEnabled = false

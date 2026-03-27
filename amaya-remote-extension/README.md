@@ -10,11 +10,15 @@ This extension acts as a high-performance bridge between the **Amaya Android App
 - **Auto-Start**: Optionally start the server automatically when your development environment launches.
 - **Diagnostic Tools**: Built-in commands to verify connection health and credentials.
 
-## Installation
+## Limitations
+This currently only support Google Antigravity IDE. The extension will not work with other IDEs. Maybe in the future I will add support for other IDEs.
 
-1. Open your IDE (e.g., VS Code).
-2. Search for `Amaya Remote Session` in the marketplace or install the extension package manually.
-3. Ensure the Amaya Android app is installed on your mobile device.
+## Installation 
+1. From Android, Go to https://github.com/nazrielnr/amaya
+2. Download and Install the APK file.
+3. Open your IDE (e.g., VS Code).
+4. Search for `Amaya Remote Session` in the marketplace or install the extension package manually.
+5. Ensure the Amaya Android app is installed on your mobile device.
 
 ## Getting Started
 

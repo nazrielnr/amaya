@@ -38,7 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.amaya.intelligence.data.local.db.entity.ConversationEntity
+import com.amaya.intelligence.data.local.entity.ConversationEntity
 import com.amaya.intelligence.domain.ai.IntelligenceSessionManager
 import com.amaya.intelligence.domain.models.ConnectionState
 import com.amaya.intelligence.ui.components.shared.ConfirmationDialog

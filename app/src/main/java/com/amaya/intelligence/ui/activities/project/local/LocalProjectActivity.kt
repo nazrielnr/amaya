@@ -15,7 +15,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
-import com.amaya.intelligence.ui.PermissionRequestScreen
+import com.amaya.intelligence.ui.components.shared.PermissionRequirementSheet
+import com.amaya.intelligence.ui.components.shared.PermissionType
 import com.amaya.intelligence.ui.screens.project.local.LocalProjectBrowserScreen
 import com.amaya.intelligence.ui.theme.AmayaTheme
 
@@ -36,19 +37,28 @@ class LocalProjectActivity : AppCompatActivity() {
         checkStoragePermission()
         setContent {
             AmayaTheme {
-                if (hasStoragePermission) {
-                    LocalProjectBrowserScreen(
-                        onWorkspaceSelected = { workspacePath ->
-                            setResult(RESULT_OK, Intent().putExtra(RESULT_KEY, workspacePath))
-                            finish()
-                        },
+                LocalProjectBrowserScreen(
+                    onWorkspaceSelected = { workspacePath ->
+                        setResult(RESULT_OK, Intent().putExtra(RESULT_KEY, workspacePath))
+                        finish()
+                    },
+                    onDismiss = {
+                        setResult(RESULT_CANCELED)
+                        finish()
+                    }
+                )
+
+                if (!hasStoragePermission) {
+                    PermissionRequirementSheet(
+                        permissionType = PermissionType.STORAGE,
+                        onGrant = { requestStoragePermission() },
                         onDismiss = {
-                            setResult(RESULT_CANCELED)
-                            finish()
+                            if (!hasStoragePermission) {
+                                setResult(RESULT_CANCELED)
+                                finish()
+                            }
                         }
                     )
-                } else {
-                    PermissionRequestScreen(onRequestPermission = { requestStoragePermission() })
                 }
             }
         }

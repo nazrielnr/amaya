@@ -5,8 +5,8 @@ import com.amaya.intelligence.domain.ai.IntelligenceSessionManager
 import com.amaya.intelligence.data.remote.api.AiSettingsManager
 import com.amaya.intelligence.data.remote.api.ChatMessage
 import com.amaya.intelligence.data.remote.api.MessageRole
-import com.amaya.intelligence.data.local.db.dao.ConversationDao
-import com.amaya.intelligence.data.local.db.entity.ConversationEntity
+import com.amaya.intelligence.data.local.dao.ConversationDao
+import com.amaya.intelligence.data.local.entity.ConversationEntity
 import com.amaya.intelligence.data.repository.AiRepository
 import com.amaya.intelligence.data.repository.AgentEvent
 import com.amaya.intelligence.domain.models.*
@@ -15,6 +15,8 @@ import com.amaya.intelligence.impl.local.tools.LocalToolMapper
 import com.amaya.intelligence.di.ApplicationScope
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -47,6 +49,7 @@ class LocalIntelligenceService @Inject constructor(
     private var chatJob: Job? = null
     private var currentConversationId: Long? = null
     private var currentAssistantMessageId: String? = null
+    private val conversationSaveMutex = Mutex()
 
     init {
         // Observe conversations from DB
@@ -409,44 +412,46 @@ class LocalIntelligenceService @Inject constructor(
     }
 
     private fun saveCurrentConversation() {
-        val messages = _uiState.value.messages
-        if (messages.isEmpty()) return
-        val hasContent = messages.any { it.role == MessageRole.ASSISTANT && it.content.isNotBlank() } ||
-            messages.any { it.role == MessageRole.USER && it.content.isNotBlank() }
-        if (!hasContent) return
-
         scope.launch {
-            try {
-                val firstUserMsg = messages.firstOrNull { it.role == MessageRole.USER }?.content ?: "New Conversation"
-                val title = firstUserMsg.split("\\s+".toRegex()).take(5).joinToString(" ").take(50)
-                val now = System.currentTimeMillis()
-                val messagesJson = serializeMessagesToJson(messages)
+            conversationSaveMutex.withLock {
+                val messages = _uiState.value.messages
+                if (messages.isEmpty()) return@withLock
+                val hasContent = messages.any { it.role == MessageRole.ASSISTANT && it.content.isNotBlank() } ||
+                    messages.any { it.role == MessageRole.USER && it.content.isNotBlank() }
+                if (!hasContent) return@withLock
 
-                if (currentConversationId != null) {
-                    val existing = conversationDao.getConversationById(currentConversationId!!)
-                    if (existing != null) {
-                        conversationDao.updateConversation(
-                            existing.copy(
+                try {
+                    val firstUserMsg = messages.firstOrNull { it.role == MessageRole.USER }?.content ?: "New Conversation"
+                    val title = firstUserMsg.split("\\s+".toRegex()).take(5).joinToString(" ").take(50)
+                    val now = System.currentTimeMillis()
+                    val messagesJson = serializeMessagesToJson(messages)
+
+                    if (currentConversationId != null) {
+                        val existing = conversationDao.getConversationById(currentConversationId!!)
+                        if (existing != null) {
+                            conversationDao.updateConversation(
+                                existing.copy(
+                                    messagesJson = messagesJson,
+                                    updatedAt = now
+                                )
+                            )
+                        }
+                    } else {
+                        val newId = conversationDao.insertConversation(
+                            ConversationEntity(
+                                id = 0,
+                                title = title,
+                                workspacePath = _uiState.value.workspacePath,
                                 messagesJson = messagesJson,
+                                createdAt = now,
                                 updatedAt = now
                             )
                         )
+                        currentConversationId = newId
+                        _uiState.update { it.copy(conversationId = newId.toString()) }
                     }
-                } else {
-                    val newId = conversationDao.insertConversation(
-                        ConversationEntity(
-                            id = 0,
-                            title = title,
-                            workspacePath = _uiState.value.workspacePath,
-                            messagesJson = messagesJson,
-                            createdAt = now,
-                            updatedAt = now
-                        )
-                    )
-                    currentConversationId = newId
-                    _uiState.update { it.copy(conversationId = newId.toString()) }
+                } catch (_: Exception) {
                 }
-            } catch (_: Exception) {
             }
         }
     }

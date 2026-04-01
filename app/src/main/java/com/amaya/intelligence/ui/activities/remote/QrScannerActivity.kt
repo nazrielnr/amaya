@@ -88,10 +88,23 @@ fun QrScannerScreen(
         }
     )
 
+    var showPermissionSheet by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
-            launcher.launch(Manifest.permission.CAMERA)
+            showPermissionSheet = true
         }
+    }
+
+    if (showPermissionSheet) {
+        com.amaya.intelligence.ui.components.shared.PermissionRequirementSheet(
+            permissionType = com.amaya.intelligence.ui.components.shared.PermissionType.CAMERA,
+            onGrant = { launcher.launch(Manifest.permission.CAMERA) },
+            onDismiss = { 
+                showPermissionSheet = false 
+                if (!hasCameraPermission) onClose()
+            }
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
@@ -99,18 +112,6 @@ fun QrScannerScreen(
             CameraPreview(
                 onQrDetected = onQrDetected
             )
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Camera permission required", color = Color.White)
-                Spacer(Modifier.height(16.dp))
-                Button(onClick = { launcher.launch(Manifest.permission.CAMERA) }) {
-                    Text("Grant Permission")
-                }
-            }
         }
 
         // Overlay UI

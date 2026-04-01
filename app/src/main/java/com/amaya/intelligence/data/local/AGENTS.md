@@ -17,25 +17,29 @@
 ```text
 data/local/
 ├─ AGENTS.md
+├─ dao/
+├─ entity/
 └─ db/
-	├─ dao/
-	├─ entity/
+	├─ migrations/
 	└─ AppDatabase.kt
 ```
 
 ## File Functions
 - `AGENTS.md`: rules for local persistence and storage.
-- `db/entity/`: Room entities for conversations, files, jobs, and related cached data.
-- `db/dao/`: Room DAO interfaces for reading and writing local data.
-- `db/AppDatabase.kt`: Room database definition and entity/DAO wiring.
+- `entity/`: Room entities for projects, files, metadata, conversations, and cron jobs.
+- `dao/`: Room DAO interfaces for data access.
+- `db/AppDatabase.kt`: Room database definition and wiring.
+- `db/migrations/`: Database migration scripts.
 
 ## Key Source Code
-- `db/entity/ConversationEntity.kt`: stored conversation records.
-- `db/entity/FileEntity.kt`: local file index entries.
-- `db/entity/FileFtsEntity.kt`: full-text-search support for local files.
-- `db/entity/ProjectEntity.kt`: persisted project metadata.
-- `db/entity/CronJobEntity.kt`: scheduled local job records.
-- `db/dao/ConversationDao.kt`: conversation persistence access.
-- `db/dao/FileDao.kt`: file index persistence access.
-- `db/dao/CronJobDao.kt`: cron job persistence access.
+- `entity/ProjectEntity.kt`: persisted project metadata.
+- `entity/FileEntity.kt`: local file index entries.
+- `entity/FileFtsEntity.kt`: full-text-search support for local files.
+- `entity/FileMetadataEntity.kt`: detailed file information.
+- `entity/ConversationEntity.kt`: stored conversation records.
+- `entity/CronJobEntity.kt`: scheduled local job records.
+- `dao/ProjectDao.kt`: project persistence access.
+- `dao/FileDao.kt`: file index and FTS access.
+- `dao/ConversationDao.kt`: conversation persistence access.
+- `dao/CronJobDao.kt`: cron job persistence access.
 - `db/AppDatabase.kt`: database configuration and migration wiring.

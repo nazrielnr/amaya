@@ -1,7 +1,8 @@
-﻿package com.amaya.intelligence.data.remote.api
+package com.amaya.intelligence.data.remote.api
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -19,6 +20,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.security.GeneralSecurityException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -56,25 +58,64 @@ class AiSettingsManager @Inject constructor(
         private val KEY_ACTIVE_AGENT_ID   = stringPreferencesKey("active_agent_id")
         private val KEY_MCP_CONFIG_JSON   = stringPreferencesKey("mcp_config_json")
         private val KEY_LAST_WORKSPACE    = stringPreferencesKey("last_workspace_path")
+        private val KEY_ONBOARDING_COMPLETED = androidx.datastore.preferences.core.booleanPreferencesKey("onboarding_completed")
 
         // Per-agent encrypted API key storage: key = "agent_key_" + agentId
         private const val ENC_AGENT_KEY_PREFIX  = "agent_key_"
+        private const val SECURE_PREFS_NAME     = "amaya_secure_prefs"
 
         const val MCP_FIXED_PATH = "/storage/emulated/0/Amaya/mcp.json"
     }
 
     private val encryptedPrefs: SharedPreferences by lazy {
+        createEncryptedPrefs()
+    }
+
+    private fun createEncryptedPrefs(): SharedPreferences {
+        return runCatching {
+            createEncryptedPrefsInternal()
+        }.getOrElse { firstFailure ->
+            clearCorruptedEncryptedPrefs(firstFailure)
+            runCatching {
+                createEncryptedPrefsInternal()
+            }.getOrElse { secondFailure ->
+                Log.w("AiSettingsManager", "Falling back to plain shared prefs after encrypted prefs failure", secondFailure)
+                context.getSharedPreferences(SECURE_PREFS_NAME, Context.MODE_PRIVATE)
+            }
+        }
+    }
+
+    private fun createEncryptedPrefsInternal(): SharedPreferences {
         // FIX 5.8: Use non-deprecated MasterKey.Builder API (MasterKeys was deprecated in security-crypto 1.1.0-alpha)
         val masterKey = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
-        EncryptedSharedPreferences.create(
+        return EncryptedSharedPreferences.create(
             context,
-            "amaya_secure_prefs",
+            SECURE_PREFS_NAME,
             masterKey,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
+    }
+
+    private fun clearCorruptedEncryptedPrefs(cause: Throwable) {
+        Log.w("AiSettingsManager", "Encrypted prefs corrupted or unreadable, clearing and recreating", cause)
+        runCatching { context.deleteSharedPreferences(SECURE_PREFS_NAME) }
+        runCatching {
+            val sharedPrefsDir = File(context.applicationInfo.dataDir, "shared_prefs")
+            if (sharedPrefsDir.exists()) {
+                sharedPrefsDir.listFiles()?.forEach { file ->
+                    if (file.name.contains(SECURE_PREFS_NAME) || file.name.contains("androidx_security_crypto")) {
+                        runCatching { file.delete() }
+                    }
+                }
+            }
+        }
+        runCatching {
+            val fallbackFile = File(context.applicationInfo.dataDir, "shared_prefs/$SECURE_PREFS_NAME.xml")
+            if (fallbackFile.exists()) fallbackFile.delete()
+        }
     }
 
     // FIX 3.1: Cache the last emitted settings so getSettings() rarely needs runBlocking.
@@ -88,7 +129,8 @@ class AiSettingsManager @Inject constructor(
             agentConfigs      = configs,
             activeAgentId     = prefs[KEY_ACTIVE_AGENT_ID] ?: "",
             mcpConfigJson     = prefs[KEY_MCP_CONFIG_JSON] ?: "",
-            lastWorkspacePath = prefs[KEY_LAST_WORKSPACE]?.ifBlank { null }
+            lastWorkspacePath = prefs[KEY_LAST_WORKSPACE]?.ifBlank { null },
+            onboardingCompleted = prefs[KEY_ONBOARDING_COMPLETED] ?: false
         )
     }
 
@@ -163,6 +205,10 @@ class AiSettingsManager @Inject constructor(
         }
     }
 
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_ONBOARDING_COMPLETED] = completed }
+    }
+
     suspend fun setMcpConfigJson(json: String) {
         context.dataStore.edit { prefs -> prefs[KEY_MCP_CONFIG_JSON] = json }
         writeMcpConfigToFixedPath(json)
@@ -227,7 +273,8 @@ data class AiSettings(
     val activeAgentId:     String            = "",
     val mcpConfigJson:     String            = "",
     /** Last workspace path the user opened — persisted across app restarts. */
-    val lastWorkspacePath: String?           = null
+    val lastWorkspacePath: String?           = null,
+    val onboardingCompleted: Boolean          = false
 )
 
 enum class ProviderType { ANTHROPIC, OPENAI, GEMINI }

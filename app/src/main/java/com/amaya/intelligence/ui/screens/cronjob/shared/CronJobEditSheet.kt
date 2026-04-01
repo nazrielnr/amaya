@@ -23,9 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.amaya.intelligence.data.local.db.entity.CronJobEntity
-import com.amaya.intelligence.data.local.db.entity.CronRecurringType
-import com.amaya.intelligence.data.local.db.entity.CronSessionMode
+import com.amaya.intelligence.data.local.entity.CronJobEntity
+import com.amaya.intelligence.data.local.entity.CronRecurringType
+import com.amaya.intelligence.data.local.entity.CronSessionMode
 import com.amaya.intelligence.ui.components.shared.SettingsBackButton
 import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
 import com.amaya.intelligence.ui.components.shared.ignoreNestedScrollForBottomSheet

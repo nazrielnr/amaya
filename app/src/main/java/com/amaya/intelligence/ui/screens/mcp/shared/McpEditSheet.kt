@@ -17,7 +17,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.font.FontWeight
 import com.amaya.intelligence.ui.components.shared.SettingsBackButton
 import com.amaya.intelligence.ui.components.shared.rememberLockedModalBottomSheetState
@@ -31,7 +30,6 @@ fun McpEditSheet(
     initialJson: String,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
-    maxSheetHeight: Dp,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -80,7 +78,6 @@ fun McpEditSheet(
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .heightIn(max = maxSheetHeight)
                 .weight(1f, fill = false)
         ) {
             // Bottom Layer: Scrolling Content

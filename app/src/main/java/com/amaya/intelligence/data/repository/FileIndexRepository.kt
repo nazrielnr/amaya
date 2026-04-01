@@ -1,13 +1,14 @@
 ﻿package com.amaya.intelligence.data.repository
 
-import com.amaya.intelligence.data.local.db.dao.FileDao
-import com.amaya.intelligence.data.local.db.dao.FileMetadataDao
-import com.amaya.intelligence.data.local.db.dao.ProjectDao
-import com.amaya.intelligence.data.local.db.entity.FileEntity
-import com.amaya.intelligence.data.local.db.entity.FileMetadataEntity
-import com.amaya.intelligence.data.local.db.entity.ProjectEntity
+import com.amaya.intelligence.data.local.dao.FileDao
+import com.amaya.intelligence.data.local.dao.FileMetadataDao
+import com.amaya.intelligence.data.local.dao.ProjectDao
+import com.amaya.intelligence.data.local.entity.FileEntity
+import com.amaya.intelligence.data.local.entity.FileMetadataEntity
+import com.amaya.intelligence.data.local.entity.ProjectEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.file.Files
@@ -233,7 +234,7 @@ class FileIndexRepository @Inject constructor(
     // ========================================================================
     
     suspend fun getFiles(projectId: Long): List<FileEntity> {
-        return fileDao.getByProject(projectId)
+        return fileDao.getByProject(projectId).first()
     }
     
     fun observeFiles(projectId: Long): Flow<List<FileEntity>> {
@@ -257,7 +258,7 @@ class FileIndexRepository @Inject constructor(
      * that can be sent to the AI without including file contents.
      */
     suspend fun buildProjectTree(projectId: Long): ProjectTree {
-        val files = fileDao.getByProject(projectId)
+        val files = fileDao.getByProject(projectId).first()
         val project = projectDao.getById(projectId)
         
         return ProjectTree(

@@ -2,11 +2,11 @@
 
 import android.content.Context
 import com.amaya.intelligence.data.local.db.AppDatabase
-import com.amaya.intelligence.data.local.db.dao.ConversationDao
-import com.amaya.intelligence.data.local.db.dao.CronJobDao
-import com.amaya.intelligence.data.local.db.dao.FileDao
-import com.amaya.intelligence.data.local.db.dao.FileMetadataDao
-import com.amaya.intelligence.data.local.db.dao.ProjectDao
+import com.amaya.intelligence.data.local.dao.ConversationDao
+import com.amaya.intelligence.data.local.dao.CronJobDao
+import com.amaya.intelligence.data.local.dao.FileDao
+import com.amaya.intelligence.data.local.dao.FileMetadataDao
+import com.amaya.intelligence.data.local.dao.ProjectDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

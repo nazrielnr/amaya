@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.amaya.intelligence.ui.components.shared
 
 import android.net.Uri

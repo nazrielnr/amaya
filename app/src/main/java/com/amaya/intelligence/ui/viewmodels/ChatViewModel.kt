@@ -47,7 +47,7 @@ class ChatViewModel @Inject constructor(
     val scrollEvent: kotlinx.coroutines.flow.SharedFlow<ScrollReason> = _scrollEvent
     
     // Conversations derived from service
-    val conversations: StateFlow<List<com.amaya.intelligence.data.local.db.entity.ConversationEntity>> = intelligenceService.conversations
+    val conversations: StateFlow<List<com.amaya.intelligence.data.local.entity.ConversationEntity>> = intelligenceService.conversations
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // Workspace & Projects

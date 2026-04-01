@@ -13,8 +13,8 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.amaya.intelligence.R
-import com.amaya.intelligence.data.local.db.dao.ConversationDao
-import com.amaya.intelligence.data.local.db.entity.ConversationEntity
+import com.amaya.intelligence.data.local.dao.ConversationDao
+import com.amaya.intelligence.data.local.entity.ConversationEntity
 import com.amaya.intelligence.data.remote.api.AiSettingsManager
 import com.amaya.intelligence.data.remote.api.ChatMessage
 import com.amaya.intelligence.data.remote.api.MessageRole

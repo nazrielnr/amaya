@@ -150,7 +150,6 @@ fun LocalMcpScreen(
     if (showAddSheet) {
         McpEditSheet(
             initialJson = editorJson,
-            maxSheetHeight = maxSheetHeight,
             onDismiss = { showAddSheet = false },
             onSave = { json ->
                 showAddSheet = false

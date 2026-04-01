@@ -9,7 +9,7 @@ import com.amaya.intelligence.impl.ide.antigravity.client.RemoteEvent
 import com.amaya.intelligence.impl.ide.antigravity.client.RemoteAttachment
 import com.amaya.intelligence.impl.ide.antigravity.client.RemoteFileEntry as ClientRemoteFileEntry
 import com.amaya.intelligence.impl.ide.antigravity.client.RemoteWorkspace as ClientRemoteWorkspace
-import com.amaya.intelligence.data.local.db.entity.ConversationEntity
+import com.amaya.intelligence.data.local.entity.ConversationEntity
 import com.amaya.intelligence.impl.ide.antigravity.services.streaming.StreamingStateManager
 import com.amaya.intelligence.impl.ide.antigravity.services.event.AntigravityEventHandler
 import com.amaya.intelligence.di.ApplicationScope

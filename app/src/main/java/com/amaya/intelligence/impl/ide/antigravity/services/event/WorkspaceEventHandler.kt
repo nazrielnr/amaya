@@ -6,7 +6,7 @@ import com.amaya.intelligence.impl.common.mappers.AgentUiMapper
 import com.amaya.intelligence.impl.ide.antigravity.client.*
 import com.amaya.intelligence.impl.ide.antigravity.client.RemoteWorkspace as ClientRemoteWorkspace
 import com.amaya.intelligence.impl.ide.antigravity.services.streaming.StreamingStateManager
-import com.amaya.intelligence.data.local.db.entity.ConversationEntity
+import com.amaya.intelligence.data.local.entity.ConversationEntity
 import java.text.NumberFormat
 import java.util.concurrent.ConcurrentHashMap
 

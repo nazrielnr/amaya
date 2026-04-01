@@ -7,9 +7,10 @@ import android.content.Intent
 import android.os.Build
 import com.amaya.intelligence.util.debugLog
 import com.amaya.intelligence.util.errorLog
-import com.amaya.intelligence.data.local.db.dao.CronJobDao
-import com.amaya.intelligence.data.local.db.entity.CronJobEntity
-import com.amaya.intelligence.data.local.db.entity.CronRecurringType
+import com.amaya.intelligence.data.local.dao.CronJobDao
+import com.amaya.intelligence.data.local.entity.CronJobEntity
+import com.amaya.intelligence.data.local.entity.CronRecurringType
+import com.amaya.intelligence.data.local.entity.CronSessionMode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -121,7 +122,14 @@ class CronJobRepository @Inject constructor(
 
     private fun cancelAlarm(id: Long) {
         // Build a minimal stub PendingIntent to match by requestCode (job id)
-        val stubJob = CronJobEntity(id = id, title = "", prompt = "", triggerTimeMillis = 0)
+        val stubJob = CronJobEntity(
+            id = id,
+            title = "",
+            prompt = "",
+            triggerTimeMillis = 0,
+            recurringType = CronRecurringType.ONCE,
+            sessionMode = CronSessionMode.CONTINUE
+        )
         makePendingIntent(stubJob)?.let { alarmManager.cancel(it) }
     }
 

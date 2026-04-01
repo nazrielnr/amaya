@@ -1,24 +1,17 @@
-﻿package com.amaya.intelligence.data.local.db
+package com.amaya.intelligence.data.local.db
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.amaya.intelligence.data.local.db.dao.ConversationDao
-import com.amaya.intelligence.data.local.db.dao.CronJobDao
-import com.amaya.intelligence.data.local.db.dao.FileDao
-import com.amaya.intelligence.data.local.db.dao.FileMetadataDao
-import com.amaya.intelligence.data.local.db.dao.ProjectDao
-import com.amaya.intelligence.data.local.db.entity.ConversationEntity
-import com.amaya.intelligence.data.local.db.entity.CronJobEntity
-import com.amaya.intelligence.data.local.db.entity.FileEntity
-import com.amaya.intelligence.data.local.db.entity.FileFtsEntity
-import com.amaya.intelligence.data.local.db.entity.FileMetadataEntity
-import com.amaya.intelligence.data.local.db.entity.ProjectEntity
+import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.amaya.intelligence.data.local.dao.*
+import com.amaya.intelligence.data.local.entity.*
+import com.amaya.intelligence.data.local.db.migrations.MIGRATION_5_6
 
-/**
- * Main Room database for the AI Coding Agent.
- */
+@TypeConverters(CronJobTypeConverters::class)
 @Database(
     entities = [
         ProjectEntity::class,
@@ -28,33 +21,31 @@ import com.amaya.intelligence.data.local.db.entity.ProjectEntity
         ConversationEntity::class,
         CronJobEntity::class
     ],
-    version = 5,
+    version = AppDatabase.DATABASE_VERSION,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
-    
+
     abstract fun projectDao(): ProjectDao
     abstract fun fileDao(): FileDao
     abstract fun fileMetadataDao(): FileMetadataDao
     abstract fun conversationDao(): ConversationDao
     abstract fun cronJobDao(): CronJobDao
-    
+
     companion object {
+        const val DATABASE_VERSION = 6
         private const val DATABASE_NAME = "Amaya_db"
-        
+        private const val TAG = "AppDatabase"
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
-        
-        /**
-         * Get or create the database instance.
-         * Uses double-checked locking for thread safety.
-         */
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
             }
         }
-        
+
         private fun buildDatabase(context: Context): AppDatabase {
             return Room.databaseBuilder(
                 context.applicationContext,
@@ -62,7 +53,18 @@ abstract class AppDatabase : RoomDatabase() {
                 DATABASE_NAME
             )
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .fallbackToDestructiveMigration()
+                .addCallback(object : Callback() {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        super.onCreate(db)
+                        Log.d(TAG, "Database created strategy: version $DATABASE_VERSION")
+                    }
+
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        super.onOpen(db)
+                        Log.d(TAG, "Database opened: version ${db.version}")
+                    }
+                })
+                .addMigrations(MIGRATION_5_6)
                 .build()
         }
     }

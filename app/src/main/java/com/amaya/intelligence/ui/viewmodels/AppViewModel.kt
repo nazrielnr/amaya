@@ -24,4 +24,26 @@ class AppViewModel @Inject constructor(
     /** Count of currently active/pending cron jobs — shown as badge in header. */
     val activeReminderCount: StateFlow<Int> = cronJobRepository.activeJobCount
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
+    /** Global permission states for File Access, Camera, and Notifications. */
+    private val _hasStoragePermission = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val hasStoragePermission: StateFlow<Boolean> = _hasStoragePermission
+
+    private val _hasCameraPermission = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val hasCameraPermission: StateFlow<Boolean> = _hasCameraPermission
+
+    private val _hasNotificationPermission = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val hasNotificationPermission: StateFlow<Boolean> = _hasNotificationPermission
+
+    private val _hasExactAlarmPermission = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val hasExactAlarmPermission: StateFlow<Boolean> = _hasExactAlarmPermission
+
+    private val _isIgnoringBatteryOptimizations = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isIgnoringBatteryOptimizations: StateFlow<Boolean> = _isIgnoringBatteryOptimizations
+
+    fun setStoragePermission(granted: Boolean) { _hasStoragePermission.value = granted }
+    fun setCameraPermission(granted: Boolean) { _hasCameraPermission.value = granted }
+    fun setNotificationPermission(granted: Boolean) { _hasNotificationPermission.value = granted }
+    fun setExactAlarmPermission(granted: Boolean) { _hasExactAlarmPermission.value = granted }
+    fun setBatteryOptimizationIgnored(ignored: Boolean) { _isIgnoringBatteryOptimizations.value = ignored }
 }

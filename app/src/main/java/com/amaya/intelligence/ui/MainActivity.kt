@@ -6,6 +6,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.PowerManager
+import android.app.AlarmManager
 import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -41,6 +43,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,8 +101,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        checkStoragePermission()
-        requestNotificationPermissionIfNeeded()
+        updatePermissionStates()
 
         // Observe theme OUTSIDE Compose -- safe on UI thread via lifecycleScope.
         lifecycleScope.launch {
@@ -120,8 +122,13 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         }
 
         setContent {
-            val settings by aiSettingsManager.settingsFlow.collectAsState(initial = AiSettings())
-
+            val initialSettings = remember { aiSettingsManager.getSettings() }
+            val settings by aiSettingsManager.settingsFlow.collectAsState(initial = initialSettings)
+            val hasStorage by appViewModel.hasStoragePermission.collectAsState()
+            val hasCamera by appViewModel.hasCameraPermission.collectAsState()
+            val hasNotification by appViewModel.hasNotificationPermission.collectAsState()
+            val hasExactAlarm by appViewModel.hasExactAlarmPermission.collectAsState()
+            val isIgnoringBattery by appViewModel.isIgnoringBatteryOptimizations.collectAsState()
 
             LaunchedEffect(Unit) {
                 val fixedJson = aiSettingsManager.loadMcpConfigFromFixedPath()
@@ -132,13 +139,17 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
             AmayaTheme {
                 AppContent(
-                    hasStoragePermission = hasStoragePermission,
+                    aiSettingsManager = aiSettingsManager,
+                    settings = settings,
                     appViewModel = appViewModel,
                     initialIntent = intent,
                     onStoragePermissionRequest = { requestStoragePermission() },
+                    onCameraPermissionRequest = { requestCameraPermission() },
+                    onNotificationPermissionRequest = { requestNotificationPermission() },
+                    onExactAlarmPermissionRequest = { requestExactAlarmPermission() },
+                    onBatteryOptimizationRequest = { requestIgnoreBatteryOptimizations() },
                     onChatViewModelReady = { vm -> chatViewModel = vm },
                     onNavigateToSettings = { workspacePath ->
-                        // Activity context available here — no cast needed
                         LocalSettingsActivity.start(this@MainActivity, workspacePath)
                     },
                     onNavigateToWorkspace = {
@@ -152,7 +163,7 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        checkStoragePermission()
+        updatePermissionStates()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -178,14 +189,43 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun checkStoragePermission() {
-        hasStoragePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+    private fun updatePermissionStates() {
+        val storage = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Environment.isExternalStorageManager()
         } else {
             ContextCompat.checkSelfPermission(
                 this, android.Manifest.permission.READ_EXTERNAL_STORAGE
             ) == PackageManager.PERMISSION_GRANTED
         }
+        appViewModel.setStoragePermission(storage)
+
+        val camera = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        appViewModel.setCameraPermission(camera)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val notif = ContextCompat.checkSelfPermission(
+                this, android.Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            appViewModel.setNotificationPermission(notif)
+        } else {
+            appViewModel.setNotificationPermission(true)
+        }
+
+        // Exact Alarm check (Android 12+)
+        val alarmManager = getSystemService(AlarmManager::class.java)
+        val canScheduleExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
+        }
+        appViewModel.setExactAlarmPermission(canScheduleExact)
+
+        // Battery Optimization check
+        val powerManager = getSystemService(PowerManager::class.java)
+        val isIgnoringBattery = powerManager.isIgnoringBatteryOptimizations(packageName)
+        appViewModel.setBatteryOptimizationIgnored(isIgnoringBattery)
     }
 
     private fun requestStoragePermission() {
@@ -209,14 +249,37 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
         }
     }
 
-    private fun requestNotificationPermissionIfNeeded() {
+    private val cameraPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            appViewModel.setCameraPermission(granted)
+        }
+
+    private fun requestCameraPermission() {
+        cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+    }
+
+    private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val granted = ContextCompat.checkSelfPermission(
-                this, android.Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-            if (!granted) {
-                notifPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-            }
+            notifPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    private fun requestExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                data = Uri.parse("package:$packageName")
+            })
+        }
+    }
+
+    private fun requestIgnoreBatteryOptimizations() {
+        try {
+            startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:$packageName")
+            })
+        } catch (_: Exception) {
+            // Some devices might not support this directly
+            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
     }
 }
@@ -225,27 +288,37 @@ class MainActivity : androidx.appcompat.app.AppCompatActivity() {
 
 @Composable
 private fun AppContent(
-    hasStoragePermission: Boolean,
+    aiSettingsManager: AiSettingsManager,
+    settings: AiSettings,
     appViewModel: AppViewModel,
     initialIntent: Intent?,
     onStoragePermissionRequest: () -> Unit,
+    onCameraPermissionRequest: () -> Unit,
+    onNotificationPermissionRequest: () -> Unit,
+    onExactAlarmPermissionRequest: () -> Unit,
+    onBatteryOptimizationRequest: () -> Unit,
     onChatViewModelReady: (ChatViewModel) -> Unit,
     onNavigateToSettings: (workspacePath: String?) -> Unit,
     onNavigateToWorkspace: () -> Unit
 ) {
     val navController = rememberNavController()
+    val scope = rememberCoroutineScope()
     val viewModel: ChatViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val activeReminderCount by appViewModel.activeReminderCount.collectAsState()
+    
+    val hasStorage by appViewModel.hasStoragePermission.collectAsState()
+    val hasCamera by appViewModel.hasCameraPermission.collectAsState()
+    val hasNotification by appViewModel.hasNotificationPermission.collectAsState()
+    val hasExactAlarm by appViewModel.hasExactAlarmPermission.collectAsState()
+    val isIgnoringBattery by appViewModel.isIgnoringBatteryOptimizations.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.switchMode(IntelligenceSessionManager.SessionMode.LOCAL)
     }
 
-    // Expose ViewModel reference to Activity
     LaunchedEffect(viewModel) { onChatViewModelReady(viewModel) }
 
-    // Handle notification deep link
     LaunchedEffect(initialIntent) {
         val id = initialIntent?.getLongExtra("open_conversation_id", -1L) ?: -1L
         if (id > 0) viewModel.loadConversation(id)
@@ -257,10 +330,29 @@ private fun AppContent(
     ) {
         NavHost(
             navController = navController,
-            startDestination = if (hasStoragePermission) "chat" else "permission"
+            startDestination = if (settings.onboardingCompleted) "chat" else "onboarding"
         ) {
-            composable("permission") {
-                PermissionRequestScreen(onRequestPermission = onStoragePermissionRequest)
+            composable("onboarding") {
+                com.amaya.intelligence.ui.screens.shared.OnboardingScreen(
+                    hasStoragePermission = hasStorage,
+                    hasCameraPermission = hasCamera,
+                    hasNotificationPermission = hasNotification,
+                    hasExactAlarmPermission = hasExactAlarm,
+                    isIgnoringBatteryOptimizations = isIgnoringBattery,
+                    onRequestStorage = onStoragePermissionRequest,
+                    onRequestCamera = onCameraPermissionRequest,
+                    onRequestNotifications = onNotificationPermissionRequest,
+                    onRequestExactAlarm = onExactAlarmPermissionRequest,
+                    onRequestBatteryOptimization = onBatteryOptimizationRequest,
+                    onFinish = {
+                        scope.launch {
+                            aiSettingsManager.setOnboardingCompleted(true)
+                            navController.navigate("chat") { 
+                                popUpTo("onboarding") { inclusive = true } 
+                            }
+                        }
+                    }
+                )
             }
             composable("chat") {
                 val context = androidx.compose.ui.platform.LocalContext.current
@@ -284,111 +376,5 @@ private fun AppContent(
             }
         }
 
-        LaunchedEffect(hasStoragePermission) {
-            if (hasStoragePermission && navController.currentDestination?.route == "permission") {
-                navController.navigate("chat") { popUpTo("permission") { inclusive = true } }
-            }
-        }
-
-        // Global Update Check on Startup
-        val updateViewModel: com.amaya.intelligence.ui.screens.settings.shared.UpdateViewModel = hiltViewModel()
-        val updateState by updateViewModel.uiState.collectAsState()
-
-        LaunchedEffect(Unit) {
-            updateViewModel.checkForUpdate(manual = false)
-        }
-
-        if (updateState is com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.UpdateAvailable) {
-            val info = (updateState as com.amaya.intelligence.ui.screens.settings.shared.UpdateUiState.UpdateAvailable).info
-            com.amaya.intelligence.ui.components.shared.UpdateInfoSheet(
-                info = info,
-                onDismiss = { updateViewModel.dismiss() }
-            )
-        }
-    }
-}
-
-// ── Permission screen ────────────────────────────────────────────────────────
-
-@Composable
-fun PermissionRequestScreen(onRequestPermission: () -> Unit) {
-    Surface(
-        color = MaterialTheme.colorScheme.background,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 32.dp, vertical = 48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Surface(
-                modifier = Modifier.size(120.dp),
-                shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 6.dp
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.FolderOpen,
-                        contentDescription = null,
-                        modifier = Modifier.size(56.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            Text(
-                text = "File Access Needed",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Amaya is your personal AI workspace. To help you manage tasks and files seamlessly, we need access to your local files.",
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            Button(
-                onClick = onRequestPermission,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = MaterialTheme.shapes.large,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 2.dp,
-                    pressedElevation = 0.dp
-                )
-            ) {
-                Text("Enable All Files Access", style = MaterialTheme.typography.titleMedium)
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "This permission is strictly required on Android 11+ to manage projects locally on your device.",
-                    style = MaterialTheme.typography.labelMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
-        }
     }
 }

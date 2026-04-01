@@ -6,7 +6,6 @@ src/**
 test/**
 docs/**
 docs/antigravity/**
-node_modules/**
 package-lock.json
 REVERSE-ENGINEERING.md
 MODEL_DISCOVERY.md

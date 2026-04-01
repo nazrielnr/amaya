@@ -15,8 +15,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,9 +33,9 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.border
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
@@ -519,7 +519,7 @@ private fun ConnectionSetupSheet(
     onDismiss: () -> Unit
 ) {
     var showScanner by remember { mutableStateOf(false) }
-    val maxSheetHeight = (0.98f * androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp).dp
+    val maxSheetHeight = 0.75f * androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )

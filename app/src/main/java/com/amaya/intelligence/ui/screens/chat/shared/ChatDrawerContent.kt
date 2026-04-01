@@ -36,7 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.domain.ai.displayName
-import com.amaya.intelligence.data.local.db.entity.ConversationEntity
+import com.amaya.intelligence.data.local.entity.ConversationEntity
 import com.amaya.intelligence.domain.models.ChatUiState
 import com.amaya.intelligence.domain.models.ConnectionState
 import com.amaya.intelligence.ui.res.UiStrings

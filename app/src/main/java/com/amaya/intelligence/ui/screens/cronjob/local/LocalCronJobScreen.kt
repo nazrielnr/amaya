@@ -14,12 +14,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.data.repository.CronJobRepository
-import com.amaya.intelligence.ui.components.local.AlarmPermissionDialog
 import com.amaya.intelligence.ui.components.shared.SettingsBackButton
 import com.amaya.intelligence.ui.screens.cronjob.shared.CronJobEditSheet
 import com.amaya.intelligence.ui.screens.cronjob.shared.CronJobList
 import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,6 +27,7 @@ fun LocalCronJobScreen(
     onNavigateBack: () -> Unit,
     cronJobRepository: CronJobRepository
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val jobs by cronJobRepository.allJobs.collectAsState(initial = emptyList())
@@ -94,7 +95,7 @@ fun LocalCronJobScreen(
                         Icon(
                             Icons.Default.AddAlarm, 
                             "Add Reminder",
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                 },
@@ -109,7 +110,18 @@ fun LocalCronJobScreen(
     }
 
     if (showAlarmPermissionDialog) {
-        AlarmPermissionDialog(onDismiss = { showAlarmPermissionDialog = false })
+        com.amaya.intelligence.ui.components.shared.PermissionRequirementSheet(
+            permissionType = com.amaya.intelligence.ui.components.shared.PermissionType.EXACT_ALARM,
+            onGrant = {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    val intent = android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                        data = android.net.Uri.parse("package:${context.packageName}")
+                    }
+                    context.startActivity(intent)
+                }
+            },
+            onDismiss = { showAlarmPermissionDialog = false }
+        )
     }
 
     if (showAddSheet) {

@@ -2,7 +2,7 @@ package com.amaya.intelligence.domain.ai
 
 import com.amaya.intelligence.domain.models.*
 import com.amaya.intelligence.data.remote.api.AgentConfig
-import com.amaya.intelligence.data.local.db.entity.ConversationEntity
+import com.amaya.intelligence.data.local.entity.ConversationEntity
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

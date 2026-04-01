@@ -1,9 +1,9 @@
 ﻿package com.amaya.intelligence.tools
 
 import android.content.Context
-import com.amaya.intelligence.data.local.db.entity.CronJobEntity
-import com.amaya.intelligence.data.local.db.entity.CronRecurringType
-import com.amaya.intelligence.data.local.db.entity.CronSessionMode
+import com.amaya.intelligence.data.local.entity.CronJobEntity
+import com.amaya.intelligence.data.local.entity.CronRecurringType
+import com.amaya.intelligence.data.local.entity.CronSessionMode
 import com.amaya.intelligence.data.repository.CronJobRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers

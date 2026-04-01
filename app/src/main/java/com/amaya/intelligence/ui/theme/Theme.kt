@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.amaya.intelligence.ui.theme
 
 import android.app.Activity

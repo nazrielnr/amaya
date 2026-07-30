@@ -1,0 +1,4 @@
+# gradlew must stay LF + executable or POSIX runners cannot launch it.
+gradlew text eol=lf
+*.sh text eol=lf
+gradlew.bat text eol=crlf

@@ -1,0 +1,63 @@
+name: Release APK
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.0.1-genzx.1)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
+
+      # No release keystore in this fork, so ship the debug-signed APK.
+      # Set up signingConfigs + .env.local secrets before switching to assembleRelease.
+      - name: Assemble debug APK
+        run: ./gradlew :app:assembleDebug --no-daemon
+
+      - name: Collect per-ABI APKs
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          mkdir -p dist
+          # ABI splits are enabled, so one APK per ABI lands here.
+          for f in app/build/outputs/apk/debug/*.apk; do
+            abi=$(basename "$f" | sed -E 's/^app-(.+)-debug\.apk$/\1/')
+            cp "$f" "dist/amaya-${TAG}-${abi}.apk"
+          done
+          ls -la dist
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          name: Amaya ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          files: dist/*.apk
+          generate_release_notes: true
+          body: |
+            Debug-signed APKs built by CI from this fork, split per ABI.
+
+            Pick one:
+            - `arm64-v8a` — nearly every phone from 2018 onward
+            - `armeabi-v7a` — older 32-bit devices
+
+            Uninstall any existing Amaya build first — a debug signature
+            will not upgrade over an APK signed with a different key.

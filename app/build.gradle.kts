@@ -23,14 +23,25 @@ android {
         applicationId = "com.amaya.intelligence"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Room schema export for migrations
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
+        }
+    }
+
+    // GeckoView ships a ~150 MB libxul.so per ABI. A universal APK is ~277 MB,
+    // so split per ABI and let each device download only what it can run.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = false
         }
     }
 
@@ -136,7 +147,6 @@ dependencies {
 
     // Moshi JSON
     implementation(libs.moshi.core)
-    implementation(libs.moshi.kotlin)
     ksp(libs.moshi.codegen)
 
     // Coroutines

@@ -34,6 +34,17 @@ android {
         }
     }
 
+    // GeckoView ships a ~150 MB libxul.so per ABI. A universal APK is ~277 MB,
+    // so split per ABI and let each device download only what it can run.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = false
+        }
+    }
+
     signingConfigs {
         create("release") {
             if (keystoreProperties.containsKey("AMAYA_KEYSTORE_PASSWORD")) {

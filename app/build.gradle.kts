@@ -136,7 +136,6 @@ dependencies {
 
     // Moshi JSON
     implementation(libs.moshi.core)
-    implementation(libs.moshi.kotlin)
     ksp(libs.moshi.codegen)
 
     // Coroutines

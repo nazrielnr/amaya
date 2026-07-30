@@ -49,9 +49,7 @@ class OpenAiStreamProtocolTest {
 
     @Test
     fun `metadata-free delta chunk parses`() {
-        val chunk = Moshi.Builder()
-            .addLast(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory())
-            .build()
+        val chunk = Moshi.Builder().build()
             .adapter(OpenAiStreamChunk::class.java)
             .fromJson("""{"choices":[{"index":0,"delta":{"content":"Hi"},"finish_reason":null}]}""")
 
@@ -61,9 +59,7 @@ class OpenAiStreamProtocolTest {
 
     @Test
     fun `usage chunk without choices parses`() {
-        val chunk = Moshi.Builder()
-            .addLast(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory())
-            .build()
+        val chunk = Moshi.Builder().build()
             .adapter(OpenAiStreamChunk::class.java)
             .fromJson("""{"usage":{"prompt_tokens":12,"completion_tokens":4,"total_tokens":16}}""")
 

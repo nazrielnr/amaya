@@ -40,6 +40,8 @@ class UpdateMemoryTool @Inject constructor(
         - action (string, optional): add, replace, ignore. Default add.
         - reason (string, optional): Specific reason this memory is durable, e.g. "The user explicitly asked Amaya to remember their response-language preference." Do not use a generic reason.
         - confidence (number, optional): 0.0-1.0. Low-confidence proposals are ignored.
+        - ttl_days (integer, optional): Explicit duration in days before memory expires.
+        - volatility (string, optional): stable, moderate, or perishable.
 
     """.trimIndent()
 
@@ -50,6 +52,9 @@ class UpdateMemoryTool @Inject constructor(
         val content = arguments["content"] as? String
             ?: return@withContext ToolResult.Error("Missing required: content", ErrorType.VALIDATION_ERROR)
         val workspaceId = context.workspacePath?.let { workspaceMemoryStore.resolve(it)?.id }
+        val ttlDays = (arguments["ttl_days"] as? Number)?.toLong()
+        val ttlMillis = ttlDays?.takeIf { it > 0L }?.let { it * 24L * 60L * 60L * 1000L }
+        val volatility = com.amaya.intelligence.domain.memory.MemoryVolatility.parse(arguments["volatility"] as? String)
         val proposal = memoryClassifier.classify(
             content = content,
             requestedType = parseType(arguments),
@@ -59,7 +64,9 @@ class UpdateMemoryTool @Inject constructor(
             confidence = (arguments["confidence"] as? Number)?.toDouble() ?: 0.8,
             workspacePath = context.workspacePath,
             workspaceId = workspaceId,
-            sourceConversationId = context.conversationId
+            sourceConversationId = context.conversationId,
+            ttlMillis = ttlMillis,
+            requestedVolatility = volatility
         )
 
         if (proposal.type == MemoryType.WORKSPACE_FACT && context.workspacePath.isNullOrBlank()) {

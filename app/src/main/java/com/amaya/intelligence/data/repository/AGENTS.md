@@ -14,3 +14,5 @@ Applies to `data/repository/`.
 - `AiConversationCompression.kt`: manual compression and automatic task-ledger updates.
 - `AiArgumentValidation.kt`: advertised-tool argument and JSON Schema validation.
 - `AiTitleGenerator.kt`: bounded title generation with deterministic fallback.
+- `RecommendationRepository.kt`: evidence-verified implementation recommendation lifecycle (suggested → accepted → in_progress → verified → completed; JSONL store; `verify` is evidence-gated by the recommendation's verification rule). On VERIFIED the evidence line is linked back as provenance to `relatedMemoryIds` via `MemoryRepository.appendEvidence`.
+- `SkillUsageLogRepository.kt`: scheme §1.4 `skill_usage_log` — per-session skill outcomes buffered in memory (never written one-by-one) and flushed as a single batch append at end-of-session housekeeping in `SelfImprovementPipeline`.

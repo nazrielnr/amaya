@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.android.baselineprofile)
 }
 
 import java.util.Properties
@@ -22,9 +21,13 @@ android {
     defaultConfig {
         applicationId = "com.amaya.intelligence"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 4
-        versionName = "1.0.3"
+        // Sengaja 28: Android 10+ (API >= 29) menegakkan kebijakan W^X yang melarang
+        // exec() biner dari direktori data aplikasi. PRoot + shell Alpine (busybox)
+        // dieksekusi dari filesDir, jadi targetSdk harus tetap di bawah 29 agar
+        // sandbox Linux tetap berfungsi (pola yang sama dipakai UserLAnd/Termux).
+        targetSdk = 28
+        versionCode = 5
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -34,16 +37,32 @@ android {
         }
     }
 
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("armeabi-v7a", "arm64-v8a")
-            isUniversalApk = false
-        }
-    }
-
     signingConfigs {
+        create("debugConfig") {
+            // debug.keystore sengaja TIDAK di-commit (.gitignore: *.keystore),
+            // sehingga CI tidak memilikinya. Urutan fallback:
+            //   1. debug.keystore milik proyek (jika developer memilikinya)
+            //   2. debug keystore bawaan Android SDK (~/.android/debug.keystore)
+            //   3. keystore di build/, dibuat task ensureDebugKeystore pada
+            //      execution time (bukan configuration time)
+            val projectKeystore = file("${rootDir}/debug.keystore")
+            val androidHome = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT")
+            val defaultKeystore = androidHome?.let { file("$it/.android/debug.keystore") }
+                ?: file("${System.getProperty("user.home")}/.android/debug.keystore")
+            val generatedKeystore = layout.buildDirectory.file("generated/debug.keystore").get().asFile
+
+            val resolved = when {
+                projectKeystore.exists() -> projectKeystore
+                defaultKeystore.exists() -> defaultKeystore
+                else -> generatedKeystore
+            }
+
+            storeFile = resolved
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+
         create("release") {
             if (keystoreProperties.containsKey("AMAYA_KEYSTORE_PASSWORD")) {
                 storeFile = file("../release.keystore")
@@ -51,6 +70,63 @@ android {
                 keyAlias = keystoreProperties["AMAYA_KEY_ALIAS"] as String
                 keyPassword = keystoreProperties["AMAYA_KEYSTORE_PASSWORD"] as String
             }
+        }
+    }
+
+    // Fallback terakhir: hasilkan debug keystore bila runner tidak punya
+    // ~/.android/debug.keystore. Dijalankan pada execution time karena Gradle
+    // melarang proses eksternal saat configuration time.
+    val ensureDebugKeystore = tasks.register("ensureDebugKeystore") {
+        val androidHome = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT")
+        val defaultKeystore = androidHome?.let { file("$it/.android/debug.keystore") }
+            ?: file("${System.getProperty("user.home")}/.android/debug.keystore")
+        val projectKeystore = file("${rootDir}/debug.keystore")
+        val generatedKeystore = layout.buildDirectory.file("generated/debug.keystore").get().asFile
+
+        onlyIf {
+            !projectKeystore.exists() && !defaultKeystore.exists() && !generatedKeystore.exists()
+        }
+
+        doLast {
+            generatedKeystore.parentFile.mkdirs()
+            val keytool = System.getenv("JAVA_HOME")?.let { "$it/bin/keytool" } ?: "keytool"
+            val proc = ProcessBuilder(
+                keytool,
+                "-genkeypair", "-v",
+                "-keystore", generatedKeystore.absolutePath,
+                "-storepass", "android",
+                "-keypass", "android",
+                "-alias", "androiddebugkey",
+                "-keyalg", "RSA",
+                "-keysize", "2048",
+                "-validity", "10950",
+                "-dname", "CN=Android Debug, OU=Debug, O=Android, L=Unknown, ST=Unknown, C=US"
+            ).redirectErrorStream(true).start()
+            val out = proc.inputStream.bufferedReader().readText()
+            if (proc.waitFor() != 0) {
+                throw GradleException("Gagal membuat debug keystore:\n$out")
+            }
+            println("debug keystore dibuat di " + generatedKeystore.absolutePath)
+        }
+    }
+
+    // Task Android baru terdaftar setelah blok android{} dievaluasi.
+    afterEvaluate {
+        tasks.matching {
+            it.name.startsWith("validateSigning") ||
+                it.name.startsWith("packageDebug") || it.name.startsWith("packagePerf")
+        }.configureEach {
+            dependsOn(ensureDebugKeystore)
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            // Tetap hasilkan APK universal agar bisa dipasang di perangkat apa pun.
+            isUniversalApk = true
         }
     }
 
@@ -68,16 +144,17 @@ android {
         }
         debug {
             isMinifyEnabled = false
-            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debugConfig")
         }
-        // Profileable production-like build for daily performance testing. It uses
-        // release code/resources, debug signing, and deliberately skips R8/shrinking.
-        // Final distribution validation must still use the signed release build.
-        create("benchmark") {
+
+        // Varian installable mirip-produksi untuk pengujian performa di setiap push CI:
+        // jalur kode release + R8, tapi debug signing (dan applicationId `.perf`) sehingga
+        // bisa di-sideload tanpa secrets release keystore dan terpasang berdampingan
+        // dengan build debug/release. Bukan untuk distribusi.
+        create("perf") {
             initWith(buildTypes.getByName("release"))
-            isMinifyEnabled = false
-            isShrinkResources = false
-            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".perf"
+            signingConfig = signingConfigs.getByName("debugConfig")
             matchingFallbacks += listOf("release")
         }
     }
@@ -85,6 +162,13 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    // targetSdk 28 di atas adalah keputusan disengaja (kebijakan exec W^X sandbox
+    // Linux, pola UserLAnd/Termux) dan aplikasi didistribusikan di luar Google Play
+    // (sideload / GitHub Releases), jadi cek lint ketat-Play ini dinonaktifkan.
+    lint {
+        disable += "ExpiredTargetSdkVersion"
     }
 
     kotlinOptions {
@@ -145,7 +229,6 @@ dependencies {
 
     // Moshi JSON
     implementation(libs.moshi.core)
-
     ksp(libs.moshi.codegen)
 
     // Coroutines
@@ -176,9 +259,6 @@ dependencies {
     implementation("org.apache.commons:commons-compress:1.26.0")
     // XZ compression library for .tar.xz (required by Commons Compress)
     implementation("org.tukaani:xz:1.9")
-
-    // PDF support disabled - requires PDFBox-Android which is not available in public repos
-    // Office/OpenDocument formats (DOCX, XLSX, PPTX, ODT, ODS, RTF) fully supported with zero dependencies
 
     // WebSocket client for Remote Session (Antigravity IDE bridge)
     implementation("org.java-websocket:Java-WebSocket:1.5.7")
@@ -211,8 +291,4 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
-    // Baseline profile producer module; the androidx.baselineprofile plugin wires
-    // its generated baseline-prof.txt into assets/dexopt/baseline-prof.
-    baselineProfile(project(":baselineprofile"))
 }

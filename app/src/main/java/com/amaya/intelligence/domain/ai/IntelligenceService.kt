@@ -53,6 +53,22 @@ interface IntelligenceService {
     // Remote-specific (will be no-op in local)
     fun respondToToolInteraction(executionId: String, confirmed: Boolean) {}
     fun connect(ip: String, port: Int) {}
+
+    /**
+     * A live ask_user question the model is waiting on (null when none). The UI shows it as a
+     * dialog with a free-text input; answering resumes the suspended tool loop.
+     */
+    val pendingClarification: StateFlow<PendingClarification?> get() = MutableStateFlow(null)
+
+    /** Resolve a pending ask_user question. A null [answer] dismisses it. */
+    fun respondToClarification(executionId: String, answer: String?) {}
+
+    /** Trim the trailing assistant turn and re-run the last user prompt with a fresh response. */
+    fun regenerateLastResponse() {}
+    /** Edit an existing user message, update persistence, truncate subsequent turns, and regenerate. */
+    fun editMessage(messageId: String, newContent: String) {}
+    /** Resend an existing user message without retyping. */
+    fun resendMessage(messageId: String) {}
     fun setConversationMode(mode: ConversationMode) {}
 
     /** Set the global reasoning effort shown by the chat bulb. */
@@ -70,6 +86,15 @@ interface IntelligenceService {
         }
     }
 }
+
+/**
+ * A model-initiated clarification question waiting for the user (drives the ask_user tool).
+ */
+data class PendingClarification(
+    val toolCallId: String,
+    val question: String,
+    val options: List<String> = emptyList()
+)
 
 /**
  * Reasons for the UI to scroll.

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AttachFile
@@ -11,6 +12,14 @@ import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -38,7 +47,6 @@ import com.amaya.intelligence.ui.screens.amaya.AmayaDivider
 import com.amaya.intelligence.ui.screens.amaya.AmayaNavigationRow
 import com.amaya.intelligence.ui.screens.amaya.AmayaScaffold
 import com.amaya.intelligence.ui.screens.amaya.AmayaSection
-import com.amaya.intelligence.ui.screens.amaya.AmayaSwitchRow
 import com.amaya.intelligence.domain.models.ModelOption
 
 @Composable
@@ -71,6 +79,7 @@ fun LocalAgentConfigScreen(
 
     var showModelSheet by remember(agent.id) { mutableStateOf(false) }
     var identitySheet by remember(agent.id) { mutableStateOf<String?>(null) }
+    var detailSheet by remember(agent.id) { mutableStateOf<String?>(null) }
 
     AmayaScaffold(agent.name, snackbarHostState, onNavigateBack) {
         AmayaSection("Default Models") {
@@ -99,21 +108,15 @@ fun LocalAgentConfigScreen(
             AmayaNavigationRow(Icons.Default.Alarm, "Reminders & Jobs", "Schedules owned by this agent", onOpenReminders)
         }
         AmayaSection("Tools") {
-            AmayaSwitchRow("Workspace", "Read and change group workspace files", profile.workspace, { profile = profile.copy(workspace = it) })
-            AmayaDivider()
-            AmayaSwitchRow("Terminal", "Run shell commands inside the workspace", profile.terminal, { profile = profile.copy(terminal = it) })
-            AmayaDivider()
-            AmayaSwitchRow("Browser", "Control the local browser", profile.browser, { profile = profile.copy(browser = it) })
-            AmayaDivider()
-            AmayaSwitchRow("Web Search", "Search and read public web pages", profile.webSearch, { profile = profile.copy(webSearch = it) })
-            AmayaDivider()
-            AmayaSwitchRow("Skills", "View and manage reusable skills", profile.skills, { profile = profile.copy(skills = it) })
-            AmayaDivider()
-            AmayaSwitchRow("Reminders", "Create Android reminders and scheduled jobs", profile.reminders, { profile = profile.copy(reminders = it) })
-            AmayaDivider()
-            AmayaSwitchRow("Todo", "Maintain the live task list", profile.todo, { profile = profile.copy(todo = it) })
-            AmayaDivider()
-            AmayaSwitchRow("Delegation", "Delegate read-only work to group members", profile.subagents, { profile = profile.copy(subagents = it) })
+            capabilityRows.forEachIndexed { index, row ->
+                if (index > 0) AmayaDivider()
+                AmayaNavigationRow(
+                    row.icon,
+                    row.title,
+                    row.subtitle(profile),
+                    onClick = { detailSheet = row.category }
+                )
+            }
         }
         OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
             Text("Delete Agent", color = MaterialTheme.colorScheme.error)
@@ -125,6 +128,33 @@ fun LocalAgentConfigScreen(
         "role" -> AgentIdentitySheet("Role", role, { role = it }, { identitySheet = null })
         "instructions" -> AgentIdentitySheet("Instructions", instructions, { instructions = it }, { identitySheet = null }, multiline = true)
         null -> Unit
+    }
+
+    detailSheet?.let { category ->
+        CapabilityDetailSheet(
+            category = category,
+            profile = profile,
+            onToggleCategory = { enabled ->
+                profile = when (category) {
+                    "workspace" -> profile.copy(workspace = enabled)
+                    "terminal" -> profile.copy(terminal = enabled)
+                    "browser" -> profile.copy(browser = enabled)
+                    "subagents" -> profile.copy(subagents = enabled)
+                    "web_search" -> profile.copy(webSearch = enabled)
+                    "skills" -> profile.copy(skills = enabled)
+                    "reminders" -> profile.copy(reminders = enabled)
+                    "todo" -> profile.copy(todo = enabled)
+                    "mcp" -> profile.copy(mcp = enabled)
+                    else -> profile
+                }
+            },
+            onToggleTool = { tool ->
+                profile = profile.copy(
+                    excludedTools = if (tool in profile.excludedTools) profile.excludedTools - tool else profile.excludedTools + tool
+                )
+            },
+            onDismiss = { detailSheet = null }
+        )
     }
 
     if (showModelSheet) ModelSelectionSheet(
@@ -201,6 +231,139 @@ private fun ModelSelectionSheet(
 }
 
 private fun referenceCount(json: String): Int = runCatching { org.json.JSONArray(json).length() }.getOrDefault(0)
+
+private data class CapabilityRow(
+    val category: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val title: String,
+    val subtitle: (AgentCapabilityProfile) -> String
+)
+
+private val capabilityRows = listOf(
+    CapabilityRow("workspace", Icons.Default.Folder, "Workspace", { p ->
+        if (!p.workspace) "Off" else
+            "On · " + com.amaya.intelligence.domain.models.CapabilityToolGroups.workspace
+                .count { it !in p.excludedTools }
+                .let { "$it of ${com.amaya.intelligence.domain.models.CapabilityToolGroups.workspace.size} tools" }
+    }),
+    CapabilityRow("terminal", Icons.Default.Build, "Terminal", { p ->
+        if (!p.terminal) "Off" else "On · shell inside the workspace"
+    }),
+    CapabilityRow("browser", Icons.Default.Language, "Browser", { p ->
+        if (!p.browser) "Off" else "On · control the local browser"
+    }),
+    CapabilityRow("web_search", Icons.Default.Tag, "Web Search", { p ->
+        if (!p.webSearch) "Off" else "On · search and read public pages"
+    }),
+    CapabilityRow("skills", Icons.Default.Extension, "Skills", { p ->
+        if (!p.skills) "Off" else
+            "On · " + com.amaya.intelligence.domain.models.CapabilityToolGroups.skills
+                .count { it !in p.excludedTools }
+                .let { "$it of ${com.amaya.intelligence.domain.models.CapabilityToolGroups.skills.size} tools" }
+    }),
+    CapabilityRow("reminders", Icons.Default.Alarm, "Reminders", { p ->
+        if (!p.reminders) "Off" else "On · create Android reminders"
+    }),
+    CapabilityRow("todo", Icons.Default.CheckCircle, "Todo", { p ->
+        if (!p.todo) "Off" else "On · maintain the live task list"
+    }),
+    CapabilityRow("subagents", Icons.Default.Groups, "Delegation", { p ->
+        if (!p.subagents) "Off" else
+            "On · " + com.amaya.intelligence.domain.models.CapabilityToolGroups.subagents
+                .count { it !in p.excludedTools }
+                .let { "$it of ${com.amaya.intelligence.domain.models.CapabilityToolGroups.subagents.size} tools" }
+    }),
+    CapabilityRow("mcp", Icons.Default.SmartToy, "MCP", { p ->
+        if (!p.mcp) "Off" else "On · external MCP servers"
+    })
+)
+
+private fun profileFlagFor(category: String, profile: AgentCapabilityProfile): Boolean = when (category) {
+    "workspace" -> profile.workspace
+    "terminal" -> profile.terminal
+    "browser" -> profile.browser
+    "subagents" -> profile.subagents
+    "web_search" -> profile.webSearch
+    "skills" -> profile.skills
+    "reminders" -> profile.reminders
+    "todo" -> profile.todo
+    "mcp" -> profile.mcp
+    else -> true
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CapabilityDetailSheet(
+    category: String,
+    profile: AgentCapabilityProfile,
+    onToggleCategory: (Boolean) -> Unit,
+    onToggleTool: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val groups = com.amaya.intelligence.domain.models.CapabilityToolGroups
+    val tools = when (category) {
+        "workspace" -> groups.workspace
+        "terminal" -> groups.terminal
+        "browser" -> groups.browser
+        "subagents" -> groups.subagents
+        "web_search" -> groups.webSearch
+        "skills" -> groups.skills
+        "reminders" -> groups.reminders
+        "todo" -> groups.todo
+        "mcp" -> groups.mcp
+        else -> emptyList()
+    }
+    val title = capabilityRows.firstOrNull { it.category == category }?.title ?: category
+    val categoryEnabled = profileFlagFor(category, profile)
+    com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(onDismissRequest = onDismiss, title = "$title tools") {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("Category", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    if (categoryEnabled) "Enabled — individual tools below can be turned off" else "Off — no tool in this category reaches the model",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            androidx.compose.material3.Switch(checked = categoryEnabled, onCheckedChange = onToggleCategory)
+        }
+        androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        if (tools.size == 1 && tools.first() == "mcp") {
+            Text(
+                "All tools from MCP servers configured in Settings → MCP. Disable specific servers there.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            tools.forEach { tool ->
+                val toolEnabled = categoryEnabled && tool !in profile.excludedTools
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = toolEnabled,
+                        onCheckedChange = { if (categoryEnabled) onToggleTool(tool) },
+                        enabled = categoryEnabled
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(tool, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            groups.descriptionFor(tool),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 private fun parseModelKeys(json: String): Set<String> = runCatching {
     val array = org.json.JSONArray(json)

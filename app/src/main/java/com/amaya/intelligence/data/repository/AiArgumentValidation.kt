@@ -15,42 +15,7 @@ internal fun AiRepository.validateToolArguments(
         name: String,
         arguments: Map<String, Any?>,
         tools: List<AiToolDefinition>
-    ): Result<Map<String, Any?>> = runCatching {
-        val definition = tools.firstOrNull { it.name == name } ?: error("Tool was not advertised")
-        definition.rawParametersJson?.let { schema ->
-            @Suppress("UNCHECKED_CAST")
-            val normalized = normalizeJsonSchemaValue(JSONObject(schema), arguments) as Map<String, Any?>
-            validateJsonSchema(JSONObject(schema), normalized, "arguments")
-            return@runCatching normalized
-        }
-        val normalized = arguments.toMutableMap()
-        definition.parameters.properties.forEach { (key, property) ->
-            if (property.type.equals("integer", ignoreCase = true) && key in normalized) {
-                normalized[key] = normalizeIntegerArgument(normalized[key])
-            }
-        }
-        val missing = definition.parameters.required.filter { it !in normalized || normalized[it] == null }
-        require(missing.isEmpty()) { "Missing required properties: ${missing.joinToString()}" }
-        if (!definition.parameters.additionalProperties) {
-            val unknown = normalized.keys - definition.parameters.properties.keys
-            require(unknown.isEmpty()) { "Unknown properties: ${unknown.joinToString()}" }
-        }
-        definition.parameters.properties.forEach { (key, property) ->
-            val value = normalized[key] ?: return@forEach
-            val validType = when (property.type.lowercase()) {
-                "string" -> value is String
-                "integer" -> value is Number && value.toDouble() % 1.0 == 0.0
-                "number" -> value is Number
-                "boolean" -> value is Boolean
-                "array" -> value is List<*>
-                "object" -> value is Map<*, *>
-                else -> true
-            }
-            require(validType) { "$key must be ${property.type}" }
-            property.enum?.let { allowed -> require(value.toString() in allowed) { "$key is not an allowed value" } }
-        }
-        normalized
-    }
+    ): Result<Map<String, Any?>> = AiToolArgumentValidator().validate(name, arguments, tools)
 
 internal fun AiRepository.normalizeJsonSchemaValue(schema: JSONObject, value: Any?): Any? {
         val types = buildList {
@@ -134,6 +99,24 @@ internal fun AiRepository.browserErrorSignature(resultContent: String): String? 
         val message = error?.optString("message")?.takeIf { it.isNotBlank() } ?: root.optJSONObject("agent")?.optString("latest_summary").orEmpty()
         return "$code:${message.take(120)}"
     }
+
+    /**
+     * Stable signature for any tool failure, so identical repeated failures can be detected
+     * across iterations. Browser failures use the structured JSON signature; every other tool
+     * uses the first error-looking line of its result.
+     */
+    internal fun AiRepository.toolErrorSignature(resultContent: String): String? {
+        browserErrorSignature(resultContent)?.let { return it }
+        val errorLine = resultContent.lineSequence().firstOrNull { line ->
+            val lower = line.lowercase()
+            TOOL_ERROR_SIGNAL_WORDS.any { it in lower }
+        } ?: return null
+        return errorLine.trim().take(120)
+    }
+
+    private val TOOL_ERROR_SIGNAL_WORDS = listOf(
+        "error", "failed", "failure", "timeout", "cancelled", "exception", "denied", "blocked", "invalid", "not found", "unavailable"
+    )
 
 
 

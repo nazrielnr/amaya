@@ -161,6 +161,31 @@ class OpencodeIntelligenceService @Inject constructor(
         _uiState.update { it.copy(isLoading = false, isStreaming = false) }
     }
 
+    override fun regenerateLastResponse() {
+        if (_uiState.value.isStreaming || _uiState.value.isLoading) {
+            _uiState.update { it.copy(error = "Wait for the current response before regenerating") }
+            return
+        }
+        val state = _uiState.value
+        val lastUserIdx = state.messages.indexOfLast { it.role == MessageRole.USER }
+        if (lastUserIdx < 0) return
+        val lastUser = state.messages[lastUserIdx]
+        if (lastUser.content.isBlank() && lastUser.attachments.isEmpty()) return
+        // Drop the trailing assistant turn and re-run the last prompt against the same session.
+        // The prompt is sent directly (not through sendMessage) so no duplicate user bubble is
+        // appended; the bridge already holds the conversation history server-side.
+        currentAssistantMessageId = null
+        _uiState.update {
+            it.copy(
+                messages = it.messages.take(lastUserIdx + 1),
+                isLoading = true,
+                isStreaming = true,
+                error = null
+            )
+        }
+        scheduleSend(lastUser.content)
+    }
+
     override fun clearConversation() {
         currentAssistantMessageId = null
         val previous = activeSessionId

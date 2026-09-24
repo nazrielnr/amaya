@@ -129,14 +129,21 @@ class InvokeSubagentsTool @Inject constructor(
 
             // Format results as structured output for the main AI
             val output = buildString {
-                appendLine("=== SUBAGENT RESULTS (${results.size} agents ran in parallel) ===")
+                appendLine("=== SUBAGENT EXECUTION SYNTHESIS (${results.size} parallel workers) ===")
+                appendLine()
+                val successful = results.count { !it.summary.startsWith("[ERROR]") && !it.summary.startsWith("[RATE LIMITED]") }
+                appendLine("Status: $successful/${results.size} subagents succeeded.")
                 appendLine()
                 results.forEach { result ->
-                    appendLine("--- [${result.taskName}] ---")
-                    appendLine(result.summary)
+                    val isErr = result.summary.startsWith("[ERROR]") || result.summary.startsWith("[RATE LIMITED]")
+                    val statusBadge = if (isErr) "[FAILED]" else "[SUCCESS]"
+                    appendLine("----------------------------------------")
+                    appendLine("Worker: ${result.taskName} $statusBadge")
+                    appendLine("----------------------------------------")
+                    appendLine(result.summary.trim())
                     appendLine()
                 }
-                appendLine("=== END OF SUBAGENT RESULTS ===")
+                appendLine("=== END OF SUBAGENT SYNTHESIS ===")
             }
 
             ToolResult.Success(output)
@@ -268,10 +275,14 @@ class SubagentRunner @Inject constructor(
         val systemPrompt = buildString {
             task.systemInstructions?.takeIf(String::isNotBlank)?.let { appendLine(it) }
             if (task.readOnly) {
-                appendLine("Complete one focused research task.")
-                appendLine("Use only the provided read-only tools. Do not modify state or request approval.")
+                appendLine("You are a focused, high-precision research subagent.")
+                appendLine("Use only the provided read-only tools. Do not modify state, write files, or request approval.")
                 if (task.systemInstructions == null) {
-                    appendLine("Return a final report with headings: Findings, Files inspected, Evidence, Verification, Blockers.")
+                    appendLine("Structure your final answer clearly:")
+                    appendLine("1. Status: [SUCCESS / BLOCKED / INCOMPLETE]")
+                    appendLine("2. Key Findings: (concise bullet points)")
+                    appendLine("3. Files / Symbols Inspected: (exact paths)")
+                    appendLine("4. Actionable Next Steps / Blockers:")
                 }
             }
             if (isRetry) appendLine("NOTE: This is a retry after a rate limit error.")

@@ -5,6 +5,8 @@ import android.content.ContextWrapper
 import com.amaya.intelligence.data.local.files.FileSessionStore
 import com.amaya.intelligence.data.local.files.FileSkillStore
 import com.amaya.intelligence.data.local.files.FileWorkspaceMemoryStore
+import com.amaya.intelligence.data.remote.api.AiSettingsManager
+import com.amaya.intelligence.data.remote.api.EmbeddingClient
 import com.amaya.intelligence.domain.memory.MemoryClassifier
 import com.amaya.intelligence.domain.memory.MemoryContentNormalizer
 import com.amaya.intelligence.domain.memory.MemoryDeduper
@@ -26,7 +28,14 @@ class ContextPromptPolicyTest {
     }
     private val classifier = MemoryClassifier(MemorySafetyFilter(), MemoryContentNormalizer())
     private val workspaceStore = FileWorkspaceMemoryStore(context)
-    private val memory = FileMemoryRepository(context, classifier, MemoryDeduper(), workspaceStore)
+    private val memory = FileMemoryRepository(
+        context = context,
+        classifier = classifier,
+        deduper = MemoryDeduper(),
+        workspaceStore = workspaceStore,
+        settingsManager = AiSettingsManager(context),
+        embeddingClient = EmbeddingClient()
+    )
     private val sessions = FileSessionMemoryRepository(FileSessionStore(context), workspaceStore, classifier)
     private val skills = FileSkillRepository(FileSkillStore(context), classifier, SkillPatchApplier())
 
@@ -64,13 +73,24 @@ class ContextPromptPolicyTest {
             override suspend fun setSkillSettings(settings: SkillBehaviorSettings) = Unit
             override suspend fun setContextRecallSettings(settings: ContextRecallSettings) = Unit
         }
+        val primedStateRepository = FilePrimedStateRepository(context, AiSettingsManager(context), EmbeddingClient())
+        val pendingProposalRepository = FilePendingProposalRepository(context, memory, skills, classifier)
+        val pipeline = SelfImprovementPipeline(
+            classifier, pendingProposalRepository, memory, primedStateRepository, skills,
+            FileProjectStateRepository(context), FileAndroidCapabilityRepository(context),
+            FileRecommendationRepository(context, memory), FileSkillUsageLogRepository(context), context
+        )
         return ContextManager(
             settingsRepository,
-            MemorySnapshotProvider(memory),
+            MemorySnapshotProvider(memory, ContextBudgetManager()),
             SkillIndexProvider(skills),
+            PitfallIndexProvider(pipeline, primedStateRepository),
             SessionSummaryProvider(sessions),
             PromptBudgetManager(),
-            ContextRanker()
+            ContextRanker(),
+            ProjectStateProvider(FileProjectStateRepository(context)),
+            CapabilityMatrixProvider(FileAndroidCapabilityRepository(context)),
+            RecommendationProvider(FileRecommendationRepository(context, memory))
         )
     }
 

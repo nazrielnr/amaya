@@ -18,6 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.amaya.intelligence.data.remote.api.McpServerConfig
-
+import com.amaya.intelligence.data.remote.mcp.McpServerTestResult
 import com.amaya.intelligence.ui.screens.amaya.iosAmayaColors
 import com.amaya.intelligence.ui.screens.amaya.AmayaSwitch
 
@@ -43,6 +45,9 @@ fun McpServerCard(
     onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onTest: (() -> Unit)? = null,
+    testResult: McpServerTestResult? = null,
+    isTesting: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val colors = iosAmayaColors()
@@ -103,6 +108,54 @@ fun McpServerCard(
                         )
                     }
                 }
+                if (isTesting) {
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(10.dp),
+                            strokeWidth = 1.5.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Testing connection...",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                } else if (testResult != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (testResult.isSuccess) Color(0x1F34C759) else Color(0x1FFF3B30)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(if (testResult.isSuccess) Color(0xFF34C759) else Color(0xFFFF3B30))
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = if (testResult.isSuccess) {
+                                    "Active • ${testResult.toolCount} tools • ${testResult.latencyMs}ms"
+                                } else {
+                                    "Offline: ${testResult.message}"
+                                },
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                color = if (testResult.isSuccess) Color(0xFF34C759) else Color(0xFFFF3B30),
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
             }
             Spacer(Modifier.width(8.dp))
             AmayaSwitch(
@@ -110,6 +163,28 @@ fun McpServerCard(
                 onCheckedChange = onToggle,
                 modifier = Modifier.padding(start = 4.dp)
             )
+            if (onTest != null) {
+                IconButton(
+                    onClick = onTest,
+                    enabled = !isTesting,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    if (isTesting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = colors.iconTint
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Test MCP Connection",
+                            tint = colors.iconTint.copy(alpha = 0.85f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
                 Icon(
                     Icons.Default.EditNote,

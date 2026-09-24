@@ -70,13 +70,13 @@ class WriteFileTool @Inject constructor(
         executionContext: ToolExecutionContext
     ): ToolResult = withContext(Dispatchers.IO) {
 
-        val pathStr = arguments["path"] as? String
+        val pathStr = (arguments["path"] ?: arguments["file_path"] ?: arguments["filePath"] ?: arguments["file"]) as? String
             ?: return@withContext ToolResult.Error(
                 "Missing required argument: path",
                 ErrorType.VALIDATION_ERROR
             )
 
-        val content = arguments["content"] as? String
+        val content = (arguments["content"] ?: arguments["text"] ?: arguments["code"] ?: arguments["data"]) as? String
             ?: return@withContext ToolResult.Error(
                 "Missing required argument: content",
                 ErrorType.VALIDATION_ERROR
@@ -98,6 +98,12 @@ class WriteFileTool @Inject constructor(
         }
 
         val file = File(pathStr)
+        if (file.exists() && file.isDirectory) {
+            return@withContext ToolResult.Error(
+                "Cannot write to path: $pathStr is an existing directory.",
+                ErrorType.VALIDATION_ERROR
+            )
+        }
         // Default false — AI-generated code is typically valid, validation causes false positives
         val validateSyntax = arguments["validate_syntax"] as? Boolean ?: false
         val createDirs = arguments["create_dirs"] as? Boolean ?: true

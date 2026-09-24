@@ -45,6 +45,7 @@ class MemoryContentNormalizer @Inject constructor() {
             "works at" in lower -> "Workplace context"
             type == MemoryType.USER_PROFILE -> "User profile"
             type == MemoryType.WORKSPACE_FACT -> "Workspace fact"
+            type == MemoryType.DECISION -> "Project decision"
             else -> content.removeSuffix(".").take(80)
         }
     }
@@ -190,6 +191,7 @@ class MemoryContentNormalizer @Inject constructor() {
             "works at" in lower -> "The user explicitly asked Amaya to remember their workplace context."
             type == MemoryType.USER_PROFILE -> "The user explicitly provided durable profile or preference information."
             type == MemoryType.WORKSPACE_FACT -> "The user explicitly provided a durable workspace fact."
+            type == MemoryType.DECISION -> "The user explicitly recorded a project design decision with its rationale."
             isSpecificReason(originalReason) -> originalReason.trim().toSentence()
             else -> "The user explicitly provided a durable fact to remember."
         }

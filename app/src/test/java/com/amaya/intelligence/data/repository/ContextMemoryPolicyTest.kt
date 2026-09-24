@@ -13,8 +13,11 @@ class ContextMemoryPolicyTest {
     private val classifier = MemoryClassifier(MemorySafetyFilter(), MemoryContentNormalizer())
 
     @Test
-    fun `only user and workspace memory types remain`() {
-        assertEquals(setOf(MemoryType.USER_PROFILE, MemoryType.WORKSPACE_FACT), MemoryType.entries.toSet())
+    fun `only user workspace and decision memory types remain`() {
+        assertEquals(
+            setOf(MemoryType.USER_PROFILE, MemoryType.WORKSPACE_FACT, MemoryType.DECISION),
+            MemoryType.entries.toSet()
+        )
     }
 
     @Test

@@ -96,6 +96,7 @@ internal suspend fun BrowserConversationSession.executeBrowserTool(toolName: Str
             "get_dom" -> controller.getDom()
             "get_html" -> controller.getHtml()
             "get_visible_text" -> controller.getVisibleText()
+            "page_fingerprint" -> controller.pageFingerprint()
             "get_screenshot" -> controller.screenshot()
             "evaluate" -> {
                 val expression = arguments["expression"]?.toString() ?: arguments["script"]?.toString()

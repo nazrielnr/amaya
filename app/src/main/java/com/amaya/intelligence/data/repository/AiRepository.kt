@@ -7,7 +7,9 @@ import com.amaya.intelligence.data.remote.api.*
 import com.amaya.intelligence.data.remote.mcp.McpClientManager
 import com.amaya.intelligence.domain.models.AssistantMode
 import com.amaya.intelligence.domain.models.UiMessage
+import com.amaya.intelligence.tools.ClarificationRequest
 import com.amaya.intelligence.tools.ConfirmationRequest
+import com.amaya.intelligence.tools.TodoRepository
 import com.amaya.intelligence.tools.ToolExecutor
 import com.amaya.intelligence.tools.toAiToolDefinition
 import com.amaya.intelligence.util.debugLog
@@ -41,6 +43,20 @@ internal val THINK_BLOCK = Regex("(?is)<think>.*?</think>")
 internal val INTEGER_TEXT = Regex("[+-]?\\d+")
 internal const val MAX_STREAM_CONTINUATIONS = 3
 internal const val MAX_STREAM_BACKOFF_MS = 4_000L
+/**
+ * How many invalid/duplicate/unadvertised tool calls a single turn tolerates before the
+ * tool loop stops. Every rejection is fed back to the model as a failure so it can
+ * self-correct; this bound prevents an infinite mis-call loop.
+ */
+internal const val MAX_FAILED_TOOL_ATTEMPTS = 3
+/**
+ * Scheme C: how many extra verification passes a turn may run after the model first stops.
+ * One pass is enough to catch a premature "done" without dragging every tool-using turn
+ * through a second full loop.
+ */
+internal const val MAX_VERIFICATION_PASSES = 1
+/** Scheme E: identical tool failures before the host steers the model to revise its plan. */
+internal const val REPLAN_AFTER_REPEATED_FAILURES = 2
 internal const val STREAM_CONTINUATION_PROMPT = "Continue the previous response exactly where it stopped. Do not repeat any text. Use tools if needed to complete the request."
 internal const val TOOL_RESULT_TRUNCATION_MARKER = "\n… [tool result truncated by context budget]"
 internal const val AUTO_COMPACTION_MARKER = "[AUTO-COMPACTED ACTIVE CONTEXT]"
@@ -52,6 +68,17 @@ internal fun truncateToolResultForContext(content: String, maxChars: Int): Strin
     maxChars <= TOOL_RESULT_TRUNCATION_MARKER.length -> TOOL_RESULT_TRUNCATION_MARKER.take(maxChars)
     else -> content.take(maxChars - TOOL_RESULT_TRUNCATION_MARKER.length).trimEnd() + TOOL_RESULT_TRUNCATION_MARKER
 }
+
+internal fun verificationPrompt(goal: String): String = """
+        Host verification step: You are attempting to finalize this turn after tool operations.
+        The user's original goal is: "$goal"
+        
+        Sanity Check Requirements:
+        1. Verify every explicit requirement and constraint requested in the goal has been addressed.
+        2. Cite concrete file paths, symbols, or tool outputs from your execution evidence.
+        3. If any task component remains incomplete, unverified, or failed: DO NOT STOP — continue executing the necessary tools immediately.
+        4. If and only if all deliverables are complete and verified: reply 'VERIFIED' followed by a concise 1-2 sentence evidence summary.
+    """.trimIndent()
 
 internal fun responseItemOutputText(items: List<String>): String? = items.asSequence()
     .mapNotNull { raw ->
@@ -78,8 +105,14 @@ internal fun canContinueStream(response: ChatResponse, hasToolCalls: Boolean): B
         else -> false
     }
 
-internal fun repeatedBrowserFailureWarning(signature: String, count: Int): String? =
-    if (count < 2) null else "Warning: the same browser tool error has occurred $count times ($signature). Do not repeat the same call unchanged. Inspect the current page state, choose a different action, or ask the user for clarification."
+internal fun repeatedToolFailureWarning(toolName: String, signature: String, count: Int): String? =
+    if (count < 2) {
+        null
+    } else if (toolName == "browser") {
+        "Warning: the same browser tool error has occurred $count times ($signature). Do not repeat the same call unchanged. Inspect the current page state, choose a different action, or ask the user for clarification."
+    } else {
+        "Warning: tool '$toolName' failed $count times with the same error ($signature). Do not repeat the same call unchanged; inspect the failure, adjust the arguments, try a different approach, or ask the user for clarification."
+    }
 
 internal fun shouldExecuteReceivedToolCalls(response: ChatResponse, hasToolCalls: Boolean): Boolean =
     hasToolCalls && when (response) {
@@ -169,12 +202,14 @@ class AiRepository @Inject constructor(
     internal val sessionMemoryRepository: SessionMemoryRepository,
     internal val workspaceMemoryStore: FileWorkspaceMemoryStore,
     internal val skillRepository: SkillRepository,
+    internal val skillUsageLogRepository: SkillUsageLogRepository,
     internal val selfImprovementPipeline: SelfImprovementPipeline,
     internal val contextManager: ContextManager,
     internal val referenceDocumentRepository: ReferenceDocumentRepository,
     internal val agentMemoryRepository: AgentMemoryRepository,
     internal val mcpClientManager: McpClientManager,
     internal val ledgerStore: ActiveContextLedgerStore,
+    internal val todoRepository: TodoRepository,
     // FIX 5.11: Inject application-scoped coroutine scope — no more manual SupervisorJob leak
     @ApplicationScope internal val repoScope: CoroutineScope
 ) {
@@ -259,8 +294,8 @@ class AiRepository @Inject constructor(
     // → IllegalStateException → FATAL EXCEPTION → app force close.
     // channelFlow uses a Channel internally which IS thread-safe for concurrent senders.
     fun chat(
-        message: String, userImages: List<ChatImage> = emptyList(), conversationHistory: List<ChatMessage> = emptyList(), projectId: Long? = null, workspacePath: String? = null, assistantMode: AssistantMode = AssistantMode.forWorkspace(workspacePath), ownerId: String? = null, agentId: Long? = null, conversationId: Long? = null, connectionId: String? = null, selectedModel: String? = null, effort: ThinkingEffort? = null, runtimeTarget: AgentRuntimeTarget = AgentRuntimeTarget.LOCAL, onConfirmation: suspend (ConfirmationRequest) -> Boolean = { false }, pendingConversationEvents: suspend () -> List<UiMessage> = { emptyList() }, onConversationEventsInjected: suspend (List<UiMessage>) -> Unit = {}, messageRole: MessageRole = MessageRole.USER
-    ): Flow<AgentEvent> = chatImpl(message, userImages, conversationHistory, projectId, workspacePath, assistantMode, ownerId, agentId, conversationId, connectionId, selectedModel, effort, runtimeTarget, onConfirmation, pendingConversationEvents, onConversationEventsInjected, messageRole)
+        message: String, userImages: List<ChatImage> = emptyList(), conversationHistory: List<ChatMessage> = emptyList(), projectId: Long? = null, workspacePath: String? = null, assistantMode: AssistantMode = AssistantMode.forWorkspace(workspacePath), ownerId: String? = null, agentId: Long? = null, conversationId: Long? = null, connectionId: String? = null, selectedModel: String? = null, effort: ThinkingEffort? = null, runtimeTarget: AgentRuntimeTarget = AgentRuntimeTarget.LOCAL, onConfirmation: suspend (ConfirmationRequest) -> Boolean = { false }, onClarification: suspend (ClarificationRequest) -> String? = { null }, pendingConversationEvents: suspend () -> List<UiMessage> = { emptyList() }, onConversationEventsInjected: suspend (List<UiMessage>) -> Unit = {}, messageRole: MessageRole = MessageRole.USER
+    ): Flow<AgentEvent> = chatImpl(message, userImages, conversationHistory, projectId, workspacePath, assistantMode, ownerId, agentId, conversationId, connectionId, selectedModel, effort, runtimeTarget, onConfirmation, onClarification, pendingConversationEvents, onConversationEventsInjected, messageRole)
 
     internal fun buildToolDefinitions(
         runtimeTarget: AgentRuntimeTarget = AgentRuntimeTarget.LOCAL,
@@ -282,17 +317,28 @@ class AiRepository @Inject constructor(
         val localTools = toolExecutor.getToolDefinitions(assistantMode, agentCapabilityProfile, delegationAgentIds)
             .filterNot { !hasWorkspace && it.name in setOf("workspace_search", "workspace_change", "read_file", "run_shell", "invoke_subagents") }
             .map { it.toAiToolDefinition(truncateDesc = true) }
-        // MCP tools come from external servers — truncate their descriptions too
-        val mcpTools = mcpClientManager.getCachedToolDefinitions().map { tool ->
-            tool.copy(
-                description = tool.description.let { if (it.length > 1023) it.take(1023) + "…" else it },
-                parameters = tool.parameters.copy(
-                    properties = tool.parameters.properties.mapValues { (_, prop) ->
-                        prop.copy(description = prop.description.let { if (it.length > 1023) it.take(1023) + "…" else it })
-                    }
+        // MCP tools come from external servers — truncate their descriptions too.
+        // CHAT mode excludes MCP by design (strict tool surface); AGENT mode defers to the
+        // agent's capability profile (mcp=..., default true for legacy profiles); PROJECT
+        // mode keeps today's behavior of advertising enabled servers.
+        val mcpTools = mcpClientManager.getCachedToolDefinitions()
+            .filter { tool ->
+                when (assistantMode) {
+                    AssistantMode.CHAT -> false
+                    AssistantMode.AGENT -> agentCapabilityProfile?.allows(tool.name) ?: true
+                    AssistantMode.PROJECT -> true
+                }
+            }
+            .map { tool ->
+                tool.copy(
+                    description = tool.description.let { if (it.length > 1023) it.take(1023) + "…" else it },
+                    parameters = tool.parameters.copy(
+                        properties = tool.parameters.properties.mapValues { (_, prop) ->
+                            prop.copy(description = prop.description.let { if (it.length > 1023) it.take(1023) + "…" else it })
+                        }
+                    )
                 )
-            )
-        }
+            }
         debugLog("AiRepository") { "Building tool defs: local=${localTools.size}, mcp=${mcpTools.size}" }
         return localTools + mcpTools
     }

@@ -292,7 +292,7 @@ val PremiumTypography = Typography(
     ),
     bodyMedium = TextStyle( // Key for settings metadata / secondary text
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.ExtraLight,
+        fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.25.sp

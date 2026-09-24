@@ -8,6 +8,7 @@ import org.mozilla.geckoview.GeckoDisplay
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 import androidx.core.content.FileProvider
+import com.amaya.intelligence.data.repository.MemoryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +31,7 @@ internal class BrowserConversationSession(
     internal val context: Context,
     internal val headlessSurfaceSlots: Semaphore,
     internal val requestHeadlessSlot: (BrowserConversationSession) -> Unit,
+    internal val memoryRepository: MemoryRepository,
 ) {
     internal var sessionId = newSessionId()
     private val initialTab = BrowserPageTab()

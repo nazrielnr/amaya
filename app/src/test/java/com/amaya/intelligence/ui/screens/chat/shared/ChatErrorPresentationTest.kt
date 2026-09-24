@@ -10,6 +10,15 @@ class ChatErrorPresentationTest {
         val presentation = presentChatError(raw)
 
         assertEquals("OpenAI API error 429", presentation.title)
-        assertEquals(raw, presentation.message)
+        assertEquals("The usage limit has been reached", presentation.message)
+    }
+
+    @Test
+    fun providerErrorWithoutColonGetsFriendlyHintInsteadOfDuplicate() {
+        val raw = "SocketTimeoutException"
+        val presentation = presentChatError(raw)
+
+        assertEquals("SocketTimeoutException", presentation.title)
+        assertEquals("Check your connection and try again.", presentation.message)
     }
 }

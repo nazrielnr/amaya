@@ -148,6 +148,7 @@ internal fun ToolExecutionGroupCard(
     group: ToolExecutionGroup,
     onToolAccept: ((ToolExecution) -> Unit)? = null,
     onToolDecline: ((ToolExecution) -> Unit)? = null,
+    onClarify: ((ToolExecution, String?) -> Unit)? = null,
     onLocalhostLinkClick: ((String) -> Unit)? = null
 ) {
     val hasError = group.executions.any { it.status == ToolStatus.ERROR }
@@ -240,7 +241,7 @@ internal fun ToolExecutionGroupCard(
                         fontWeight = FontWeight.Normal,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
-                        overflow = TextOverflow.Clip,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f).toolHeaderFade()
                     )
                     if (isRunning) {
@@ -275,6 +276,7 @@ internal fun ToolExecutionGroupCard(
                                 } else execution,
                                 onAccept = if (isSyntheticGroup) null else onToolAccept?.let { callback -> { callback(execution) } },
                                 onDecline = if (isSyntheticGroup) null else onToolDecline?.let { callback -> { callback(execution) } },
+                                onClarify = if (isSyntheticGroup) null else onClarify?.let { callback -> { answer -> callback(execution, answer) } },
                                 onLocalhostLinkClick = onLocalhostLinkClick,
                                 // The first child is the one the wrapper appeared with, so
                                 // the wrapper's fade already covers it. Later siblings
@@ -329,8 +331,9 @@ private fun groupIcon(key: String): ToolInfoIcon = when {
         "find_files", "session_search" -> ToolInfoIcon.SEARCH
         "run_shell" -> ToolInfoIcon.RUN
         "web_search" -> ToolInfoIcon.WORLD
+        "ask_user", "notify_user" -> ToolInfoIcon.MESSAGE
         "create_reminder" -> ToolInfoIcon.TASK
-        "update_memory", "memory_manage" -> ToolInfoIcon.BRAIN
+        "update_memory", "memory_manage", "agent_memory", "agent_memory_internal" -> ToolInfoIcon.BRAIN
         "skill_view", "skill_manage" -> ToolInfoIcon.BOOK
         "browser" -> ToolInfoIcon.BROWSER
         else -> ToolInfoIcon.TASK

@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.amaya.intelligence.data.remote.api.AmayaProviderRegistry
 import com.amaya.intelligence.data.remote.api.ConfiguredModel
+import com.amaya.intelligence.data.remote.api.ModelContextDetector
+import com.amaya.intelligence.data.remote.api.ModelLatencyResult
 import com.amaya.intelligence.ui.components.shared.AmayaTopBarButton
 import com.amaya.intelligence.ui.components.shared.SettingsBackButton
 import com.amaya.intelligence.ui.screens.amaya.AmayaGroupedSettingsTokens
@@ -41,6 +43,8 @@ fun ProviderDetailScreen(
 ) {
     val settings by viewModel.settings.collectAsState()
     val operation by viewModel.operation.collectAsState()
+    val modelLatencies by viewModel.modelLatencies.collectAsState()
+    val testingModelId by viewModel.testingModelId.collectAsState()
     val connection = settings.connections.firstOrNull { it.id == connectionId }
     val colors = com.amaya.intelligence.ui.screens.amaya.iosAmayaColors()
     val context = LocalContext.current
@@ -202,6 +206,66 @@ fun ProviderDetailScreen(
 
                 item {
                     com.amaya.intelligence.ui.screens.amaya.AmayaSection("Models") {
+                        if (availableModels.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(
+                                        horizontal = AmayaGroupedSettingsTokens.rowHorizontalPadding,
+                                        vertical = 6.dp
+                                    ),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${selectedIds.size} of ${availableModels.size} active",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = colors.secondaryText
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    if (selectedIds.isNotEmpty()) {
+                                        TextButton(
+                                            onClick = {
+                                                viewModel.testActiveModelsLatency(connection)
+                                            },
+                                            enabled = testingModelId == null,
+                                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            if (testingModelId != null) {
+                                                CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp)
+                                                Spacer(Modifier.width(4.dp))
+                                            } else {
+                                                Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                Spacer(Modifier.width(4.dp))
+                                            }
+                                            Text("Test Latency", fontSize = 12.sp)
+                                        }
+                                        TextButton(
+                                            onClick = {
+                                                selectedIds = emptySet()
+                                                viewModel.saveVisibleModels(connection.id, emptyList()) {}
+                                            },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Disable All", fontSize = 12.sp)
+                                        }
+                                    }
+                                    if (selectedIds.size < availableModels.size) {
+                                        TextButton(
+                                            onClick = {
+                                                val allIds = availableModels.map { it.id }.toSet()
+                                                selectedIds = allIds
+                                                viewModel.saveVisibleModels(connection.id, availableModels) {}
+                                            },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Enable All", fontSize = 12.sp)
+                                        }
+                                    }
+                                }
+                            }
+                            ModelDivider(colors)
+                        }
                         if (filteredModels.isEmpty()) {
                             Box(
                                 Modifier
@@ -222,6 +286,8 @@ fun ProviderDetailScreen(
                                     providerId = connection.providerId,
                                     checked = model.id in selectedIds,
                                     colors = colors,
+                                    latencyResult = modelLatencies[model.id],
+                                    isTestingLatency = testingModelId == model.id,
                                     onToggle = {
                                         val updatedIds = if (model.id in selectedIds) {
                                             selectedIds - model.id
@@ -234,7 +300,10 @@ fun ProviderDetailScreen(
                                             availableModels.filter { it.id in updatedIds }
                                         ) {}
                                     },
-                                    onConfigure = { editingModel = model }
+                                    onConfigure = { editingModel = model },
+                                    onTestLatency = {
+                                        viewModel.testModelLatency(connection, model.id)
+                                    }
                                 )
                                 if (index < filteredModels.lastIndex) ModelDivider(colors)
                             }
@@ -328,6 +397,11 @@ fun ProviderDetailScreen(
         ModelConfigurationSheet(
             model = model,
             operation = operation,
+            latencyResult = modelLatencies[model.id],
+            isTestingLatency = testingModelId == model.id,
+            onTestLatency = {
+                viewModel.testModelLatency(connection, model.id)
+            },
             onDismiss = { editingModel = null },
             onSave = { updated ->
                 viewModel.saveModel(connection.id, updated) {
@@ -444,6 +518,12 @@ private fun AddCustomModelSheet(
     var displayName by remember { mutableStateOf("") }
     val normalizedId = modelId.trim()
     val duplicate = normalizedId in existingModelIds
+    val detectedContext = remember(normalizedId) {
+        if (normalizedId.isNotBlank()) ModelContextDetector.detectContextWindow(normalizedId) else null
+    }
+    val detectedMaxOutput = remember(normalizedId, detectedContext) {
+        if (normalizedId.isNotBlank()) ModelContextDetector.detectMaxOutputTokens(normalizedId, contextWindow = detectedContext) else null
+    }
 
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -457,6 +537,13 @@ private fun AddCustomModelSheet(
             supportingText = { Text("Use the ID accepted by this provider.") },
             singleLine = true
         )
+        if (detectedContext != null) {
+            Text(
+                "Detected context window: ${ModelContextDetector.formatTokenCount(detectedContext)} tokens",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
         OutlinedTextField(
             value = displayName,
             onValueChange = { displayName = it },
@@ -470,7 +557,10 @@ private fun AddCustomModelSheet(
                 onSave(
                     ConfiguredModel(
                         id = normalizedId,
-                        displayName = displayName.trim().ifBlank { normalizedId }
+                        displayName = displayName.trim().ifBlank { normalizedId },
+                        contextWindowTokens = detectedContext,
+                        maxOutputTokens = detectedMaxOutput,
+                        enabled = true
                     )
                 )
             },
@@ -598,6 +688,9 @@ private fun ApiKeySheet(
 private fun ModelConfigurationSheet(
     model: ConfiguredModel,
     operation: ManageModelsViewModel.OperationState,
+    latencyResult: ModelLatencyResult? = null,
+    isTestingLatency: Boolean = false,
+    onTestLatency: (() -> Unit)? = null,
     onDismiss: () -> Unit,
     onSave: (ConfiguredModel) -> Unit
 ) {
@@ -607,6 +700,10 @@ private fun ModelConfigurationSheet(
     var contextWindow by remember(model.id, model.contextWindowTokens) { mutableStateOf(model.contextWindowTokens?.toString().orEmpty()) }
     var maxInput by remember(model.id, model.maxInputTokens) { mutableStateOf(model.maxInputTokens?.toString().orEmpty()) }
     var maxOutput by remember(model.id, model.maxOutputTokens) { mutableStateOf(model.maxOutputTokens?.toString().orEmpty()) }
+    val detectedContext = remember(model.id) { ModelContextDetector.detectContextWindow(model.id) }
+    val detectedMaxOutput = remember(model.id, detectedContext) {
+        ModelContextDetector.detectMaxOutputTokens(model.id, contextWindow = detectedContext)
+    }
     val candidate = runCatching {
         model.copy(
             displayName = displayName.trim().ifBlank { model.id },
@@ -627,9 +724,123 @@ private fun ModelConfigurationSheet(
             label = { Text("Display name") },
             singleLine = true
         )
-        TokenField("Context window", contextWindow) { contextWindow = it }
+        if (detectedContext != null && contextWindow != detectedContext.toString()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Detected: ${ModelContextDetector.formatTokenCount(detectedContext)} tokens",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                TextButton(
+                    onClick = {
+                        contextWindow = detectedContext.toString()
+                        detectedMaxOutput?.let { maxOutput = it.toString() }
+                    },
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text("Apply auto-detect", fontSize = 12.sp)
+                }
+            }
+        }
+        TokenField(
+            label = "Context window",
+            value = contextWindow
+        ) { contextWindow = it }
         TokenField("Max input", maxInput) { maxInput = it }
         TokenField("Max output", maxOutput) { maxOutput = it }
+
+        if (onTestLatency != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Speed,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Model Latency",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Button(
+                            onClick = onTestLatency,
+                            enabled = !isTestingLatency,
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            if (isTestingLatency) {
+                                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 1.5.dp)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Testing…", fontSize = 12.sp)
+                            } else {
+                                Text(if (latencyResult == null) "Test Latency" else "Retest", fontSize = 12.sp)
+                            }
+                        }
+                    }
+                    if (latencyResult != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(androidx.compose.foundation.shape.CircleShape)
+                                    .background(
+                                        if (latencyResult.isSuccess) {
+                                            when {
+                                                latencyResult.latencyMs < 600 -> Color(0xFF4CAF50)
+                                                latencyResult.latencyMs < 1500 -> Color(0xFFFFA000)
+                                                else -> Color(0xFFFF7043)
+                                            }
+                                        } else MaterialTheme.colorScheme.error
+                                    )
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = if (latencyResult.isSuccess) "Response time: ${latencyResult.latencyMs} ms" else "Failed to respond",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                                color = if (latencyResult.isSuccess) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
+                            )
+                        }
+                        if (!latencyResult.errorMessage.isNullOrBlank()) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = latencyResult.errorMessage,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        if (!latencyResult.sampleResponse.isNullOrBlank()) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = "Sample response: \"${latencyResult.sampleResponse.trim()}\"",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         candidate.exceptionOrNull()?.message?.let { message -> InlineError(message) }
         Button(
             onClick = { candidate.getOrNull()?.let(onSave) },
@@ -663,8 +874,11 @@ fun ModernModelToggleRow(
     providerId: String,
     checked: Boolean,
     colors: com.amaya.intelligence.ui.screens.amaya.IosAmayaColors,
+    latencyResult: ModelLatencyResult? = null,
+    isTestingLatency: Boolean = false,
     onToggle: () -> Unit,
-    onConfigure: () -> Unit
+    onConfigure: () -> Unit,
+    onTestLatency: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -701,10 +915,17 @@ fun ModernModelToggleRow(
                 ),
                 color = colors.primaryText
             )
-            if (model.displayName != model.id) {
+            val contextTokens = model.contextWindowTokens
+                ?: ModelContextDetector.detectContextWindow(model.id)
+            val subtext = buildList {
+                if (model.displayName != model.id) add(model.id)
+                if (contextTokens != null) add("${ModelContextDetector.formatTokenCount(contextTokens)} context")
+            }.joinToString(" • ")
+
+            if (subtext.isNotBlank()) {
                 Spacer(Modifier.height(AmayaGroupedSettingsTokens.inlineTextSpacing))
                 Text(
-                    model.id,
+                    subtext,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontSize = 12.5.sp,
                         lineHeight = 16.sp
@@ -713,6 +934,57 @@ fun ModernModelToggleRow(
                     maxLines = 1
                 )
             }
+            if (latencyResult != null) {
+                Spacer(Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(
+                                if (latencyResult.isSuccess) {
+                                    when {
+                                        latencyResult.latencyMs < 600 -> Color(0xFF4CAF50)
+                                        latencyResult.latencyMs < 1500 -> Color(0xFFFFA000)
+                                        else -> Color(0xFFFF7043)
+                                    }
+                                } else MaterialTheme.colorScheme.error
+                            )
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = if (latencyResult.isSuccess) "${latencyResult.latencyMs} ms" else "Failed to respond",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = if (latencyResult.isSuccess) colors.secondaryText else MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+        if (onTestLatency != null) {
+            IconButton(
+                onClick = onTestLatency,
+                enabled = !isTestingLatency,
+                modifier = Modifier.size(32.dp)
+            ) {
+                if (isTestingLatency) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Speed,
+                        contentDescription = "Test latency for ${model.displayName}",
+                        tint = colors.secondaryText,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.width(2.dp))
         }
         Icon(
             Icons.Default.ChevronRight,
@@ -728,8 +1000,27 @@ fun ModernModelToggleRow(
 internal fun mergeConfiguredModels(
     savedModels: List<ConfiguredModel>,
     refreshedModels: List<ConfiguredModel>
-): List<ConfiguredModel> =
-    (refreshedModels + savedModels)
-        .associateBy { it.id }
-        .values
-        .sortedBy { it.displayName.lowercase() }
+): List<ConfiguredModel> {
+    val savedById = savedModels.associateBy { it.id }
+    val refreshedById = refreshedModels.associateBy { it.id }
+    val allIds = (refreshedModels.map { it.id } + savedModels.map { it.id }).distinct()
+
+    return allIds.mapNotNull { id ->
+        val saved = savedById[id]
+        val refreshed = refreshedById[id]
+        when {
+            saved != null && refreshed != null -> {
+                saved.copy(
+                    contextWindowTokens = saved.contextWindowTokens ?: refreshed.contextWindowTokens,
+                    maxOutputTokens = saved.maxOutputTokens ?: refreshed.maxOutputTokens,
+                    maxInputTokens = saved.maxInputTokens ?: refreshed.maxInputTokens,
+                    supportsTools = refreshed.supportsTools,
+                    supportsImages = refreshed.supportsImages
+                )
+            }
+            saved != null -> saved
+            refreshed != null -> refreshed.copy(enabled = false)
+            else -> null
+        }
+    }.sortedBy { it.displayName.lowercase() }
+}

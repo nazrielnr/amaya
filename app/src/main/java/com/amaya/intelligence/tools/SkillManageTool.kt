@@ -18,7 +18,7 @@ class SkillManageTool @Inject constructor(
     private val memoryClassifier: MemoryClassifier
 ) : Tool, ContextAwareTool {
     override val name = "skill_manage"
-    override val description = "Create, update, patch, archive, or delete reusable procedural skills when the user explicitly asks to manage skills. Never store credentials or trivial one-off notes."
+    override val description = "Create, update, patch, merge, archive, or delete reusable procedural skills when the user explicitly asks to manage skills. Never store credentials or trivial one-off notes."
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult =
         execute(arguments, ToolExecutionContext())
@@ -28,7 +28,7 @@ class SkillManageTool @Inject constructor(
             ?: return@withContext ToolResult.Error("Missing required: action", ErrorType.VALIDATION_ERROR)
         val name = arguments["name"] as? String
             ?: return@withContext ToolResult.Error("Missing required: name", ErrorType.VALIDATION_ERROR)
-        if (action in setOf("create", "update", "patch") && (arguments["content"] as? String).isNullOrBlank()) {
+        if (action in setOf("create", "update", "patch", "merge") && (arguments["content"] as? String).isNullOrBlank()) {
             return@withContext ToolResult.Error("Missing required: content", ErrorType.VALIDATION_ERROR)
         }
         if (action == "delete" && !context.confirmed) {
@@ -42,6 +42,7 @@ class SkillManageTool @Inject constructor(
             "create" -> createSkill(name, arguments).map { skillPayload("create", it, arguments) }
             "update" -> updateSkill(name, arguments, patch = false)
             "patch" -> updateSkill(name, arguments, patch = true)
+            "merge" -> mergeSkills(name, arguments).map { skillPayload("merge", it, arguments) }
             "archive" -> archiveSkill(name).map { basicPayload("archive", name) }
             "delete" -> skillRepository.deleteSkill(name).map { basicPayload("delete", name) }
             else -> Result.failure(IllegalArgumentException("Unsupported action: $action"))
@@ -102,6 +103,42 @@ class SkillManageTool @Inject constructor(
                 .put("summary", arguments["summary"]?.toString().orEmpty())
                 .put("diff", buildCoarseDiff(before.content, after.content))
         )
+    }
+
+    private suspend fun mergeSkills(targetName: String, arguments: Map<String, Any?>): Result<Skill> {
+        val content = requiredContent(arguments)
+        if (content.length < 120) return Result.failure(IllegalArgumentException("Merged skill content is too short/trivial."))
+        if (memoryClassifier.containsSecret(content)) return Result.failure(IllegalArgumentException("Skill content appears to contain a secret."))
+        val sourceNames = (arguments["source_names"] as? List<*>)?.mapNotNull { it as? String }?.filter(String::isNotBlank)
+            ?: return Result.failure(IllegalArgumentException("Missing required: source_names (array of skill names to merge)"))
+        if (sourceNames.isEmpty()) return Result.failure(IllegalArgumentException("source_names cannot be empty."))
+
+        val now = System.currentTimeMillis()
+        val description = (arguments["description"] as? String)?.take(180)
+            ?: content.lineSequence().firstOrNull { it.isNotBlank() }?.take(180)
+            ?: "Consolidated Amaya skill"
+        val tags = (arguments["tags"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+
+        val targetMetadata = SkillMetadata(
+            name = targetName,
+            description = description,
+            status = SkillStatus.ACTIVE,
+            usageCount = 0,
+            successCount = 0,
+            failureCount = 0,
+            createdAt = now,
+            updatedAt = now,
+            lastUsedAt = now,
+            createdBy = "agent-merge",
+            version = "1.0.0",
+            tags = tags,
+            enabled = true
+        )
+
+        val mergeResult = skillRepository.mergeSkills(sourceNames, Skill(metadata = targetMetadata, content = content))
+        if (mergeResult.isFailure) return Result.failure(mergeResult.exceptionOrNull() ?: IllegalStateException("Merge failed"))
+        val target = skillRepository.getSkill(targetName) ?: Skill(targetMetadata, content)
+        return Result.success(target)
     }
 
     private suspend fun archiveSkill(name: String): Result<Unit> {

@@ -3,6 +3,8 @@ package com.amaya.intelligence.data.repository
 import android.content.Context
 import com.amaya.intelligence.data.local.files.FileWorkspaceMemoryStore
 import com.amaya.intelligence.data.local.files.canonicalWorkspacePath
+import com.amaya.intelligence.data.remote.api.AiSettingsManager
+import com.amaya.intelligence.data.remote.api.EmbeddingClient
 import com.amaya.intelligence.domain.memory.MemoryAction
 import com.amaya.intelligence.domain.memory.MemoryClassifier
 import com.amaya.intelligence.domain.memory.MemoryDeduper
@@ -10,9 +12,12 @@ import com.amaya.intelligence.domain.memory.MemoryProposal
 import com.amaya.intelligence.domain.memory.MemoryScope
 import com.amaya.intelligence.domain.memory.MemoryStatus
 import com.amaya.intelligence.domain.memory.MemoryType
+import com.amaya.intelligence.domain.memory.MemoryVolatility
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlin.math.pow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.UUID
@@ -24,9 +29,19 @@ class FileMemoryRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val classifier: MemoryClassifier,
     private val deduper: MemoryDeduper,
-    private val workspaceStore: FileWorkspaceMemoryStore
+    private val workspaceStore: FileWorkspaceMemoryStore,
+    private val settingsManager: AiSettingsManager,
+    private val embeddingClient: EmbeddingClient
 ) : MemoryRepository {
     private val fileLock = Any()
+    /** Small LRU of embedded text vectors, keyed by `endpoint|model|text-hash`. Synchronized because
+     * semantic reranking runs outside [fileLock] (a suspend call inside a critical section is an
+     * error), so concurrent searches may touch the cache. */
+    private val vectorCache: MutableMap<String, List<Float>> = java.util.Collections.synchronizedMap(
+        object : LinkedHashMap<String, List<Float>>(64, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<Float>>?): Boolean = size > VECTOR_CACHE_MAX
+        }
+    )
 
     private val memoryDir: File
         get() = File(context.filesDir, "memory").also { it.mkdirs() }
@@ -45,6 +60,10 @@ class FileMemoryRepository @Inject constructor(
                     MemoryType.WORKSPACE_FACT -> {
                         require(!proposal.workspacePath.isNullOrBlank()) { "Workspace memory requires an active workspace." }
                         applyStructuredMemory(proposal, "Project Memory")
+                    }
+                    MemoryType.DECISION -> {
+                        require(!proposal.workspacePath.isNullOrBlank()) { "Project decisions require an active workspace." }
+                        applyStructuredMemory(proposal, "Project Decision")
                     }
                 }
             }
@@ -114,28 +133,96 @@ class FileMemoryRepository @Inject constructor(
         }
     }
 
+    override suspend fun runHousekeeping(): Result<MemoryHousekeepingReport> = withContext(Dispatchers.IO) {
+        synchronized(fileLock) {
+            runCatching {
+                ensureMigrated()
+                var archivedCount = 0
+                var cappedCount = 0
+                var decayedCount = 0
+                var expiredCount = 0
+                val now = System.currentTimeMillis()
+                recordFiles().forEach { file ->
+                    val records = readRecords(file)
+                    if (records.isEmpty()) return@forEach
+                    var changed = false
+                    val decayed = records.map { record ->
+                        if (record.status != MemoryStatus.ACTIVE) return@map record
+                        // Explicit TTL expiration check
+                        if (record.expiresAt != null && record.expiresAt <= now) {
+                            expiredCount++
+                            changed = true
+                            return@map record.copy(status = MemoryStatus.SUPERSEDED, updatedAt = now)
+                        }
+                        val factor = decayFactor(record)
+                        when {
+                            factor < ARCHIVE_DECAY_FLOOR -> {
+                                archivedCount++
+                                changed = true
+                                record.copy(status = MemoryStatus.SUPERSEDED, updatedAt = now)
+                            }
+                            factor < 1.0 -> {
+                                decayedCount++
+                                record
+                            }
+                            else -> record
+                        }
+                    }
+                    val active = decayed.filter { it.status == MemoryStatus.ACTIVE }
+                    val finalized = if (active.size > MEMORY_CAP_PER_SCOPE) {
+                        val keepIds = active.sortedByDescending { priorityScore(it, 1.0) }
+                            .take(MEMORY_CAP_PER_SCOPE)
+                            .map { it.id to it.version }
+                            .toSet()
+                        decayed.map { record ->
+                            if (record.status == MemoryStatus.ACTIVE && (record.id to record.version) !in keepIds) {
+                                cappedCount++
+                                changed = true
+                                record.copy(status = MemoryStatus.SUPERSEDED, updatedAt = now)
+                            } else record
+                        }
+                    } else decayed
+                    if (changed) writeRecords(file, finalized)
+                }
+                MemoryHousekeepingReport(
+                    archivedCount = archivedCount,
+                    cappedCount = cappedCount,
+                    decayedCount = decayedCount,
+                    expiredCount = expiredCount
+                )
+            }
+        }
+    }
+
     override suspend fun listMemoryRecords(
         type: MemoryType?,
         query: String?,
         limit: Int,
         workspacePath: String?
     ): List<MemoryRecord> = withContext(Dispatchers.IO) {
-        synchronized(fileLock) {
+        // Records are read under the file lock, but lexical scoring and the optional semantic
+        // rerank run outside it — rerankWithEmbeddings is a suspend call (network), which is not
+        // allowed inside a critical section.
+        val scoped = synchronized(fileLock) {
             ensureMigrated()
             val canonicalWorkspace = workspacePath?.takeIf(String::isNotBlank)?.let(::canonicalWorkspacePath)
-            val scoped = activeMemoryRecords()
+            activeMemoryRecords()
                 .filter { type == null || it.type == type }
-                .filter { it.type != MemoryType.WORKSPACE_FACT || it.workspacePath == canonicalWorkspace }
-            val ranked = if (query.isNullOrBlank()) {
-                scoped.sortedByDescending { it.updatedAt }
-            } else {
-                scoped.map { it to scoreMemoryRecord(it, query) }
-                    .filter { it.second >= MIN_SEARCH_SCORE }
-                    .sortedByDescending { it.second }
-                    .map { it.first }
-            }
-            ranked.take(limit.coerceIn(1, MAX_LIST_LIMIT))
+                .filter { it.type !in WORKSPACE_SCOPED_TYPES || it.workspacePath == canonicalWorkspace }
         }
+        val ranked = if (query.isNullOrBlank()) {
+            scoped.sortedByDescending { it.updatedAt }.map { it to 0.0 }
+        } else {
+            val lexical = scoped.map { it to scoreMemoryRecord(it, query) }
+                .filter { it.second >= MIN_SEARCH_SCORE }
+                .sortedByDescending { it.second }
+            val blended = rerankWithEmbeddings(lexical, query) ?: lexical
+            // Fusion priority (scheme §2): relevance × volatility decay × confidence. Decay is applied
+            // after the relevance threshold so stale memories are ranked lower, not filtered out.
+            blended.map { (record, relevance) -> record to priorityScore(record, relevance) }
+                .sortedByDescending { it.second }
+        }
+        ranked.map { it.first }.take(limit.coerceIn(1, MAX_LIST_LIMIT))
     }
 
     override suspend fun updateMemoryById(
@@ -171,6 +258,30 @@ class FileMemoryRepository @Inject constructor(
         }
     }
 
+    override suspend fun appendEvidence(
+        id: String,
+        evidenceLine: String,
+        workspacePath: String?
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        synchronized(fileLock) {
+            runCatching {
+                ensureMigrated()
+                val clean = evidenceLine.trim()
+                require(clean.isNotBlank()) { "Evidence line is required." }
+                val record = findActiveMemory(id, workspacePath)
+                val now = System.currentTimeMillis()
+                supersedeMemoryRecord(record, now)
+                appendMemoryRecord(record.copy(
+                    action = MemoryAction.REPLACE,
+                    reason = "Verification evidence appended.",
+                    updatedAt = now,
+                    version = record.version + 1,
+                    evidence = (record.evidence + clean.take(300)).take(MAX_EVIDENCE_LINES)
+                ))
+            }
+        }
+    }
+
     override suspend fun deleteMemoryById(
         id: String,
         expectedVersion: Int,
@@ -189,10 +300,30 @@ class FileMemoryRepository @Inject constructor(
         }
     }
 
+    override suspend fun confirmMemory(id: String, workspacePath: String?): Result<String> = withContext(Dispatchers.IO) {
+        synchronized(fileLock) {
+            runCatching {
+                ensureMigrated()
+                val record = findActiveMemory(id, workspacePath)
+                val now = System.currentTimeMillis()
+                // Content is unchanged; only the confirmation status advances. Supersede + append so
+                // the active record (last per id) carries the new verified state.
+                supersedeMemoryRecord(record, now)
+                appendMemoryRecord(record.copy(
+                    updatedAt = now,
+                    verified = true,
+                    verifyCount = record.verifyCount + 1,
+                    lastConfirmedAt = now
+                ))
+                "Confirmed memory ${record.id} (verified)."
+            }
+        }
+    }
+
     private fun findActiveMemory(id: String, workspacePath: String?): MemoryRecord {
         val canonicalWorkspace = workspacePath?.takeIf(String::isNotBlank)?.let(::canonicalWorkspacePath)
         return activeMemoryRecords().firstOrNull {
-            it.id == id && (it.type != MemoryType.WORKSPACE_FACT || it.workspacePath == canonicalWorkspace)
+            it.id == id && (it.type !in WORKSPACE_SCOPED_TYPES || it.workspacePath == canonicalWorkspace)
         } ?: throw IllegalArgumentException("Memory not found: $id")
     }
 
@@ -219,20 +350,46 @@ class FileMemoryRepository @Inject constructor(
             workspaceId = proposal.workspaceId ?: canonicalWorkspace?.let(::workspaceId),
             subject = proposal.subject.ifBlank { defaultSubject(proposal.scope) },
             attribute = proposal.attribute.ifBlank { inferAttribute(finalContent, proposal.title, proposal.type) },
-            sourceConversationId = proposal.sourceConversationId
+            sourceConversationId = proposal.sourceConversationId,
+            volatility = proposal.volatility ?: MemoryVolatility.fromType(proposal.type),
+            evidence = proposal.evidence
         ).withIdentity()
-        val existing = activeMemoryRecords().firstOrNull { memoryIdentity(it) == memoryIdentity(candidate) }
-        if (existing != null && deduper.isDuplicate(candidate.content, existing.content)) return "Skipped duplicate $label."
+        val allActive = activeMemoryRecords()
+        val existing = allActive.firstOrNull { memoryIdentity(it) == memoryIdentity(candidate) }
+            ?: allActive.firstOrNull {
+                it.type == candidate.type &&
+                it.scope == candidate.scope &&
+                (candidate.scope != MemoryScope.WORKSPACE || it.workspacePath == candidate.workspacePath) &&
+                (it.attribute.isNotBlank() && it.attribute == candidate.attribute || deduper.isContradictionOrUpdate(candidate.content, it.content))
+            }
+
+        if (existing != null && deduper.isDuplicate(candidate.content, existing.content)) {
+            if (candidate.confidence > existing.confidence && !existing.verified) {
+                val now = System.currentTimeMillis()
+                supersedeMemoryRecord(existing, now, supersededById = candidate.id)
+                appendMemoryRecord(existing.copy(
+                    confidence = candidate.confidence,
+                    updatedAt = now,
+                    expiresAt = candidate.expiresAt ?: existing.expiresAt,
+                    version = existing.version + 1,
+                    evidence = (existing.evidence + candidate.evidence).distinct().take(MAX_EVIDENCE_LINES)
+                ))
+                return "Refreshed confidence for $label."
+            }
+            return "Skipped duplicate $label."
+        }
 
         val now = System.currentTimeMillis()
-        if (existing != null) supersedeMemoryRecord(existing, now)
+        // Phase B temporal validity: the previous revision is marked superseded and points at the
+        // replacing record (valid → superseded → archived), instead of silently vanishing.
+        if (existing != null) supersedeMemoryRecord(existing, now, supersededById = candidate.id)
         appendMemoryRecord(candidate.copy(
             id = existing?.id ?: candidate.id,
             version = existing?.version?.plus(1) ?: candidate.version,
             createdAt = existing?.createdAt ?: candidate.createdAt,
             updatedAt = now
         ))
-        return if (existing == null) "Saved to $label." else "Updated $label."
+        return if (existing == null) "Saved to $label." else "Updated $label (resolved update/contradiction)."
     }
 
     private fun activeMemoryRecords(): List<MemoryRecord> {
@@ -279,15 +436,16 @@ class FileMemoryRepository @Inject constructor(
         file.appendText(normalized.toJson().toString() + "\n")
     }
 
-    private fun supersedeMemoryRecord(record: MemoryRecord, updatedAt: Long) {
+    private fun supersedeMemoryRecord(record: MemoryRecord, updatedAt: Long, supersededById: String? = null) {
         val file = recordFile(record)
         val records = readRecords(file).toMutableList()
         val index = records.indexOfLast { it.id == record.id && it.version == record.version && it.status == MemoryStatus.ACTIVE }
+        val superseded = record.copy(status = MemoryStatus.SUPERSEDED, updatedAt = updatedAt, supersededById = supersededById)
         if (index >= 0) {
-            records[index] = records[index].copy(status = MemoryStatus.SUPERSEDED, updatedAt = updatedAt)
+            records[index] = records[index].copy(status = MemoryStatus.SUPERSEDED, updatedAt = updatedAt, supersededById = supersededById)
             writeRecords(file, records)
         } else {
-            appendMemoryRecord(record.copy(status = MemoryStatus.SUPERSEDED, updatedAt = updatedAt))
+            appendMemoryRecord(superseded)
         }
     }
 
@@ -416,7 +574,8 @@ class FileMemoryRepository @Inject constructor(
                     workspacePath = workspacePath,
                     workspaceId = workspacePath?.let(::workspaceId),
                     subject = defaultSubject(scope),
-                    attribute = inferAttribute(content, inferTitle(content, type), type)
+                    attribute = inferAttribute(content, inferTitle(content, type), type),
+                    volatility = MemoryVolatility.fromType(type)
                 )
             }.toList()
     }
@@ -440,7 +599,8 @@ class FileMemoryRepository @Inject constructor(
 
     private fun targetFor(type: MemoryType, workspacePath: String?): String = when (type) {
         MemoryType.USER_PROFILE -> "records.jsonl#user"
-        MemoryType.WORKSPACE_FACT -> "workspaces/${workspacePath?.let(::workspaceId)}/records.jsonl"
+        MemoryType.WORKSPACE_FACT,
+        MemoryType.DECISION -> "workspaces/${workspacePath?.let(::workspaceId)}/records.jsonl"
     }
 
     private fun memoryIdentity(record: MemoryRecord): String {
@@ -465,6 +625,7 @@ class FileMemoryRepository @Inject constructor(
             listOf("concise", "ringkas", "detail", "verbose", "panjang", "singkat").any { it in lower } -> "response_detail"
             listOf("bahasa", "language", "respond in", "jawab saya", "indonesian", "english").any { it in lower } -> "response_language"
             type == MemoryType.WORKSPACE_FACT && listOf("build command", "assemble", "gradlew", "mvn ", "npm run build").any { it in lower } -> "build_command"
+            type == MemoryType.DECISION && listOf("decided", "decision", "chose", "memilih", "keputusan", "rather than", "instead of", "opted for").any { it in lower } -> "decision"
             type == MemoryType.WORKSPACE_FACT && listOf("test command", "test task", "npm test", "pytest").any { it in lower } -> "test_command"
             type == MemoryType.WORKSPACE_FACT && listOf("uses gradle", "uses maven", "build system").any { it in lower } -> "build_system"
             title.isNotBlank() && title !in GENERIC_TITLES -> normalizeMemoryText(title).take(80)
@@ -480,6 +641,7 @@ class FileMemoryRepository @Inject constructor(
             "works at" in lower -> "Workplace context"
             type == MemoryType.USER_PROFILE -> "User profile"
             type == MemoryType.WORKSPACE_FACT -> "Workspace fact"
+            type == MemoryType.DECISION -> "Project decision"
             else -> content.removeSuffix(".").take(80).ifBlank { "Memory" }
         }
     }
@@ -511,6 +673,12 @@ class FileMemoryRepository @Inject constructor(
         .put("attribute", attribute)
         .put("status", status.name)
         .put("sourceConversationId", sourceConversationId)
+        .put("volatility", volatility.name)
+        .put("verified", verified)
+        .put("verifyCount", verifyCount)
+        .put("lastConfirmedAt", lastConfirmedAt)
+        .put("evidence", JSONArray(evidence))
+        .put("supersededById", supersededById)
 
     private fun JSONObject.toMemoryRecordOrNull(): MemoryRecord? {
         val type = runCatching { MemoryType.valueOf(optString("type")) }.getOrNull() ?: return null
@@ -541,7 +709,16 @@ class FileMemoryRepository @Inject constructor(
             attribute = optString("attribute"),
             status = if (rawAction.equals("REMOVE", true)) MemoryStatus.SUPERSEDED
                 else conflictFreeStatus(optString("status", MemoryStatus.ACTIVE.name)),
-            sourceConversationId = optString("sourceConversationId").takeIf(String::isNotBlank)
+            sourceConversationId = optString("sourceConversationId").takeIf(String::isNotBlank),
+            volatility = runCatching { MemoryVolatility.valueOf(optString("volatility")) }
+                .getOrDefault(MemoryVolatility.fromType(type)),
+            verified = optBoolean("verified", false),
+            verifyCount = optInt("verifyCount", 0).coerceAtLeast(0),
+            lastConfirmedAt = if (has("lastConfirmedAt") && !isNull("lastConfirmedAt")) optLong("lastConfirmedAt") else null,
+            evidence = optJSONArray("evidence")?.let { array ->
+                List(array.length()) { array.optString(it) }.filter(String::isNotBlank)
+            }.orEmpty(),
+            supersededById = optString("supersededById").takeIf(String::isNotBlank)
         ).withIdentity()
     }
 
@@ -553,16 +730,112 @@ class FileMemoryRepository @Inject constructor(
         return content.trim()
     }
 
+    /**
+     * Rank a memory record against the query. Field-weighted lexical scoring (title 3x,
+     * attribute 2.5x, content 2x), fuzzy substring hits, multi-word bigram co-occurrence, and a
+     * recency decay so recently relevant memories outrank stale ones. Purely local (no embedding
+     * API) while keeping the same pass threshold as before, so recall improves without noise.
+     */
     private fun scoreMemoryRecord(record: MemoryRecord, query: String): Double {
-        val terms = expandTerms(query)
-        if (terms.isEmpty()) return 0.0
-        val haystack = expandTerms("${record.title} ${record.content} ${record.label} ${record.type}")
+        val queryTerms = expandTerms(query)
+        if (queryTerms.isEmpty()) return 0.0
+        val titleTerms = expandTerms(record.title)
+        val attributeTerms = expandTerms(record.attribute)
+        val contentTerms = expandTerms("${record.content} ${record.label} ${record.type.name}")
+        val allTerms = titleTerms + attributeTerms + contentTerms
         var score = 0.0
-        terms.forEach { term ->
-            if (term in haystack) score += 2.0
-            else if (haystack.any { it.contains(term) || term.contains(it) }) score += 0.75
+        queryTerms.forEach { term ->
+            when {
+                term in titleTerms -> score += 3.0
+                term in attributeTerms -> score += 2.5
+                term in contentTerms -> score += 2.0
+                allTerms.any { it.contains(term) || term.contains(it) } -> score += 0.75
+            }
         }
+        score += bigramOverlap(query, "${record.title} ${record.attribute} ${record.content} ${record.label}") * 1.5
+        // Recency was removed here: time-based ranking is handled by priorityScore (volatility decay)
+        // so the relevance threshold stays age-independent and decay applies to the final rank.
         return score
+    }
+
+    /**
+     * Final ranking weight = relevance × volatility decay × confidence. Mirrors the biomimetic
+     * priority_score (decay_score × urgency_weight) from the self-improving memory scheme §2,
+     * where decay depends on the memory's volatility class and how long ago it was updated.
+     */
+    private fun priorityScore(record: MemoryRecord, relevance: Double): Double =
+        relevance * decayFactor(record) * confidenceFactor(record.confidence)
+
+    /** Decay multiplier^(periods) with a floor so decayed memories still surface at a low priority. */
+    private fun decayFactor(record: MemoryRecord): Double {
+        val ageDays = (System.currentTimeMillis() - record.updatedAt).coerceAtLeast(0L) / (24L * 60L * 60L * 1000L)
+        val periods = ageDays / DECAY_PERIOD_DAYS
+        return record.volatility.decayMultiplier.pow(periods).coerceIn(MIN_DECAY_FLOOR, 1.0)
+    }
+
+    /** Low-confidence memories rank below confirmed ones (0.7–1.0 multiplier). */
+    private fun confidenceFactor(confidence: Double): Double = 0.7 + 0.3 * confidence.coerceIn(0.0, 1.0)
+
+    /**
+     * Semantic rerank: when the user configured an embedding endpoint, re-score the top lexical
+     * candidates by cosine similarity to the query (batched in one API call) and blend the scores.
+     * Any failure (offline, bad key, unsupported model) falls back to the lexical ranking, so
+     * semantic recall is strictly an improvement, never a regression. Vectors are cached per
+     * (endpoint, model, text-hash) so repeated snapshots do not re-hit the API.
+     */
+    private suspend fun rerankWithEmbeddings(
+        lexical: List<Pair<MemoryRecord, Double>>,
+        query: String
+    ): List<Pair<MemoryRecord, Double>>? {
+        if (lexical.isEmpty()) return lexical
+        // Settings and credential reads can throw on broken stores; a search must never crash.
+        val settings = runCatching { settingsManager.getSettings() }.getOrNull() ?: return null
+        val config = settings.memoryEmbedding
+        if (!config.enabled || config.endpoint.isBlank() || config.model.isBlank()) return null
+        val apiKey = runCatching { settingsManager.getEmbeddingApiKey(config) }.getOrNull()
+        if (apiKey.isNullOrBlank()) return null
+        val candidates = lexical.take(EMBEDDING_CANDIDATE_LIMIT)
+        return runCatching {
+            val texts = candidates.map { (record, _) ->
+                "${record.title} ${record.attribute} ${record.content} ${record.label}".take(EMBEDDING_TEXT_MAX_CHARS)
+            }
+            val cacheKey = "${config.format}|${config.model}|${config.endpoint}"
+            val queryVector = embeddingClient.embed(listOf(query.take(EMBEDDING_TEXT_MAX_CHARS)), config, apiKey).getOrThrow().first()
+            val vectors = embeddingClient.embed(texts, config, apiKey).getOrThrow()
+            val blended = candidates.mapIndexedNotNull { index, (record, lexicalScore) ->
+                val text = texts[index]
+                val cached = vectorCache["$cacheKey|${text.hashCode()}"]
+                val vector = cached ?: vectors.getOrNull(index)?.also { vectorCache["$cacheKey|${text.hashCode()}"] = it }
+                if (vector == null) return@mapIndexedNotNull null
+                val similarity = cosineSimilarity(queryVector, vector)
+                val combined = lexicalScore + EMBEDDING_SIMILARITY_WEIGHT * similarity
+                if (combined >= MIN_SEARCH_SCORE) record to combined else null
+            }
+            blended.sortedByDescending { it.second }.ifEmpty { lexical }
+        }.getOrNull() ?: lexical
+    }
+
+    private fun cosineSimilarity(a: List<Float>, b: List<Float>): Double {
+        if (a.isEmpty() || a.size != b.size) return 0.0
+        var dot = 0.0
+        var normA = 0.0
+        var normB = 0.0
+        for (i in a.indices) {
+            dot += a[i] * b[i]
+            normA += a[i] * a[i]
+            normB += b[i] * b[i]
+        }
+        if (normA == 0.0 || normB == 0.0) return 0.0
+        return dot / (kotlin.math.sqrt(normA) * kotlin.math.sqrt(normB))
+    }
+
+    /** Fraction of the query's adjacent token pairs whose tokens both appear in [candidate]. */
+    private fun bigramOverlap(query: String, candidate: String): Double {
+        val queryTerms = expandTerms(query).toList()
+        if (queryTerms.size < 2) return 0.0
+        val candidateTerms = expandTerms(candidate).toSet()
+        val hits = queryTerms.zipWithNext().count { pair -> pair.first in candidateTerms && pair.second in candidateTerms }
+        return hits.toDouble() / (queryTerms.size - 1)
     }
 
     private fun expandTerms(text: String): Set<String> {
@@ -607,8 +880,25 @@ class FileMemoryRepository @Inject constructor(
         private const val MIN_SEARCH_SCORE = 2.0
         private const val MAX_LIST_LIMIT = 200
         private const val MAX_REVISIONS_PER_MEMORY = 5
+        /** Top lexical candidates re-scored semantically; bounds API cost to ~13 texts per recall. */
+        private const val EMBEDDING_CANDIDATE_LIMIT = 12
+        private const val EMBEDDING_TEXT_MAX_CHARS = 512
+        /** Cosine (0..1) weight added on top of the lexical score. */
+        private const val EMBEDDING_SIMILARITY_WEIGHT = 3.0
+        private const val VECTOR_CACHE_MAX = 200
+        /** Decay period for the volatility multiplier (scheme §2 uses 30-day periods). */
+        private const val DECAY_PERIOD_DAYS = 30.0
+        /** Memories decayed below this are archived during end-of-session housekeeping. */
+        private const val ARCHIVE_DECAY_FLOOR = 0.05
+        /** Floor for the live decay factor so decayed memories still rank (but last). */
+        private const val MIN_DECAY_FLOOR = 0.05
+        /** Bounded memory cap per scope (user file and each workspace file). */
+        private const val MEMORY_CAP_PER_SCOPE = 200
+        /** Cap on appended provenance lines kept per memory record. */
+        private const val MAX_EVIDENCE_LINES = 8
         private val UUID_REGEX = Regex("[0-9a-fA-F-]{36}")
-        private val DURABLE_TYPES = setOf(MemoryType.USER_PROFILE, MemoryType.WORKSPACE_FACT)
+        private val DURABLE_TYPES = setOf(MemoryType.USER_PROFILE, MemoryType.WORKSPACE_FACT, MemoryType.DECISION)
+        private val WORKSPACE_SCOPED_TYPES = setOf(MemoryType.WORKSPACE_FACT, MemoryType.DECISION)
         private val LEGACY_DAILY_FILE = Regex("\\d{4}-\\d{2}-\\d{2}\\.md")
         private val GENERIC_TITLES = setOf("User profile", "Workspace fact", "Memory")
         private val USER_FACT_TERMS = setOf(
@@ -622,7 +912,15 @@ class FileMemoryRepository @Inject constructor(
             "detail" to setOf("rinci", "lengkap", "panjang", "verbose"),
             "name" to setOf("nama", "panggil", "nickname", "call"),
             "project" to setOf("workspace", "repo", "repository", "codebase", "kode"),
-            "memory" to setOf("ingat", "remember", "memori")
+            "memory" to setOf("ingat", "remember", "memori"),
+            // Site/browser terms so browser-site memory and login/flow facts recall across languages.
+            "login" to setOf("sign in", "signin", "log in", "masuk", "authenticate", "auth"),
+            "register" to setOf("sign up", "signup", "daftar", "buat akun"),
+            "search" to setOf("cari", "find", "lookup"),
+            "download" to setOf("unduh", "downloads"),
+            "upload" to setOf("unggah"),
+            "settings" to setOf("pengaturan", "config", "configuration"),
+            "browser" to setOf("web", "website", "site", "halaman", "page")
         )
     }
 }

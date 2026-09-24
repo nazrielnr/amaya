@@ -125,6 +125,12 @@
             android:theme="@style/Theme.Amaya" />
 
         <activity
+            android:name=".ui.activities.recommendations.local.LocalRecommendationsActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Amaya" />
+
+        <activity
             android:name=".ui.activities.amaya.local.LocalMemoryActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize"
@@ -174,6 +180,12 @@
 
         <activity
             android:name=".ui.activities.shared.LocalReferenceListActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Amaya" />
+
+        <activity
+            android:name=".ui.activities.terminal.TerminalActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Amaya" />

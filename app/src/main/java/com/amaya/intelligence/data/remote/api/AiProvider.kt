@@ -231,10 +231,34 @@ private val JSON_ARGUMENTS_TYPE = com.squareup.moshi.Types.newParameterizedType(
     Map::class.java, String::class.java, Any::class.java
 )
 
-fun com.squareup.moshi.Moshi.parseJsonArgs(json: String): Result<Map<String, Any?>> = runCatching {
-    require(json.isNotBlank()) { "Tool arguments are empty" }
-    adapter<Map<String, Any?>>(JSON_ARGUMENTS_TYPE).fromJson(json)
-        ?: error("Tool arguments must be a JSON object")
+/**
+ * Prefix of the provider error emitted when a model's tool-call arguments fail to parse.
+ * The agent loop treats errors starting with this prefix as a recoverable tool-call failure
+ * and feeds them back to the model instead of terminating the turn.
+ */
+internal const val INVALID_TOOL_ARGUMENTS_PREFIX = "Invalid tool arguments"
+
+fun com.squareup.moshi.Moshi.parseJsonArgs(json: String): Result<Map<String, Any?>> =
+    runCatching {
+        require(json.isNotBlank()) { "Tool arguments are empty" }
+        adapter<Map<String, Any?>>(JSON_ARGUMENTS_TYPE).fromJson(json)
+            ?: error("Tool arguments must be a JSON object")
+    }.recoverCatching { strictFailure ->
+        // Models occasionally emit slightly malformed JSON (trailing commas, single-quoted or
+        // unquoted keys, comments). Android's org.json JSONTokener is lenient about those, so
+        // fall back to it before failing the tool call. The parsed value must still be a JSON
+        // object; anything else rethrows the strict parse failure.
+        val objectValue = runCatching { JSONObject(json) }.getOrElse { throw strictFailure }
+        @Suppress("UNCHECKED_CAST")
+        (normalizeJsonValue(objectValue) as Map<*, *>) as Map<String, Any?>
+    }
+
+/** Convert org.json values (JSONObject/JSONArray) into plain Kotlin Map/List for the pipeline. */
+private fun normalizeJsonValue(value: Any?): Any? = when (value) {
+    is JSONObject -> value.keys().asSequence().associateWith { key -> normalizeJsonValue(value.opt(key)) }
+    is JSONArray -> (0 until value.length()).map { normalizeJsonValue(value.opt(it)) }
+    JSONObject.NULL, null -> null
+    else -> value
 }
 
 fun com.squareup.moshi.Moshi.jsonArgs(arguments: Map<String, Any?>): String {

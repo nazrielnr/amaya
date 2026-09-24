@@ -5,6 +5,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.amaya.intelligence.data.remote.api.AiSettingsManager
+import com.amaya.intelligence.data.remote.mcp.McpClientManager
 import com.amaya.intelligence.ui.screens.mcp.local.LocalMcpScreen
 import com.amaya.intelligence.ui.theme.AmayaTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -16,6 +17,9 @@ class LocalMcpActivity : AppCompatActivity() {
     @Inject
     lateinit var aiSettingsManager: AiSettingsManager
 
+    @Inject
+    lateinit var mcpClientManager: McpClientManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -23,7 +27,8 @@ class LocalMcpActivity : AppCompatActivity() {
             AmayaTheme {
                 LocalMcpScreen(
                     onNavigateBack = { finish() },
-                    aiSettingsManager = aiSettingsManager
+                    aiSettingsManager = aiSettingsManager,
+                    mcpClientManager = mcpClientManager
                 )
             }
         }

@@ -181,6 +181,13 @@ object ToolUiMapper {
             }
 
             // -- Meta ---------------------------------------------------------
+            "ask_user" -> ToolUiMetadata(
+                category = ToolCategory.SYSTEM,
+                label = safeText(safeArgs["question"], 60) ?: "Question for user",
+                actionIcon = ToolInfoIcon.MESSAGE,
+                targetIcon = ToolInfoIcon.PERSON,
+                badges = listOf("ASK")
+            )
             "notify_user" -> ToolUiMetadata(
                 category = ToolCategory.SYSTEM,
                 label = "User",

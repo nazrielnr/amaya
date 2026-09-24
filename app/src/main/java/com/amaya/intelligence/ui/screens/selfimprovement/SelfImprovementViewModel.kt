@@ -127,6 +127,8 @@ class SelfImprovementViewModel @Inject constructor(
         return memoryClassifier.checkSafety(content).redactedContent.take(6_000)
     }
 
-    private fun PendingProposalType.isSelfImprovementType(): Boolean = this == PendingProposalType.WORKSPACE_FACT ||
-        this == PendingProposalType.SKILL_CREATE || this == PendingProposalType.SKILL_PATCH || this == PendingProposalType.SKILL_UPDATE
+    private fun PendingProposalType.isSelfImprovementType(): Boolean =
+        this == PendingProposalType.USER_PROFILE ||
+            this == PendingProposalType.WORKSPACE_FACT ||
+            this == PendingProposalType.SKILL_CREATE || this == PendingProposalType.SKILL_PATCH || this == PendingProposalType.SKILL_UPDATE
 }

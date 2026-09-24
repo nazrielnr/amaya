@@ -24,6 +24,7 @@ proguard/
 # ==============================================
 *.class
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
 kotlin-build/
@@ -195,6 +196,8 @@ simple.txt
 *.exe
 *.dll
 *.so
+!app/src/main/jniLibs/**/libproot.so
+!app/src/main/jniLibs/**/libproot_loader.so
 *.dylib
 *.lib
 *.a
@@ -229,6 +232,7 @@ REMOTE_SYNC_STRATEGY.md
 secrets/
 private/
 credentials/
+.env
 .env.local
 .env.local.*
 amaya-remote-extension/amaya-remote-0.2.0.vsix

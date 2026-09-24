@@ -31,8 +31,14 @@ internal object WorkspacePathResolver {
         }
 
         if ("path" in keys) {
-            val path = resolved["path"] as? String
-            if (!path.isNullOrBlank()) resolved["path"] = resolvePath(path)
+            val rawPath = (resolved["path"] ?: resolved["file_path"] ?: resolved["filePath"] ?: resolved["file"] ?: resolved["target_file"] ?: resolved["TargetFile"]) as? String
+            if (!rawPath.isNullOrBlank()) {
+                val resolvedPath = resolvePath(rawPath)
+                resolved["path"] = resolvedPath
+                if (resolved.containsKey("file_path")) resolved["file_path"] = resolvedPath
+                if (resolved.containsKey("filePath")) resolved["filePath"] = resolvedPath
+                if (resolved.containsKey("file")) resolved["file"] = resolvedPath
+            }
             else if (toolName in setOf("list_files", "find_files") && rootCanonical != null) resolved["path"] = rootCanonical.path
         }
         if ("paths" in keys && resolved["paths"] is List<*>) {

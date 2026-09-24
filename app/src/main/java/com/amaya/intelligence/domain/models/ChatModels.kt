@@ -252,6 +252,12 @@ data class UiMessage(
     val canonicalHistory: List<String> = emptyList()
 )
 
+val UiMessage.isEdited: Boolean
+    get() = metadata["isEdited"] == "true"
+
+val UiMessage.editedAt: Long?
+    get() = metadata["editedAt"]?.toLongOrNull()
+
 internal fun List<MessageStep>.appendThinking(delta: String, nowMs: Long = System.currentTimeMillis()): List<MessageStep> {
     val current = lastOrNull() as? MessageStep.Thinking
     if (current != null) {

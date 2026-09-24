@@ -12,6 +12,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.amaya.intelligence.ui.activities.recommendations.local.LocalRecommendationsActivity
 import com.amaya.intelligence.ui.screens.amaya.AmayaHomeScreen
 import com.amaya.intelligence.ui.screens.amaya.AmayaViewModel
 import com.amaya.intelligence.ui.theme.AmayaTheme
@@ -41,6 +42,7 @@ class LocalAmayaActivity : AppCompatActivity() {
                     onMemory = { LocalMemoryActivity.start(this, state.workspacePath) },
                     onReview = { LocalReviewActivity.start(this, state.workspacePath) },
                     onSkills = { LocalSkillsActivity.start(this) },
+                    onRecommendations = { LocalRecommendationsActivity.start(this) },
                 )
             }
         }

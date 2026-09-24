@@ -5,6 +5,7 @@ import com.amaya.intelligence.domain.models.AssistantMode
 import com.amaya.intelligence.domain.models.UiMessage
 import com.amaya.intelligence.domain.models.conversationEvent
 import com.amaya.intelligence.domain.models.conversationEventProviderContent
+import com.amaya.intelligence.tools.ClarificationRequest
 import com.amaya.intelligence.tools.ConfirmationRequest
 import com.amaya.intelligence.tools.ToolResult
 import com.amaya.intelligence.util.debugLog
@@ -20,6 +21,33 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.util.UUID
+
+/**
+ * Conservative detection of a user correction: the message says the previous outcome was wrong.
+ * Short and imperative only, so normal follow-ups ("jangan lupa…", "tolong buat…") never match.
+ */
+internal fun isUserCorrectionMessage(text: String): Boolean {
+    val trimmed = text.trim()
+    if (trimmed.length !in 2..220) return false
+    if ('?' in trimmed || '\n' in trimmed) return false
+    val lower = trimmed.lowercase()
+    if (CORRECTION_MARKERS.none { lower.startsWith(it) || it in lower }) return false
+    // A task request that merely contains a marker word is not a correction of past output.
+    return CORRECTION_TASK_VERBS.none { it in lower }
+}
+
+private val CORRECTION_MARKERS = listOf(
+    "bukan begitu", "bukan gitu", "bukan seperti itu", "bukan itu", "itu bukan", "tidak seperti itu",
+    "jangan begitu", "jangan gitu", "jangan seperti itu", "kamu salah", "anda salah", "itu salah",
+    "salah, ", "salah!", "salah.", "that's wrong", "that is wrong", "that was wrong", "not like that",
+    "wrong, ", "wrong!", "wrong.", "you got it wrong", "no, i meant", "no that's not", "no, that's not",
+    "that's not what", "that is not what", "salah besar", "salah total"
+)
+
+private val CORRECTION_TASK_VERBS = listOf(
+    "buat", "buatkan", "tulis", "perbaiki", "implement", "create", "add ", "write ", "fix ",
+    "refactor", "jangan lupa", "jangan lupa untuk", "please", "tolong"
+)
 
 internal fun queuedConversationEventMessage(event: UiMessage): ChatMessage? {
     if (event.role != MessageRole.SYSTEM) return null
@@ -44,6 +72,7 @@ internal fun AiRepository.chatImpl(
         effort: ThinkingEffort? = null,
         runtimeTarget: AgentRuntimeTarget = AgentRuntimeTarget.LOCAL,
         onConfirmation: suspend (ConfirmationRequest) -> Boolean = { false },
+        onClarification: suspend (ClarificationRequest) -> String? = { null },
         pendingConversationEvents: suspend () -> List<UiMessage> = { emptyList() },
         onConversationEventsInjected: suspend (List<UiMessage>) -> Unit = {},
         messageRole: MessageRole = MessageRole.USER
@@ -53,28 +82,29 @@ internal fun AiRepository.chatImpl(
 
         val activeSelection = settings.activeSelection
         val resolvedConnectionId = connectionId ?: activeSelection?.connectionId
-        val connection = settings.connections.firstOrNull { it.id == resolvedConnectionId }
+        val initialConnection = settings.connections.firstOrNull { it.id == resolvedConnectionId }
 
-        if (connection == null) {
+        if (initialConnection == null) {
             send(AgentEvent.Error("No model selected. Open Settings → Manage Models and select a model.", retryable = false))
             return@channelFlow
         }
+        var connection: ProviderConnection = initialConnection
 
-        val model = selectedModel?.takeIf { it.isNotBlank() }
+        var model = selectedModel?.takeIf { it.isNotBlank() }
             ?: activeSelection?.takeIf { it.connectionId == connection.id }?.modelId
             ?: ""
         if (model.isBlank() || connection.visibleModels.none { it.id == model && it.enabled }) {
             send(AgentEvent.Error("The selected model is unavailable. Open Settings → Manage Models and select another model.", retryable = false))
             return@channelFlow
         }
-        val provider = resolveProvider(connection)
-        val modelConfig = connection.visibleModels.first { it.id == model }
-        val maxOutputTokens = modelConfig.maxOutputTokens?.coerceIn(256, 32_768) ?: AiRepository.DEFAULT_MAX_OUTPUT_TOKENS
-        val providerContextWindowTokens = modelConfig.contextWindowTokens?.coerceAtLeast(maxOutputTokens + 1) ?: 32_768
-        val maxInputTokens = modelConfig.maxInputTokens
+        var provider = resolveProvider(connection)
+        var modelConfig = connection.visibleModels.first { it.id == model }
+        var maxOutputTokens = modelConfig.maxOutputTokens?.coerceIn(256, 32_768) ?: AiRepository.DEFAULT_MAX_OUTPUT_TOKENS
+        var providerContextWindowTokens = modelConfig.contextWindowTokens?.coerceAtLeast(maxOutputTokens + 1) ?: 32_768
+        var maxInputTokens = modelConfig.maxInputTokens
             ?.coerceIn(1, providerContextWindowTokens - maxOutputTokens)
             ?: providerContextWindowTokens - maxOutputTokens
-        val contextWindowTokens = minOf(providerContextWindowTokens, maxInputTokens + maxOutputTokens)
+        var contextWindowTokens = minOf(providerContextWindowTokens, maxInputTokens + maxOutputTokens)
         if (userImages.isNotEmpty() && !modelConfig.supportsImages) {
             send(AgentEvent.Error("The selected model does not support image input.", retryable = false))
             return@channelFlow
@@ -82,6 +112,15 @@ internal fun AiRepository.chatImpl(
         debugLog("AiRepository") { "chat() resolved connection=${connection.id}, model=$model" }
 
         val sessionId = conversationId?.toString() ?: "session_${UUID.randomUUID()}"
+        // Learn from user corrections: a follow-up that says the previous outcome was wrong marks
+        // the previous turn's workflow evidence as failed and proposes a correction lesson. Fired
+        // off the hot path — it never blocks the current turn.
+        if (runtimeTarget == AgentRuntimeTarget.LOCAL && isUserCorrectionMessage(message)) {
+            repoScope.launch {
+                runCatching { selfImprovementPipeline.recordUserCorrection(sessionId, message, workspacePath) }
+                    .onFailure { errorLog("AiRepository", "Failed to record user correction", it) }
+            }
+        }
         val workspaceId = workspacePath?.takeIf(String::isNotBlank)?.let { workspaceMemoryStore.resolve(it)?.id }
         val completedUserMessages = mutableListOf(message)
         val completedAssistantMessages = mutableListOf<String>()
@@ -240,17 +279,40 @@ internal fun AiRepository.chatImpl(
         val manualSummary = managedContext.manualSummary
         var autoSummary: String? = ledger?.render() ?: managedContext.autoSummary
         var persistedLedgerText: String? = managedContext.autoSummary
-        var systemPromptWithAutoContext =
-            composeSystemPrompt(basePrompt, manualSummary, autoSummary, ledgerBudgetTokens)
+        // Scheme E: host-pinned plan mirroring the visible todo list (survives compaction).
+        // Declared before composeWithPlan because the local function captures it.
+        var taskPlan: TaskPlan = TaskPlan(emptyList())
+        fun composeWithPlan(): String {
+            val composed = composeSystemPrompt(basePrompt, manualSummary, autoSummary, ledgerBudgetTokens)
+            return if (taskPlan.steps.isEmpty()) composed else "$composed\n\n${taskPlan.renderSection()}"
+        }
+        var systemPromptWithAutoContext = composeWithPlan()
 
         var continueLoop = true
         var iterations = 0
         var browserTaskStarted = false
-        var lastBrowserErrorSignature: String? = null
-        var repeatedBrowserErrors = 0
         var terminalError = false
         var streamContinuations = 0
+        /** Cumulative rejected tool calls across iterations; capped at [MAX_FAILED_TOOL_ATTEMPTS]. */
+        var failedToolAttempts = 0
+        // Per-tool repeated-failure tracking for self-correction warnings (browser + any tool).
+        val lastToolErrorSignature = mutableMapOf<String, String>()
+        val repeatedToolErrors = mutableMapOf<String, Int>()
+        val lastExecutedCallSignature = mutableMapOf<String, String>()
+        val repeatedIdenticalCallCount = mutableMapOf<String, Int>()
+        val callSignatureFrequency = mutableMapOf<String, Int>()
         val invalidToolArgumentErrors = mutableMapOf<String, Throwable>()
+        // Scheme C: how many tool calls actually executed this turn + how many verification
+        // passes have run (bounded by MAX_VERIFICATION_PASSES).
+        var executedToolCalls = 0
+        var verificationPasses = 0
+        /** Scheme C: the verification pass is host-internal meta-commentary ("VERIFIED — evidence: …").
+         *  While true, the next provider reply is not streamed to the user nor persisted as the
+         *  answer, so the model's real final text stays the visible output. */
+        var verificationActive = false
+        /** Last successful tool result of the turn, surfaced as the final answer when the model
+         *  packs its whole reply into a tool call (e.g. saving it to memory) and emits no text. */
+        var lastToolResultContent: String? = null
 
         while (continueLoop) {
             iterations++
@@ -367,8 +429,7 @@ internal fun AiRepository.chatImpl(
                     }
                 }
 
-                systemPromptWithAutoContext =
-                    composeSystemPrompt(basePrompt, manualSummary, autoSummary, ledgerBudgetTokens)
+                systemPromptWithAutoContext = composeWithPlan()
                 systemPromptTokens = TokenEstimator.text(systemPromptWithAutoContext)
                 historyBudget = requestInputBudget - toolSchemaTokens - AiRepository.CONTEXT_SAFETY_RESERVE_TOKENS - systemPromptTokens
                 if (historyBudget <= 0) {
@@ -413,19 +474,30 @@ internal fun AiRepository.chatImpl(
             var hasToolCalls = false
             var providerTerminal = false
             var retryableFailure: String? = null
+            /** Provider could not parse a model tool call's arguments; needs failure feedback. */
+            var providerParseFailure: String? = null
+            /** Tool calls rejected in this request that still need failure feedback to the model. */
+            val rejectedToolCalls = mutableListOf<ToolCallMessage>()
+            // A verification reply is host meta-commentary, not the answer. Capture the flag for
+            // this request only, then clear it so the next real answer streams normally.
+            val suppressUserStreaming = verificationActive
+            verificationActive = false
 
-            provider.chat(request).collect { response ->
+            provider.chat(request).withInactivityTimeout().collect { response ->
                 if (providerTerminal) {
-                    send(AgentEvent.Error("Provider emitted an event after its terminal event", retryable = false))
-                    terminalError = true
-                    continueLoop = false
+                    // Some providers flush buffered events after the terminal one (Done/Incomplete/
+                    // Error). They are stale by definition — ignore them instead of failing the whole
+                    // turn with "Provider emitted an event after its terminal event".
+                    StreamDebugLog.event(conversationId, null, "POST_TERMINAL_IGNORED", response.javaClass.simpleName)
                     return@collect
                 }
                 when (response) {
                     is ChatResponse.TextDelta -> {
                         textBuffer.append(response.text)
                         StreamDebugLog.event(conversationId, null, "TEXT_DELTA", "chars=${response.text.length} total=${textBuffer.length}")
-                        send(AgentEvent.TextDelta(response.text))
+                        if (!suppressUserStreaming) {
+                            send(AgentEvent.TextDelta(response.text))
+                        }
                     }
 
                     is ChatResponse.ThinkingDelta -> {
@@ -433,26 +505,57 @@ internal fun AiRepository.chatImpl(
                     }
 
                     is ChatResponse.ToolCall -> {
-                        StreamDebugLog.event(conversationId, null, "TOOL_CALL", "id=${response.id} name=${response.name}")
-                        if (!isValidToolCall(response.id, response.name, allowedToolNames, toolCalls.map { it.id }.toSet())) {
-                            send(AgentEvent.Error("Invalid, duplicate, or unadvertised tool call: ${response.name}", retryable = false))
+                        val sanitizedName = sanitizeToolName(response.name, allowedToolNames)
+                        StreamDebugLog.event(conversationId, null, "TOOL_CALL", "id=${response.id} rawName=${response.name} name=$sanitizedName")
+                        val rawId = response.id.ifBlank { "synth_call_${System.currentTimeMillis()}" }
+                        val isDuplicateId = rawId in toolCalls.map { it.id }.toSet()
+                        val callId = if (isDuplicateId) "${rawId}_dup_${System.currentTimeMillis()}" else rawId
+                        val isRecognized = sanitizedName in allowedToolNames
+
+                        if (!isRecognized) {
+                            failedToolAttempts++
+                            val available = allowedToolNames.take(16).joinToString()
+                            invalidToolArgumentErrors[callId] = IllegalArgumentException(
+                                "Tool '${response.name}' is not recognized or available in this environment. Available tools: $available. Please select from available tools or answer the user directly."
+                            )
+                            StreamDebugLog.event(conversationId, null, "TOOL_CALL_UNRECOGNIZED", "name=${response.name} attempts=$failedToolAttempts")
+                        } else if (isDuplicateId) {
+                            failedToolAttempts++
+                            invalidToolArgumentErrors[callId] = IllegalArgumentException(
+                                "Duplicate tool call ID detected for '$sanitizedName'. Each tool invocation must provide a unique call ID."
+                            )
+                            StreamDebugLog.event(conversationId, null, "TOOL_CALL_DUPLICATE_ID", "name=$sanitizedName attempts=$failedToolAttempts")
+                        } else {
+                            val validation = validateToolArguments(sanitizedName, response.arguments, tools)
+                            validation.onFailure { error ->
+                                invalidToolArgumentErrors[callId] = error
+                            }
+                        }
+
+                        if (failedToolAttempts >= MAX_FAILED_TOOL_ATTEMPTS) {
+                            send(AgentEvent.Error(
+                                "The model issued $failedToolAttempts consecutive invalid tool calls (last: ${response.name}); stopping the tool loop after $MAX_FAILED_TOOL_ATTEMPTS failures.",
+                                retryable = false
+                            ))
                             terminalError = true
                             providerTerminal = true
                             continueLoop = false
                             return@collect
                         }
-                        val validation = validateToolArguments(response.name, response.arguments, tools)
-                        val toolArguments = validation.getOrElse { error ->
-                            invalidToolArgumentErrors[response.id] = error
+
+                        val resolvedArguments = if (!isRecognized || isDuplicateId) {
                             response.arguments
+                        } else {
+                            validateToolArguments(sanitizedName, response.arguments, tools).getOrElse { response.arguments }
                         }
+
                         hasToolCalls = true
-                        send(AgentEvent.ToolCallStart(response.id, response.name, toolArguments, response.metadata))
+                        send(AgentEvent.ToolCallStart(callId, sanitizedName, resolvedArguments, response.metadata))
 
                         toolCalls.add(ToolCallMessage(
-                            id = response.id,
-                            name = response.name,
-                            arguments = toolArguments,
+                            id = callId,
+                            name = sanitizedName,
+                            arguments = resolvedArguments,
                             metadata = response.metadata
                         ))
                     }
@@ -484,8 +587,98 @@ internal fun AiRepository.chatImpl(
                     is ChatResponse.Error -> {
                         StreamDebugLog.event(conversationId, null, "PROVIDER_ERROR", response.message)
                         providerTerminal = true
+                        if (response.message.startsWith(INVALID_TOOL_ARGUMENTS_PREFIX)) {
+                            // The model emitted tool-call arguments the provider could not parse.
+                            // That is a recoverable call failure, not a terminal error: record it
+                            // and feed it back so the model can re-issue the call, bounded by
+                            // MAX_FAILED_TOOL_ATTEMPTS so a pathological model cannot loop forever.
+                            failedToolAttempts++
+                            providerParseFailure = response.message
+                            StreamDebugLog.event(conversationId, null, "TOOL_ARGS_PARSE_FAILED", "attempts=$failedToolAttempts")
+                            if (failedToolAttempts >= MAX_FAILED_TOOL_ATTEMPTS) {
+                                send(AgentEvent.Error(
+                                    "The model issued $failedToolAttempts tool calls with unparseable arguments (last: ${response.message.take(120)}); stopping the tool loop after $MAX_FAILED_TOOL_ATTEMPTS failures.",
+                                    retryable = false
+                                ))
+                                terminalError = true
+                                continueLoop = false
+                            }
+                            return@collect
+                        }
+
+                        val errorCategory = classifyError(
+                            message = response.message,
+                            code = response.code,
+                            isEmptyResponse = false
+                        )
+
+                        // 1. Auth error (API key salah): berhenti dan minta user periksa settings
+                        if (errorCategory == ErrorCategory.AUTH_ERROR) {
+                            send(AgentEvent.Error(
+                                message = "API key salah atau belum diatur untuk provider '${connection.name.ifBlank { connection.providerId }}'. Silakan periksa di Settings → Manage Models.",
+                                retryable = false
+                            ))
+                            terminalError = true
+                            continueLoop = false
+                            return@collect
+                        }
+
+                        // 2. Model error: coba beralih ke model cadangan
+                        if (errorCategory == ErrorCategory.MODEL_ERROR) {
+                            val fallbackCandidate = findFallbackCandidate(
+                                currentConnectionId = connection.id,
+                                currentModelId = model,
+                                requiresImages = userImages.isNotEmpty(),
+                                requiresTools = tools.isNotEmpty(),
+                                connections = settings.connections,
+                                hasApiKey = { connId -> settingsManager.getConnectionApiKey(connId).isNotBlank() }
+                            )
+                            if (fallbackCandidate != null) {
+                                val (fallbackConn, fallbackMod) = fallbackCandidate
+                                send(AgentEvent.TextDelta("\n\n*[Model error pada '$model': ${response.message}. Beralih ke model cadangan: ${fallbackMod.displayName.ifBlank { fallbackMod.id }}]*\n\n"))
+                                StreamDebugLog.event(conversationId, null, "MODEL_FALLBACK", "from=$model to=${fallbackMod.id}")
+                                connection = fallbackConn
+                                model = fallbackMod.id
+                                modelConfig = fallbackMod
+                                provider = resolveProvider(fallbackConn)
+                                maxOutputTokens = fallbackMod.maxOutputTokens?.coerceIn(256, 32_768) ?: AiRepository.DEFAULT_MAX_OUTPUT_TOKENS
+                                providerContextWindowTokens = fallbackMod.contextWindowTokens?.coerceAtLeast(maxOutputTokens + 1) ?: 32_768
+                                maxInputTokens = fallbackMod.maxInputTokens?.coerceIn(1, providerContextWindowTokens - maxOutputTokens) ?: (providerContextWindowTokens - maxOutputTokens)
+                                contextWindowTokens = minOf(providerContextWindowTokens, maxInputTokens + maxOutputTokens)
+                                streamContinuations = 0
+                                textBuffer.clear()
+                                return@collect
+                            }
+                        }
+
                         retryableFailure = response.message.takeIf { canContinueStream(response, hasToolCalls) }
                         if (retryableFailure == null && !shouldExecuteReceivedToolCalls(response, hasToolCalls)) {
+                            // Non-retryable error and no tool calls: attempt fallback before failing
+                            val fallbackCandidate = findFallbackCandidate(
+                                currentConnectionId = connection.id,
+                                currentModelId = model,
+                                requiresImages = userImages.isNotEmpty(),
+                                requiresTools = tools.isNotEmpty(),
+                                connections = settings.connections,
+                                hasApiKey = { connId -> settingsManager.getConnectionApiKey(connId).isNotBlank() }
+                            )
+                            if (fallbackCandidate != null) {
+                                val (fallbackConn, fallbackMod) = fallbackCandidate
+                                send(AgentEvent.TextDelta("\n\n*[Kendala pada model '$model': ${response.message}. Beralih ke model cadangan: ${fallbackMod.displayName.ifBlank { fallbackMod.id }}]*\n\n"))
+                                StreamDebugLog.event(conversationId, null, "MODEL_FALLBACK", "from=$model to=${fallbackMod.id}")
+                                connection = fallbackConn
+                                model = fallbackMod.id
+                                modelConfig = fallbackMod
+                                provider = resolveProvider(fallbackConn)
+                                maxOutputTokens = fallbackMod.maxOutputTokens?.coerceIn(256, 32_768) ?: AiRepository.DEFAULT_MAX_OUTPUT_TOKENS
+                                providerContextWindowTokens = fallbackMod.contextWindowTokens?.coerceAtLeast(maxOutputTokens + 1) ?: 32_768
+                                maxInputTokens = fallbackMod.maxInputTokens?.coerceIn(1, providerContextWindowTokens - maxOutputTokens) ?: (providerContextWindowTokens - maxOutputTokens)
+                                contextWindowTokens = minOf(providerContextWindowTokens, maxInputTokens + maxOutputTokens)
+                                streamContinuations = 0
+                                textBuffer.clear()
+                                return@collect
+                            }
+
                             send(AgentEvent.Error(response.message, response.retryable))
                             terminalError = true
                             continueLoop = false
@@ -495,36 +688,109 @@ internal fun AiRepository.chatImpl(
             }
 
             if (terminalError) break
+
+            // Feed rejected tool calls back as an explicit failure so the model can correct its
+            // next call instead of the loop silently ending (previously a hard turn-terminating
+            // error on the first mis-call).
+            if (rejectedToolCalls.isNotEmpty() && !hasToolCalls) {
+                if (textBuffer.isNotBlank()) {
+                    messages = messages + ChatMessage(role = MessageRole.ASSISTANT, content = textBuffer.toString())
+                }
+                val lastRejected = rejectedToolCalls.last()
+                val available = allowedToolNames.take(16).joinToString()
+                messages = messages + ChatMessage(
+                    role = MessageRole.USER,
+                    content = "Host tool-loop feedback: the previous response called '${lastRejected.name}' but the host rejected it (blank call ID, unadvertised tool, or duplicate ID). Available tools: $available. Fix the call and retry, or answer directly. (Failure $failedToolAttempts/$MAX_FAILED_TOOL_ATTEMPTS.)"
+                )
+                StreamDebugLog.event(conversationId, null, "TOOL_CALL_REJECTED_FEEDBACK", "attempts=$failedToolAttempts name=${lastRejected.name}")
+                continue
+            }
+
+            // Unparseable tool-call arguments must not kill the turn either: append the parse
+            // failure as user feedback so the next request re-issues the call correctly (bounded
+            // by MAX_FAILED_TOOL_ATTEMPTS). When valid tool calls were also received they are
+            // executed below, and this feedback still lets the model correct the malformed one
+            // on the next iteration.
+            if (providerParseFailure != null) {
+                if (textBuffer.isNotBlank()) {
+                    messages = messages + ChatMessage(role = MessageRole.ASSISTANT, content = textBuffer.toString())
+                }
+                messages = messages + ChatMessage(
+                    role = MessageRole.USER,
+                    content = "Host tool-loop feedback: the provider could not parse the arguments of the tool call in the previous response: $providerParseFailure. Re-issue the tool call with valid JSON arguments (quote all keys and string values, no trailing commas) or answer directly. (Failure $failedToolAttempts/$MAX_FAILED_TOOL_ATTEMPTS.)"
+                )
+                StreamDebugLog.event(conversationId, null, "TOOL_ARGS_PARSE_FAILED_FEEDBACK", "attempts=$failedToolAttempts")
+                if (!hasToolCalls) continue
+            }
+
             if (!providerTerminal && !hasToolCalls) retryableFailure = "Provider stream ended without a terminal event"
             if (providerTerminal && !hasToolCalls && textBuffer.isBlank() && responseItemOutputText(responseItems).isNullOrBlank()) {
-                retryableFailure = "Provider completed without a final response"
+                retryableFailure = "Empty response: Provider completed without output text or tool calls"
             }
 
             if (retryableFailure != null) {
-                if (streamContinuations == MAX_STREAM_CONTINUATIONS) {
-                    send(AgentEvent.Incomplete(retryableFailure!!, retryable = true))
-                    terminalError = true
-                    break
+                val errorCategory = classifyError(
+                    message = retryableFailure!!,
+                    code = null,
+                    isEmptyResponse = (textBuffer.isBlank() && !hasToolCalls)
+                )
+
+                if (streamContinuations >= MAX_STREAM_CONTINUATIONS) {
+                    val fallbackCandidate = findFallbackCandidate(
+                        currentConnectionId = connection.id,
+                        currentModelId = model,
+                        requiresImages = userImages.isNotEmpty(),
+                        requiresTools = tools.isNotEmpty(),
+                        connections = settings.connections,
+                        hasApiKey = { connId -> settingsManager.getConnectionApiKey(connId).isNotBlank() }
+                    )
+                    if (fallbackCandidate != null) {
+                        val (fallbackConn, fallbackMod) = fallbackCandidate
+                        send(AgentEvent.TextDelta("\n\n*[Model '$model' gagal setelah $streamContinuations kali percobaan ($retryableFailure). Beralih ke model cadangan: ${fallbackMod.displayName.ifBlank { fallbackMod.id }}]*\n\n"))
+                        StreamDebugLog.event(conversationId, null, "MODEL_FALLBACK_AFTER_RETRIES", "from=$model to=${fallbackMod.id}")
+                        connection = fallbackConn
+                        model = fallbackMod.id
+                        modelConfig = fallbackMod
+                        provider = resolveProvider(fallbackConn)
+                        maxOutputTokens = fallbackMod.maxOutputTokens?.coerceIn(256, 32_768) ?: AiRepository.DEFAULT_MAX_OUTPUT_TOKENS
+                        providerContextWindowTokens = fallbackMod.contextWindowTokens?.coerceAtLeast(maxOutputTokens + 1) ?: 32_768
+                        maxInputTokens = fallbackMod.maxInputTokens?.coerceIn(1, providerContextWindowTokens - maxOutputTokens) ?: (providerContextWindowTokens - maxOutputTokens)
+                        contextWindowTokens = minOf(providerContextWindowTokens, maxInputTokens + maxOutputTokens)
+                        streamContinuations = 0
+                        textBuffer.clear()
+                        continue
+                    } else {
+                        send(AgentEvent.Incomplete(retryableFailure!!, retryable = true))
+                        terminalError = true
+                        break
+                    }
                 }
                 streamContinuations++
+                val backoffDelay = if (errorCategory == ErrorCategory.RATE_LIMIT) {
+                    calculateRateLimitBackoff(streamContinuations)
+                } else {
+                    calculateBackoffWithJitter(streamContinuations, MAX_STREAM_BACKOFF_MS)
+                }
                 if (textBuffer.isNotBlank()) {
                     messages = messages + ChatMessage(
                         role = MessageRole.ASSISTANT,
                         content = textBuffer.toString()
                     ) + ChatMessage(role = MessageRole.USER, content = STREAM_CONTINUATION_PROMPT)
                 }
-                delay(minOf(1_000L shl (streamContinuations - 1), MAX_STREAM_BACKOFF_MS))
+                delay(backoffDelay)
                 continue
             }
 
             if (textBuffer.isNotBlank()) {
                 val assistantText = textBuffer.toString()
-                completedAssistantMessages.add(assistantText)
-                if (runtimeTarget == AgentRuntimeTarget.LOCAL) {
-                    repoScope.launch {
-                        runCatching {
-                            sessionMemoryRepository.saveMessage(SessionMessage(sessionId = sessionId, role = "assistant", content = assistantText, workspacePath = workspacePath, workspaceId = workspaceId, assistantMode = assistantMode.name, ownerId = ownerId))
-                        }.onFailure { errorLog("AiRepository", "Failed to save assistant session message", it) }
+                if (!suppressUserStreaming) {
+                    completedAssistantMessages.add(assistantText)
+                    if (runtimeTarget == AgentRuntimeTarget.LOCAL) {
+                        repoScope.launch {
+                            runCatching {
+                                sessionMemoryRepository.saveMessage(SessionMessage(sessionId = sessionId, role = "assistant", content = assistantText, workspacePath = workspacePath, workspaceId = workspaceId, assistantMode = assistantMode.name, ownerId = ownerId))
+                            }.onFailure { errorLog("AiRepository", "Failed to save assistant session message", it) }
+                        }
                     }
                 }
             }
@@ -532,10 +798,39 @@ internal fun AiRepository.chatImpl(
             if (!hasToolCalls) {
                 if (textBuffer.isBlank()) {
                     responseItemOutputText(responseItems)?.let { itemText ->
-                        send(AgentEvent.TextDelta(itemText))
+                        if (!suppressUserStreaming) send(AgentEvent.TextDelta(itemText))
                     }
                 }
-                continueLoop = false
+                // Scheme C: one bounded verification pass when a tool-using turn stops. The model
+                // must confirm the goal is fully done with evidence, or continue working. Never
+                // runs on plain Q&A (no tools), internal continuations, or bridge turns.
+                val shouldVerify = shouldRunVerificationPass(
+                    verificationPasses = verificationPasses,
+                    maxPasses = MAX_VERIFICATION_PASSES,
+                    messageRole = messageRole,
+                    runtimeTarget = runtimeTarget,
+                    executedToolCalls = executedToolCalls,
+                    failedToolAttempts = failedToolAttempts,
+                    hasPlanSteps = taskPlan.steps.isNotEmpty()
+                )
+                if (shouldVerify) {
+                    verificationPasses++
+                    if (textBuffer.isNotBlank()) {
+                        messages = messages + ChatMessage(
+                            role = MessageRole.ASSISTANT,
+                            content = textBuffer.toString()
+                        )
+                    }
+                    messages = messages + ChatMessage(
+                        role = MessageRole.USER,
+                        content = verificationPrompt(conversationGoal)
+                    )
+                    verificationActive = true
+                    StreamDebugLog.event(conversationId, null, "VERIFY_PASS", "goal=${conversationGoal.take(80)}")
+                    continueLoop = true
+                } else {
+                    continueLoop = false
+                }
             } else {
                 messages = messages + ChatMessage(
                     role = MessageRole.ASSISTANT,
@@ -543,6 +838,8 @@ internal fun AiRepository.chatImpl(
                     toolCalls = toolCalls,
                     responseItems = responseItems
                 )
+
+                val executedBatchSignatures = mutableMapOf<String, String>()
 
                 for (toolCall in toolCalls) {
                     val channel = this
@@ -557,34 +854,84 @@ internal fun AiRepository.chatImpl(
                     }
 
                     completedToolCalls.add("${toolCall.name}: ${toolCall.arguments}")
+                    executedToolCalls++
                     StreamDebugLog.event(conversationId, null, "TOOL_EXECUTE", "id=${toolCall.id} name=${toolCall.name}")
+
+                    val currentCallSig = "${toolCall.name}:${JSONObject(toolCall.arguments)}"
+                    val batchCachedResult = executedBatchSignatures[currentCallSig]
+
                     val result = invalidToolArgumentErrors.remove(toolCall.id)?.let { error ->
                         ToolResult.Error(
-                            message = "Invalid arguments for ${toolCall.name}: ${error.message.orEmpty()}",
-                            errorType = com.amaya.intelligence.tools.ErrorType.VALIDATION_ERROR
+                            message = error.message.orEmpty().ifBlank { "Invalid arguments for ${toolCall.name}" },
+                            errorType = com.amaya.intelligence.tools.ErrorType.VALIDATION_ERROR,
+                            recoverable = true
                         )
-                    } ?: if (runtimeTarget == AgentRuntimeTarget.WINDOWS_BRIDGE && toolCall.name !in allowedToolNames) {
-                        ToolResult.Error(
-                            message = "Tool '${toolCall.name}' is not available in Windows Bridge chat.",
-                            errorType = com.amaya.intelligence.tools.ErrorType.PERMISSION_ERROR,
-                            recoverable = false
+                    } ?: if (batchCachedResult != null) {
+                        StreamDebugLog.event(conversationId, null, "TOOL_DEDUP_BATCH", "tool=${toolCall.name}")
+                        ToolResult.Success(
+                            "[Duplicate Call Deduplicated]: Tool '${toolCall.name}' with identical arguments was already executed in this batch. Reusing previous output:\n$batchCachedResult"
                         )
                     } else {
-                        mcpToolExecutor.execute(
-                            toolName = toolCall.name,
-                            arguments = executionArguments,
-                            workspacePath = workspacePath,
-                            toolCallId = toolCall.id,
-                            onEvent = { event -> if (event is AgentEvent) channel.send(event) },
-                            onConfirmationRequired = onConfirmation,
-                            providerConnection = connection,
-                            selectedModelId = model,
-                            conversationId = sessionId,
-                            ownerId = ownerId,
-                            agentId = activeAgent?.id,
-                            assistantMode = assistantMode,
-                            agentCapabilityProfile = agentCapabilityProfile
-                        )
+                        val identicalCallCount = if (lastExecutedCallSignature[toolCall.name] == currentCallSig) {
+                            (repeatedIdenticalCallCount[toolCall.name] ?: 0) + 1
+                        } else 1
+                        lastExecutedCallSignature[toolCall.name] = currentCallSig
+                        repeatedIdenticalCallCount[toolCall.name] = identicalCallCount
+
+                        val totalFrequency = (callSignatureFrequency[currentCallSig] ?: 0) + 1
+                        callSignatureFrequency[currentCallSig] = totalFrequency
+
+                        val isConsecutiveBreak = shouldCircuitBreakConsecutiveCalls(identicalCallCount)
+                        val isFrequencyBreak = shouldCircuitBreakFrequency(totalFrequency)
+
+                        if (isConsecutiveBreak || isFrequencyBreak) {
+                            val triggerReason = if (isConsecutiveBreak) {
+                                "invoked $identicalCallCount times consecutively"
+                            } else {
+                                "invoked $totalFrequency times in this turn"
+                            }
+                            StreamDebugLog.event(conversationId, null, "TOOL_CIRCUIT_BREAKER", "tool=${toolCall.name} reason=$triggerReason")
+                            ToolResult.Error(
+                                message = "[Circuit Breaker Triggered]: Tool '${toolCall.name}' has been $triggerReason with identical arguments without strategy change. Invocation suppressed to prevent an infinite loop. Please analyze existing data, alter parameters, or conclude your answer directly.",
+                                errorType = com.amaya.intelligence.tools.ErrorType.VALIDATION_ERROR,
+                                recoverable = true
+                            )
+                        } else if (runtimeTarget == AgentRuntimeTarget.WINDOWS_BRIDGE && toolCall.name !in allowedToolNames) {
+                            ToolResult.Error(
+                                message = "Tool '${toolCall.name}' is not available in Windows Bridge chat.",
+                                errorType = com.amaya.intelligence.tools.ErrorType.PERMISSION_ERROR,
+                                recoverable = false
+                            )
+                        } else {
+                            try {
+                                mcpToolExecutor.execute(
+                                    toolName = toolCall.name,
+                                    arguments = executionArguments,
+                                    workspacePath = workspacePath,
+                                    toolCallId = toolCall.id,
+                                    onEvent = { event -> if (event is AgentEvent) channel.send(event) },
+                                    onConfirmationRequired = onConfirmation,
+                                    onClarificationRequired = onClarification,
+                                    providerConnection = connection,
+                                    selectedModelId = model,
+                                    conversationId = sessionId,
+                                    ownerId = ownerId,
+                                    agentId = activeAgent?.id,
+                                    assistantMode = assistantMode,
+                                    agentCapabilityProfile = agentCapabilityProfile
+                                )
+                            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                                throw cancelled
+                            } catch (e: Throwable) {
+                                errorLog("AiAgentLoop", "Tool execution threw exception: ${toolCall.name}", e)
+                                StreamDebugLog.event(conversationId, null, "TOOL_EXEC_EXCEPTION", "tool=${toolCall.name} error=${e.message}")
+                                ToolResult.Error(
+                                    message = "Tool execution exception in '${toolCall.name}': ${e.message ?: e.javaClass.simpleName}. You may check parameters or try an alternative method.",
+                                    errorType = com.amaya.intelligence.tools.ErrorType.EXECUTION_ERROR,
+                                    recoverable = true
+                                )
+                            }
+                        }
                     }
 
                     val rawResultContent = when (result) {
@@ -594,18 +941,34 @@ internal fun AiRepository.chatImpl(
                         is ToolResult.RequiresConfirmation -> "Error: Approval could not be completed: ${result.reason}"
                     }
                     var resultContent = rawResultContent
-                    if (toolCall.name == "browser") {
-                        val signature = browserErrorSignature(resultContent)
-                        if (signature != null) {
-                            repeatedBrowserErrors = if (signature == lastBrowserErrorSignature) repeatedBrowserErrors + 1 else 1
-                            lastBrowserErrorSignature = signature
-                            repeatedBrowserFailureWarning(signature, repeatedBrowserErrors)?.let { warning ->
-                                resultContent += "\n\n$warning"
+                    if (result is ToolResult.Success || result is ToolResult.Deferred) {
+                        executedBatchSignatures[currentCallSig] = rawResultContent
+                    }
+                    val identicalCallCount = repeatedIdenticalCallCount[toolCall.name] ?: 1
+                    if (identicalCallCount == 2) {
+                        resultContent += "\n\n[Circuit Breaker Notice]: Tool '${toolCall.name}' was executed with identical arguments $identicalCallCount times consecutively. If you are stuck in a loop or receiving the same outcome, do not repeat this exact call again. Alter your strategy, verify required prerequisites, or proceed with available evidence."
+                    }
+                    // Repeated identical tool failures get a self-correction hint appended to the
+                    // result, for browser and every other tool (Hermes-style in-loop recovery).
+                    val errorSignature = toolErrorSignature(resultContent)
+                    if (errorSignature != null) {
+                        val repeated = if (lastToolErrorSignature[toolCall.name] == errorSignature) {
+                            (repeatedToolErrors[toolCall.name] ?: 0) + 1
+                        } else 1
+                        lastToolErrorSignature[toolCall.name] = errorSignature
+                        repeatedToolErrors[toolCall.name] = repeated
+                        repeatedToolFailureWarning(toolCall.name, errorSignature, repeated)?.let { warning ->
+                            resultContent += "\n\n$warning"
+                            // Scheme E: the same action keeps failing → steer the model back to its
+                            // plan instead of letting it burn the failure budget on identical calls.
+                            if (repeated >= REPLAN_AFTER_REPEATED_FAILURES && taskPlan.steps.isNotEmpty()) {
+                                resultContent += "\n\nPlan revision required: the same action has now failed $repeated times. " +
+                                    "Update your plan with update_todo (merge=false to revise it) or switch approach before retrying; do not repeat the identical call."
                             }
-                        } else {
-                            lastBrowserErrorSignature = null
-                            repeatedBrowserErrors = 0
                         }
+                    } else {
+                        lastToolErrorSignature.remove(toolCall.name)
+                        repeatedToolErrors.remove(toolCall.name)
                     }
 
                     completedToolResults.add("${toolCall.name}: $resultContent")
@@ -635,6 +998,10 @@ internal fun AiRepository.chatImpl(
                     }
 
                     val toolFailed = result is ToolResult.Error || result is ToolResult.RequiresConfirmation
+                    val isHousekeeping = isInternalOrHousekeepingTool(toolCall.name)
+                    if (!toolFailed && (!isHousekeeping || lastToolResultContent == null)) {
+                        lastToolResultContent = resultContent
+                    }
                     StreamDebugLog.event(conversationId, null, "TOOL_RESULT", "id=${toolCall.id} name=${toolCall.name} error=$toolFailed deferred=${result is ToolResult.Deferred} chars=${resultContent.length}")
                     send(AgentEvent.ToolCallResult(
                         toolCallId = toolCall.id,
@@ -651,6 +1018,12 @@ internal fun AiRepository.chatImpl(
                         (result.metadata["bridge_image_format"] as? String)?.let { resultMetadata["bridge_image_format"] = it }
                     }
 
+                    // Scheme E: mirror the visible todo list into the pinned plan state after
+                    // every update_todo call, so the plan section stays current for the next request.
+                    if (toolCall.name == "update_todo") {
+                        taskPlan = TaskPlan.from(todoRepository.getItems())
+                    }
+
                     messages = messages + ChatMessage(
                         role = MessageRole.TOOL,
                         toolResult = ToolResultMessage(
@@ -661,6 +1034,20 @@ internal fun AiRepository.chatImpl(
                         )
                     )
 
+                }
+                // Mixed-response recovery: the model also emitted tool calls the host rejected
+                // (blank ID, unadvertised name, duplicate ID). The rejection could not be fed back
+                // before the tool results without breaking the provider's required tool-result
+                // ordering, so append it after them — otherwise the model never learns the call
+                // was invalid and can repeat it until MAX_FAILED_TOOL_ATTEMPTS errors the turn.
+                if (rejectedToolCalls.isNotEmpty()) {
+                    val lastRejected = rejectedToolCalls.last()
+                    val available = allowedToolNames.take(16).joinToString()
+                    messages = messages + ChatMessage(
+                        role = MessageRole.USER,
+                        content = "Host tool-loop feedback: the previous response also called '${lastRejected.name}' but the host rejected it (blank call ID, unadvertised tool, or duplicate ID). Available tools: $available. Fix the call if you retry it. (Failure $failedToolAttempts/$MAX_FAILED_TOOL_ATTEMPTS.)"
+                    )
+                    StreamDebugLog.event(conversationId, null, "TOOL_CALL_REJECTED_FEEDBACK", "attempts=$failedToolAttempts name=${lastRejected.name} mixed=true")
                 }
             }
         }
@@ -678,9 +1065,14 @@ internal fun AiRepository.chatImpl(
         )
 
         if (viewedSkills.isNotEmpty()) {
+            val outcome = !terminalError
             viewedSkills.forEach { skillName ->
-                runCatching { skillRepository.recordSkillUsage(skillName, success = !terminalError) }
+                runCatching { skillRepository.recordSkillUsage(skillName, success = outcome) }
                     .onFailure { errorLog("AiRepository", "Failed to record skill outcome", it) }
+                // Batched usage log (scheme §1.4): buffer in memory, flush once at end-of-session
+                // housekeeping so flash I/O stays bounded to a single session boundary.
+                runCatching { skillUsageLogRepository.recordUsage(skillName, sessionId, outcome) }
+                    .onFailure { errorLog("AiRepository", "Failed to buffer skill usage log", it) }
             }
         }
         if (runtimeTarget == AgentRuntimeTarget.LOCAL) {
@@ -730,7 +1122,97 @@ internal fun AiRepository.chatImpl(
         }
         if (terminalError) return@channelFlow
 
+        // The model may pack its whole answer into a tool call (e.g. saving it to memory) and end
+        // the turn without emitting text. Surface the last successful tool result so the final
+        // bubble is never empty and the user still reads the substance of the answer. The first
+        // argument is `hasAssistantText` (isNotEmpty): the fallback must fire only when NO visible
+        // assistant text exists, so a normal answered turn never gets tool-result text appended.
+        if (needsFinalAnswerFallback(completedAssistantMessages.isNotEmpty(), executedToolCalls, lastToolResultContent)) {
+            val fallback = extractAnswerLikeText(lastToolResultContent!!)
+            send(AgentEvent.TextDelta(fallback))
+            StreamDebugLog.event(conversationId, null, "FINAL_TEXT_FALLBACK", "chars=${fallback.length}")
+            // Persist the surfaced answer like any other assistant text so semantic recall finds
+            // it verbatim (the underlying tool call is stored separately). Off the hot path.
+            if (runtimeTarget == AgentRuntimeTarget.LOCAL) {
+                repoScope.launch {
+                    runCatching {
+                        sessionMemoryRepository.saveMessage(SessionMessage(sessionId = sessionId, role = "assistant", content = fallback, workspacePath = workspacePath, workspaceId = workspaceId, assistantMode = assistantMode.name, ownerId = ownerId))
+                    }.onFailure { errorLog("AiRepository", "Failed to save fallback assistant message", it) }
+                }
+            }
+        }
+
         StreamDebugLog.event(conversationId, null, "TURN_DONE", "iterations=$iterations")
         send(AgentEvent.Done)
     }
+
+/**
+ * Scheme C: whether a tool-using turn gets one extra verification pass before finalizing. The
+ * model must confirm the goal is fully done with evidence, or continue working. Never runs on
+ * plain Q&A (no tools), internal continuations, or bridge turns.
+ */
+internal fun shouldRunVerificationPass(
+    verificationPasses: Int,
+    maxPasses: Int,
+    messageRole: MessageRole,
+    runtimeTarget: AgentRuntimeTarget,
+    executedToolCalls: Int,
+    failedToolAttempts: Int,
+    hasPlanSteps: Boolean
+): Boolean = verificationPasses < maxPasses &&
+    messageRole == MessageRole.USER &&
+    runtimeTarget == AgentRuntimeTarget.LOCAL &&
+    (executedToolCalls > 0 || failedToolAttempts > 0 || hasPlanSteps)
+
+internal fun isInternalOrHousekeepingTool(name: String): Boolean = name in setOf(
+    "memory_manage", "update_memory", "agent_memory", "agent_memory_internal",
+    "skill_manage", "skill_view", "update_todo", "recommendation_manage", "session_search"
+)
+
+/**
+ * Whether a tool-using turn that produced no assistant text should surface the last tool result
+ * as the final answer (the model packed its reply into a tool call instead of writing it).
+ */
+internal fun needsFinalAnswerFallback(hasAssistantText: Boolean, executedToolCalls: Int, lastToolResult: String?): Boolean =
+    !hasAssistantText && executedToolCalls > 0 && !lastToolResult.isNullOrBlank()
+
+/**
+ * Best-effort extraction of the human-readable substance from a tool result before it is shown as
+ * the final-answer fallback. Memory tools echo a JSON document with a `content` field; plain text
+ * results are returned unchanged.
+ */
+internal fun extractAnswerLikeText(result: String): String {
+    val trimmed = result.trim()
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+        return runCatching { JSONObject(trimmed) }
+            .getOrNull()
+            ?.optString("content")
+            ?.takeIf(String::isNotBlank)
+            ?: trimmed
+    }
+    return trimmed
+}
+
+internal fun shouldCircuitBreakConsecutiveCalls(consecutiveCount: Int): Boolean = consecutiveCount >= 3
+
+internal fun computeToolCallSignature(toolName: String, arguments: Map<String, Any?>): String =
+    "$toolName:${JSONObject(arguments)}"
+
+internal fun sanitizeToolName(name: String, allowedToolNames: Set<String>): String {
+    val trimmed = name.trim()
+    if (trimmed in allowedToolNames) return trimmed
+    // Strip special tokens e.g. <|channel|>commentary, <|call:...|>, <|thought|>, etc.
+    val strippedTokens = trimmed.substringBefore("<|").substringBefore("[:").substringBefore("(").trim()
+    if (strippedTokens in allowedToolNames) return strippedTokens
+    // Strip namespace prefix e.g. tools.browser, functions.browser, tool:browser
+    val afterNamespace = strippedTokens.substringAfterLast('.').substringAfterLast(':').trim()
+    if (afterNamespace in allowedToolNames) return afterNamespace
+    // Match prefix against allowed tool names (e.g. browser_xxx or browser...)
+    val prefixMatch = allowedToolNames.firstOrNull { allowed ->
+        strippedTokens.startsWith(allowed, ignoreCase = true) &&
+            (strippedTokens.length == allowed.length || !strippedTokens[allowed.length].isLetterOrDigit())
+    }
+    if (prefixMatch != null) return prefixMatch
+    return trimmed
+}
 

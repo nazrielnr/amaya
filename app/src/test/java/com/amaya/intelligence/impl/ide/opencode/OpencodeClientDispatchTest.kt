@@ -156,7 +156,13 @@ class OpencodeClientDispatchTest {
     }
 
     private class FakeTransport : OpencodeBridgeTransport {
-        private val flow = MutableSharedFlow<BridgeEnvelope>(extraBufferCapacity = 32)
+        // Replay diperlukan karena test mengirim envelope segera setelah
+        // attach(). Tanpa replay, subscriber yang belum aktif akan kehilangan
+        // event dan test menjadi flaky (race antara launch{} dan emit()).
+        private val flow = MutableSharedFlow<BridgeEnvelope>(
+            replay = 8,
+            extraBufferCapacity = 32
+        )
         val sent = mutableListOf<BridgeEnvelope>()
 
         override val envelopes: SharedFlow<BridgeEnvelope> = flow.asSharedFlow()

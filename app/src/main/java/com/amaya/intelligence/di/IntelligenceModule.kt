@@ -2,6 +2,7 @@ package com.amaya.intelligence.di
 
 import com.amaya.intelligence.domain.ai.IntelligenceService
 import com.amaya.intelligence.domain.ai.IntelligenceSessionManager
+import com.amaya.intelligence.domain.ai.PendingClarification
 import com.amaya.intelligence.domain.models.ConversationMode
 import com.amaya.intelligence.domain.models.AssistantMode
 import com.amaya.intelligence.domain.models.ChatUiState
@@ -94,6 +95,10 @@ object IntelligenceModule {
                 selector = { it.uiState },
                 initial = ChatUiState(sessionMode = sessionManager.currentMode.value)
             )
+            override val pendingClarification: StateFlow<PendingClarification?> = switchedFlow(
+                selector = { it.pendingClarification },
+                initial = null
+            )
             override val conversations = switchedFlow(
                 selector = { it.conversations },
                 initial = emptyList()
@@ -135,6 +140,11 @@ object IntelligenceModule {
             override fun loadMoreConversations() = active.loadMoreConversations()
             override fun hasMoreConversations() = active.hasMoreConversations()
             override fun respondToToolInteraction(executionId: String, confirmed: Boolean) = active.respondToToolInteraction(executionId, confirmed)
+            override fun respondToClarification(executionId: String, answer: String?) =
+                active.respondToClarification(executionId, answer)
+            override fun regenerateLastResponse() = active.regenerateLastResponse()
+            override fun editMessage(messageId: String, newContent: String) = active.editMessage(messageId, newContent)
+            override fun resendMessage(messageId: String) = active.resendMessage(messageId)
 
             override fun connect(ip: String, port: Int) = active.connect(ip, port)
             override fun resync() = active.resync()

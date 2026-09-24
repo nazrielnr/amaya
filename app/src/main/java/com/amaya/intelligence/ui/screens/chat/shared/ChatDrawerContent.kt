@@ -344,7 +344,7 @@ internal fun HyperText(
     Text(
         text = rendered,
         maxLines = 1,
-        overflow = TextOverflow.Clip,
+        overflow = TextOverflow.Ellipsis,
         style = style,
         color = color,
         modifier = modifier.clearAndSetSemantics { contentDescription = text }

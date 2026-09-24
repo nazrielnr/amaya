@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.amaya.intelligence.domain.ai.IntelligenceSessionManager
 import com.amaya.intelligence.domain.ai.displayName
 import com.amaya.intelligence.domain.models.ToolExecution
+import com.amaya.intelligence.ui.components.shared.AskUserClarificationDialog
 import com.amaya.intelligence.ui.components.shared.ConversationModeSheet
 import com.amaya.intelligence.ui.components.shared.LocalhostLinkBottomSheet
 import com.amaya.intelligence.ui.components.shared.LocalhostLinkInfo
@@ -72,7 +73,11 @@ fun ChatScreen(
     topOverlay: (@Composable () -> Unit)? = null
 ) {
     val context = LocalContext.current
+    // Hoisted to composable scope: LocalClipboardManager.current is @Composable and cannot be
+    // read inside the remember-lambda that builds the copy callback below.
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val uiState by viewModel.uiState.collectAsState()
+    val pendingClarification by viewModel.pendingClarification.collectAsState()
     val todoItems by viewModel.todoItems.collectAsState()
     val localReminderCount by viewModel.activeReminderCount.collectAsState()
     val effectiveReminderCount = if (activeReminderCount >= 0) activeReminderCount else localReminderCount
@@ -95,7 +100,20 @@ fun ChatScreen(
     val connectionState = uiState.connectionState
     val workspaces by viewModel.workspaces.collectAsState()
 
-    val doSendMessage: (String) -> Unit = remember(viewModel) { { viewModel.sendMessage(it) } }
+    val composerKey = "${uiState.assistantMode}:${uiState.ownerId}:${uiState.agentId}:${uiState.conversationId}"
+    var editingMessageId by remember(composerKey) { mutableStateOf<String?>(null) }
+
+    val doSendMessage: (String) -> Unit = remember(viewModel, editingMessageId) {
+        { text ->
+            val targetEditId = editingMessageId
+            if (targetEditId != null) {
+                editingMessageId = null
+                viewModel.editMessage(targetEditId, text)
+            } else {
+                viewModel.sendMessage(text)
+            }
+        }
+    }
     val doSendMessageWithImage: (String, String, String, String) -> Unit = remember(viewModel) {
         { content, base64, mime, name -> viewModel.sendMessageWithImage(content, base64, mime, name) }
     }
@@ -133,7 +151,6 @@ fun ChatScreen(
 
     val inputBarHeight = remember { mutableIntStateOf(0) }
     val conversationKey = uiState.conversationId.orEmpty()
-    val composerKey = "${uiState.assistantMode}:${uiState.ownerId}:${uiState.agentId}:${uiState.conversationId}"
     var attachedFilePath by remember(composerKey) { mutableStateOf<String?>(null) }
     var attachedImageBase64 by remember(composerKey) { mutableStateOf<String?>(null) }
     var attachedImageMimeType by remember(composerKey) { mutableStateOf<String?>(null) }
@@ -150,6 +167,8 @@ fun ChatScreen(
         withContext(Dispatchers.IO) { localIp = NetworkUtils.getLocalIpAddress() }
     }
     val inputText = remember(composerKey) { mutableStateOf("") }
+    // Bumped by the edit-bubble action so the composer refocuses and raises the keyboard.
+    var composerEditRequest by remember { mutableIntStateOf(0) }
 
     val serverIp = uiState.serverIp ?: localIp
 
@@ -257,6 +276,39 @@ fun ChatScreen(
         { execution: ToolExecution ->
             viewModel.respondToToolInteraction(execution.metadata["approvalId"] ?: execution.toolCallId, false)
         }
+    }
+    val onClarify: ((ToolExecution, String?) -> Unit)? = remember(viewModel) {
+        { execution: ToolExecution, answer: String? ->
+            viewModel.respondToClarification(
+                execution.metadata["clarificationId"] ?: execution.toolCallId,
+                answer
+            )
+        }
+    }
+    // Message actions: long-press a bubble for copy (user + assistant), edit (user prompt →
+    // composer), or regenerate (assistant response → re-run the last user prompt).
+    val onCopyMessage: ((String) -> Unit)? = remember(context) {
+        { text: String ->
+            if (text.isNotBlank()) {
+                clipboard.setText(androidx.compose.ui.text.AnnotatedString(text))
+                android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    val onEditUserMessage: ((String, String) -> Unit)? = remember {
+        { id: String, text: String ->
+            editingMessageId = id
+            inputText.value = text
+            composerEditRequest++
+        }
+    }
+    val onResendUserMessage: ((String) -> Unit)? = remember(viewModel) {
+        { id: String ->
+            viewModel.resendMessage(id)
+        }
+    }
+    val onRegenerate: (() -> Unit)? = remember(viewModel) {
+        { viewModel.regenerateLastResponse() }
     }
 
     val displayMessages by remember(uiState.messages) {
@@ -413,6 +465,11 @@ fun ChatScreen(
                     drawerOpen = drawerVisible,
                     onToolAccept = onToolAccept,
                     onToolDecline = onToolDecline,
+                    onClarify = onClarify,
+                    onCopyMessage = onCopyMessage,
+                    onEditUserMessage = onEditUserMessage,
+                    onResendUserMessage = onResendUserMessage,
+                    onRegenerate = onRegenerate,
                     onLocalhostLinkClick = { annotationItem ->
                         selectedLocalhostLink = LocalhostLinkInfoParser.parse(annotationItem, serverIp)
                         showLocalhostLinkSheet = true
@@ -495,6 +552,7 @@ fun ChatScreen(
             ChatBottomSection(
                 modifier = Modifier.align(Alignment.BottomStart),
                 inputText = inputText,
+                editRequest = composerEditRequest,
                 isRemoteMode = isRemoteMode,
                 uiState = uiState,
                 connectionState = connectionState,
@@ -539,6 +597,11 @@ fun ChatScreen(
                 onSelectModel = {
                     keyboardController?.hide()
                     showModelSelector = true
+                },
+                editingMessageId = editingMessageId,
+                onCancelEdit = {
+                    editingMessageId = null
+                    inputText.value = ""
                 },
                 onInputBarHeightChange = { inputBarHeight.intValue = it }
             )
@@ -673,6 +736,16 @@ fun ChatScreen(
                 onExit()
             },
             onDismiss = { showDisconnectDialog = false }
+        )
+    }
+
+    // Live ask_user question: the tool loop is suspended until the user answers or dismisses.
+    pendingClarification?.let { pending ->
+        AskUserClarificationDialog(
+            question = pending.question,
+            options = pending.options,
+            onAnswer = { answer -> viewModel.respondToClarification(pending.toolCallId, answer) },
+            onDismiss = { viewModel.respondToClarification(pending.toolCallId, null) }
         )
     }
 }

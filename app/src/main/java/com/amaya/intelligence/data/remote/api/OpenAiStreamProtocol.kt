@@ -1,5 +1,7 @@
 package com.amaya.intelligence.data.remote.api
 
+import com.amaya.intelligence.util.debugLog
+
 internal class OpenAiDeltaCoalescer {
     private enum class Kind { TEXT, THINKING }
 
@@ -59,20 +61,38 @@ internal class OpenAiToolCallAccumulator {
     fun append(index: Int?, id: String?, name: String?, argumentsDelta: String?) {
         require(index != null && index >= 0) { "Missing or invalid tool_call.index" }
         val call = pending.getOrPut(index) { Pending() }
-        id?.let {
-            require(call.id.isBlank() || call.id == it) { "Tool call ID changed at index $index" }
-            call.id = it
+        // Never throw on identity drift. Several OpenAI-compatible vendors re-emit the tool call at
+        // a reused index (placeholder name first, or a fresh call object after a partial send), and a
+        // require() here used to surface as "Failed to parse chunk: Tool name changed at index 0",
+        // killing the whole stream mid-turn. Recover per-case instead; the agent loop rejects any
+        // resulting partial call and feeds it back to the model.
+        id?.let { newId ->
+            when {
+                call.id.isBlank() -> call.id = newId
+                call.id != newId -> {
+                    debugLog("OpenAiStreamProtocol") { "Tool call ID changed at index $index (${call.id} -> $newId); starting a fresh call" }
+                    call.id = newId
+                    call.name = ""
+                    call.arguments.setLength(0)
+                }
+            }
         }
-        name?.let {
-            require(call.name.isBlank() || call.name == it) { "Tool name changed at index $index" }
-            call.name = it
+        name?.let { newName ->
+            when {
+                call.name.isBlank() -> call.name = newName
+                call.name != newName -> {
+                    debugLog("OpenAiStreamProtocol") { "Tool name changed at index $index (${call.name} -> $newName); adopting latest name" }
+                    call.name = newName
+                }
+            }
         }
         call.arguments.append(argumentsDelta.orEmpty())
     }
 
-    fun complete(): List<CompletedOpenAiToolCall> = pending.map { (index, call) ->
-        require(call.id.isNotBlank()) { "Missing tool call ID at index $index" }
-        require(call.name.isNotBlank()) { "Missing tool name at index $index" }
+    fun complete(): List<CompletedOpenAiToolCall> = pending.map { (_, call) ->
+        // Never throw here: a partial call (blank id/name) is rejected by the agent loop and fed
+        // back to the model as a recoverable failure, whereas an exception at completion would
+        // surface as a fatal "Failed to parse chunk" error and terminate the whole turn.
         CompletedOpenAiToolCall(call.id, call.name, call.arguments.toString())
     }
 

@@ -65,6 +65,13 @@ fun WelcomeScreen(
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold
         )
+
+        // Suggested prompts so a fresh conversation is not a blank page: tapping a
+        // pill fills the composer ("Summarize", "Write code", ...). This used to be
+        // dead code — ScrollablePills was defined but never rendered, so the empty
+        // chat state showed only a greeting with no way in.
+        Spacer(Modifier.height(24.dp))
+        ScrollablePills(onPromptClick = onPromptClick)
     }
 }
 

@@ -2,6 +2,8 @@ package com.amaya.intelligence.data.repository
 
 import android.content.ContextWrapper
 import com.amaya.intelligence.data.local.files.FileWorkspaceMemoryStore
+import com.amaya.intelligence.data.remote.api.AiSettingsManager
+import com.amaya.intelligence.data.remote.api.EmbeddingClient
 import com.amaya.intelligence.domain.memory.MemoryAction
 import com.amaya.intelligence.domain.memory.MemoryClassifier
 import com.amaya.intelligence.domain.memory.MemoryContentNormalizer
@@ -28,7 +30,9 @@ class FileMemoryRepositoryTest {
         context = testContext,
         classifier = classifier,
         deduper = MemoryDeduper(),
-        workspaceStore = FileWorkspaceMemoryStore(testContext)
+        workspaceStore = FileWorkspaceMemoryStore(testContext),
+        settingsManager = AiSettingsManager(testContext),
+        embeddingClient = EmbeddingClient()
     )
 
     @After
@@ -165,7 +169,9 @@ class FileMemoryRepositoryTest {
             context = testContext,
             classifier = classifier,
             deduper = MemoryDeduper(),
-            workspaceStore = FileWorkspaceMemoryStore(testContext)
+            workspaceStore = FileWorkspaceMemoryStore(testContext),
+            settingsManager = AiSettingsManager(testContext),
+            embeddingClient = EmbeddingClient()
         )
         assertEquals("The user prefers concise responses.", restarted.listMemoryRecords(MemoryType.USER_PROFILE).single().content)
     }

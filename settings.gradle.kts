@@ -1,4 +1,4 @@
-﻿pluginManagement {
+pluginManagement {
     repositories {
         google {
             content {
@@ -22,6 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "OpenCode Mobile"
+rootProject.name = "Amaya"
 include(":app")
-include(":baselineprofile")

@@ -2,6 +2,7 @@ package com.amaya.intelligence.tools
 
 import android.content.Context
 import com.amaya.intelligence.data.repository.TerminalSettingsRepository
+import com.amaya.intelligence.domain.sandbox.LinuxSandboxManager
 import com.amaya.intelligence.domain.security.CommandValidator
 import com.amaya.intelligence.domain.security.ValidationResult
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -53,7 +54,8 @@ import javax.inject.Singleton
 class RunShellTool @Inject constructor(
     @ApplicationContext private val context: Context,
     private val commandValidator: CommandValidator,
-    private val terminalSettingsRepository: TerminalSettingsRepository
+    private val terminalSettingsRepository: TerminalSettingsRepository,
+    private val linuxSandboxManager: LinuxSandboxManager
 ) : Tool, ContextAwareTool {
 
     companion object {
@@ -102,7 +104,7 @@ class RunShellTool @Inject constructor(
     override suspend fun execute(arguments: Map<String, Any?>, context: ToolExecutionContext): ToolResult =
         withContext(Dispatchers.IO) {
 
-            val command = (arguments["command"] as? String)?.trim()
+            val command = ((arguments["command"] ?: arguments["cmd"]) as? String)?.trim()
             if (command.isNullOrBlank()) {
                 return@withContext ToolResult.Error(
                     "Missing or empty 'command' argument. You must provide a non-empty shell command to run. " +
@@ -130,9 +132,13 @@ class RunShellTool @Inject constructor(
             }
 
             val workingDir = arguments["working_dir"] as? String
-            val timeoutMs = (arguments["timeout_ms"] as? Number)?.toLong()
+            val isApkCommand = command.contains("apk add") || command.contains("apk update") || command.contains("apk upgrade")
+            val baseTimeoutMs = if (isApkCommand) 180_000L else DEFAULT_TIMEOUT_MS
+            val timeoutMs = ((arguments["timeout_ms"] as? Number)?.toLong()
+                ?: (arguments["timeout_seconds"] as? Number)?.let { it.toLong() * 1000L }
+                ?: (arguments["timeout"] as? Number)?.let { it.toLong() * 1000L })
                 ?.coerceIn(1000, MAX_TIMEOUT_MS)
-                ?: DEFAULT_TIMEOUT_MS
+                ?: baseTimeoutMs
 
             try {
                 // FIX 4.6: Removed outer withTimeout() — double timeout was redundant and caused
@@ -161,10 +167,24 @@ class RunShellTool @Inject constructor(
         timeoutMs: Long
     ): ToolResult = withContext(Dispatchers.IO) {
 
-        val processBuilder = ProcessBuilder("/system/bin/sh", "-c", command)
+        val settings = terminalSettingsRepository.getSettings()
+        val isSandboxActive = settings.useLinuxSandbox && linuxSandboxManager.isReady()
 
-        // Set working directory if specified
-        if (workingDir != null) {
+        val processBuilder = if (isSandboxActive) {
+            val (cmdList, envMap) = linuxSandboxManager.buildExecution(command, workingDir)
+            ProcessBuilder(cmdList).apply {
+                val env = environment()
+                env.putAll(envMap)
+                com.amaya.intelligence.domain.sandbox.LinuxSandboxManager.HOST_LEAK_ENV_VARS.forEach {
+                    env.remove(it)
+                }
+            }
+        } else {
+            ProcessBuilder("/system/bin/sh", "-c", command)
+        }
+
+        // Set working directory if specified and not in sandbox (sandbox mounts workingDir directly)
+        if (!isSandboxActive && workingDir != null) {
             val dir = java.io.File(workingDir)
             if (!dir.exists() || !dir.isDirectory) {
                 return@withContext ToolResult.Error(
@@ -243,17 +263,18 @@ class RunShellTool @Inject constructor(
         }
 
         val exitCode = process.exitValue()
+        val cleanedOutput = output.toString().replace(Regex("\u001B\\[[;?0-9]*[a-zA-Z]"), "")
 
         if (exitCode != 0) {
             return@withContext ToolResult.Error(
-                "Command exited with code $exitCode:\n${output}",
+                "Command exited with code $exitCode:\n${cleanedOutput}",
                 ErrorType.EXECUTION_ERROR,
                 recoverable = true
             )
         }
 
         ToolResult.Success(
-            output = output.toString(),
+            output = cleanedOutput,
             metadata = mapOf(
                 "exit_code" to exitCode,
                 "truncated" to truncated,

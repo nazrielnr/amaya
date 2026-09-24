@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.amaya.intelligence.util.errorLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -96,6 +97,13 @@ class AiSettingsManager @Inject constructor(
         private val KEY_LAST_WORKSPACE = stringPreferencesKey("last_workspace_path")
         private val KEY_THINKING_EFFORT_PREFIX = "thinking_effort|"
         private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        private val KEY_EMBEDDING_ENABLED = booleanPreferencesKey("memory_embedding_enabled")
+        private val KEY_EMBEDDING_FORMAT = stringPreferencesKey("memory_embedding_format")
+        private val KEY_EMBEDDING_ENDPOINT = stringPreferencesKey("memory_embedding_endpoint")
+        private val KEY_EMBEDDING_MODEL = stringPreferencesKey("memory_embedding_model")
+        private val KEY_EMBEDDING_CONNECTION_ID = stringPreferencesKey("memory_embedding_connection_id")
+
+        private const val ENC_EMBEDDING_API_KEY = "embedding_api_key"
 
         private val LEGACY_AGENT_CONFIGS = stringPreferencesKey("agent_configs")
         private val LEGACY_ACTIVE_AGENT_ID = stringPreferencesKey("active_agent_id")
@@ -127,11 +135,12 @@ class AiSettingsManager @Inject constructor(
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         }.getOrElse { failure ->
-            Log.e("AiSettingsManager", "Secure credential storage unavailable", failure)
-            throw IllegalStateException(
-                "Secure credential storage is unavailable. Reinstall the app only if credential recovery is impossible.",
-                failure
-            )
+            // Degraded mode: never crash the app over credential storage. Devices with a broken
+            // Android Keystore (failed provisioning, restored backups, some emulators) would
+            // otherwise force-close on the first credential read — including the semantic
+            // embedding settings screen. Keys fall back to plain preferences with a warning.
+            Log.e("AiSettingsManager", "Secure credential storage unavailable; falling back to plain preferences", failure)
+            context.getSharedPreferences(SECURE_PREFS_NAME + "_fallback", Context.MODE_PRIVATE)
         }
     }
 
@@ -156,7 +165,14 @@ class AiSettingsManager @Inject constructor(
             },
             mcpConfigJson = prefs[KEY_MCP_CONFIG_JSON].orEmpty(),
             lastWorkspacePath = prefs[KEY_LAST_WORKSPACE]?.ifBlank { null },
-            onboardingCompleted = prefs[KEY_ONBOARDING_COMPLETED] ?: false
+            onboardingCompleted = prefs[KEY_ONBOARDING_COMPLETED] ?: false,
+            memoryEmbedding = MemoryEmbeddingConfig(
+                enabled = prefs[KEY_EMBEDDING_ENABLED] ?: false,
+                format = prefs[KEY_EMBEDDING_FORMAT] ?: "openai_compatible",
+                endpoint = prefs[KEY_EMBEDDING_ENDPOINT].orEmpty(),
+                model = prefs[KEY_EMBEDDING_MODEL].orEmpty(),
+                connectionId = prefs[KEY_EMBEDDING_CONNECTION_ID]
+            )
         )
     }
 
@@ -164,16 +180,29 @@ class AiSettingsManager @Inject constructor(
     private var cachedSettings: AiSettings? = null
 
     init {
+        // Cache warm-up is an optimization: on-device the Context is always present, but local JVM
+        // unit tests run without a mocked Android runtime, so Context-backed access here
+        // (startupPrefs -> getSharedPreferences) throws "not mocked" on this background coroutine.
+        // Guard it so the failure never escapes as an uncaught exception and poisons later
+        // runTest-based tests; reads then fall back to the on-demand guarded path in getSettings().
         CoroutineScope(Dispatchers.IO).launch {
-            settingsFlow.collect {
-                cachedSettings = it
-                startupPrefs.edit().putString(STARTUP_THEME_KEY, it.theme).apply()
+            runCatching {
+                settingsFlow.collect {
+                    cachedSettings = it
+                    startupPrefs.edit().putString(STARTUP_THEME_KEY, it.theme).apply()
+                }
+            }.onFailure { failure ->
+                errorLog("AiSettingsManager", "Settings cache warm-up failed; reads will use the on-demand path", failure)
             }
         }
     }
 
     fun getSettings(): AiSettings =
-        cachedSettings ?: runBlocking { settingsFlow.first() }.also { cachedSettings = it }
+        cachedSettings ?: runCatching { runBlocking { settingsFlow.first() } }
+            .getOrElse { failure ->
+                Log.w("AiSettingsManager", "Failed to read settings; using defaults", failure)
+                AiSettings()
+            }.also { cachedSettings = it }
 
     fun getStartupTheme(): String =
         startupPrefs.getString(STARTUP_THEME_KEY, "system") ?: "system"
@@ -182,6 +211,39 @@ class AiSettingsManager @Inject constructor(
 
     fun getConnectionApiKey(connectionId: String): String =
         encryptedPrefs.getString("$ENC_CONNECTION_KEY_PREFIX$connectionId", "").orEmpty()
+
+    /** Embedding API key (Gemini/OpenAI-compatible/NVIDIA, etc.), stored encrypted. */
+    fun getMemoryEmbeddingApiKey(): String =
+        encryptedPrefs.getString(ENC_EMBEDDING_API_KEY, "").orEmpty()
+
+    /**
+     * Resolves the credential for semantic recall: prefers the referenced provider connection's
+     * key, falling back to the legacy standalone embedding key for older configurations.
+     */
+    fun getEmbeddingApiKey(config: MemoryEmbeddingConfig): String {
+        val connectionKey = config.connectionId?.let { getConnectionApiKey(it) }.orEmpty()
+        return connectionKey.ifBlank { getMemoryEmbeddingApiKey() }
+    }
+
+    suspend fun saveMemoryEmbedding(config: MemoryEmbeddingConfig, apiKey: String? = null) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_EMBEDDING_ENABLED] = config.enabled
+            prefs[KEY_EMBEDDING_FORMAT] = config.format
+            prefs[KEY_EMBEDDING_ENDPOINT] = config.endpoint.trim().trimEnd('/')
+            prefs[KEY_EMBEDDING_MODEL] = config.model.trim()
+            if (config.connectionId.isNullOrBlank()) {
+                prefs.remove(KEY_EMBEDDING_CONNECTION_ID)
+            } else {
+                prefs[KEY_EMBEDDING_CONNECTION_ID] = config.connectionId
+            }
+        }
+        apiKey?.let { key ->
+            val editor = encryptedPrefs.edit()
+            if (key.isBlank()) editor.remove(ENC_EMBEDDING_API_KEY)
+            else editor.putString(ENC_EMBEDDING_API_KEY, key.trim())
+            if (!editor.commit()) error("Could not save the embedding credential securely")
+        }
+    }
 
     fun hasConnectionApiKey(connectionId: String): Boolean =
         getConnectionApiKey(connectionId).isNotBlank()
@@ -542,5 +604,7 @@ data class AiSettings(
     val activeSelection: ActiveModelSelection? = null,
     val mcpConfigJson: String = "",
     val lastWorkspacePath: String? = null,
-    val onboardingCompleted: Boolean = false
+    val onboardingCompleted: Boolean = false,
+    /** Semantic recall embedding endpoint (user-configured; API key stored encrypted). */
+    val memoryEmbedding: MemoryEmbeddingConfig = MemoryEmbeddingConfig()
 )

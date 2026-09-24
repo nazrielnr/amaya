@@ -64,6 +64,9 @@ class MemoryManageTool @Inject constructor(
         }
         return memoryRepository.updateMemoryById(id, content, expectedVersion, workspacePath).fold(
             onSuccess = {
+                // Scheme §4 confidence breaker: an explicit user-confirmed edit is independent
+                // validation, so the memory may rise to verified. Best-effort and non-fatal.
+                runCatching { memoryRepository.confirmMemory(id, workspacePath) }
                 ToolResult.Success(JSONObject()
                     .put("id", id)
                     .put("content", content.trim())
@@ -78,6 +81,7 @@ class MemoryManageTool @Inject constructor(
     private fun parseType(raw: String?): MemoryType? = when (raw?.lowercase()) {
         "user_profile", "user" -> MemoryType.USER_PROFILE
         "workspace_fact", "workspace", "project" -> MemoryType.WORKSPACE_FACT
+        "decision" -> MemoryType.DECISION
         else -> null
     }
 }

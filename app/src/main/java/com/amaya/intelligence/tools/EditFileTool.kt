@@ -46,7 +46,7 @@ class EditFileTool @Inject constructor(
         executionContext: ToolExecutionContext
     ): ToolResult = withContext(Dispatchers.IO) {
 
-        val pathStr = arguments["path"] as? String
+        val pathStr = (arguments["path"] ?: arguments["file_path"] ?: arguments["filePath"] ?: arguments["file"]) as? String
             ?: return@withContext ToolResult.Error("Missing required argument: path", ErrorType.VALIDATION_ERROR)
 
         // ── Diff/patch mode (replaces apply_diff) ────────────────────────
@@ -66,13 +66,13 @@ class EditFileTool @Inject constructor(
             return@withContext applyUnifiedDiff(file, content, diffStr)
         }
 
-        val oldContent = arguments["old_content"] as? String
+        val oldContent = (arguments["old_content"] ?: arguments["old_text"] ?: arguments["target_content"] ?: arguments["TargetContent"]) as? String
             ?: return@withContext ToolResult.Error(
                 "Missing required argument: old_content",
                 ErrorType.VALIDATION_ERROR
             )
 
-        val newContent = arguments["new_content"] as? String
+        val newContent = (arguments["new_content"] ?: arguments["new_text"] ?: arguments["replacement_content"] ?: arguments["ReplacementContent"]) as? String
             ?: return@withContext ToolResult.Error(
                 "Missing required argument: new_content",
                 ErrorType.VALIDATION_ERROR
@@ -128,12 +128,43 @@ class EditFileTool @Inject constructor(
 
         try {
             // Read current content
-            val currentContent = file.readText()
+            var currentContent = file.readText()
+            var targetOldContent = oldContent
+            var targetNewContent = newContent
 
-            // Check if old_content exists
-            if (!currentContent.contains(oldContent)) {
+            // Check if old_content exists with exact match, CRLF tolerance, or whitespace/indentation tolerance
+            var matchedSubstring: String? = null
+
+            if (currentContent.contains(targetOldContent)) {
+                matchedSubstring = targetOldContent
+            } else {
+                val normalizedCurrent = currentContent.replace("\r\n", "\n")
+                val normalizedOld = targetOldContent.replace("\r\n", "\n")
+                if (normalizedCurrent.contains(normalizedOld)) {
+                    currentContent = normalizedCurrent
+                    targetOldContent = normalizedOld
+                    targetNewContent = targetNewContent.replace("\r\n", "\n")
+                    matchedSubstring = targetOldContent
+                } else {
+                    // Tier 3: Line-by-line whitespace-tolerant sliding window matcher
+                    val trimmedMatch = findTrimmedLineBlock(currentContent, targetOldContent)
+                    if (trimmedMatch != null) {
+                        matchedSubstring = trimmedMatch
+                        targetOldContent = trimmedMatch
+                    }
+                }
+            }
+
+            if (matchedSubstring == null) {
+                val fileLines = currentContent.lines()
+                val targetLines = targetOldContent.lines()
+                val contextHint = findBestContextHint(fileLines, targetLines)
+
                 return@withContext ToolResult.Error(
-                    "Text not found in file. Make sure 'old_content' matches exactly (including whitespace).",
+                    "Text not found in file '$pathStr'. Make sure 'old_content' matches the actual file content.\n" +
+                    "File total lines: ${fileLines.size}.\n\n" +
+                    contextHint + "\n\n" +
+                    "Hint: Use 'read_file' or refer to the context lines above to align indentation and line breaks.",
                     ErrorType.NOT_FOUND,
                     recoverable = true
                 )
@@ -143,18 +174,18 @@ class EditFileTool @Inject constructor(
             var occurrences = 0
             var searchIndex = 0
             while (true) {
-                val foundIndex = currentContent.indexOf(oldContent, searchIndex)
+                val foundIndex = currentContent.indexOf(targetOldContent, searchIndex)
                 if (foundIndex == -1) break
                 occurrences++
-                searchIndex = foundIndex + oldContent.length
+                searchIndex = foundIndex + targetOldContent.length
                 if (occurrences >= MAX_REPLACEMENTS) break
             }
 
             // Perform replacement
             val newFullContent = if (replaceAll) {
-                currentContent.replace(oldContent, newContent)
+                currentContent.replace(targetOldContent, targetNewContent)
             } else {
-                currentContent.replaceFirst(oldContent, newContent)
+                currentContent.replaceFirst(targetOldContent, targetNewContent)
             }
 
             val replacementCount = if (replaceAll) occurrences else 1
@@ -415,6 +446,84 @@ class EditFileTool @Inject constructor(
         }
 
         return Pair(true, totalReplacements)
+    }
+
+    /**
+     * Attempts a sliding-window match where leading/trailing whitespaces on each line are ignored.
+     * Returns the exact original substring in [fullContent] that corresponds to the matched block.
+     */
+    private fun findTrimmedLineBlock(fullContent: String, targetOld: String): String? {
+        val targetLines = targetOld.replace("\r\n", "\n").lines()
+        val normalizedTargetLines = targetLines.map { it.trim() }
+        if (normalizedTargetLines.all { it.isEmpty() }) return null
+
+        val fileLines = fullContent.replace("\r\n", "\n").lines()
+        if (fileLines.size < targetLines.size) return null
+
+        val windowSize = targetLines.size
+        for (i in 0..(fileLines.size - windowSize)) {
+            var allMatch = true
+            for (j in 0 until windowSize) {
+                if (fileLines[i + j].trim() != normalizedTargetLines[j]) {
+                    allMatch = false
+                    break
+                }
+            }
+            if (allMatch) {
+                // Reconstruct the exact slice from fullContent
+                val matchedBlock = fileLines.subList(i, i + windowSize).joinToString("\n")
+                if (fullContent.contains(matchedBlock)) {
+                    return matchedBlock
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * Identifies the closest line region in the file to help the agent locate the target,
+     * providing surrounding lines with 1-based line numbers.
+     */
+    private fun findBestContextHint(fileLines: List<String>, targetLines: List<String>): String {
+        if (fileLines.isEmpty()) return "File is empty."
+
+        val firstMeaningfulTarget = targetLines.firstOrNull { it.isNotBlank() }?.trim() ?: ""
+        var bestIndex = 0
+        var bestScore = -1
+
+        if (firstMeaningfulTarget.isNotEmpty()) {
+            val targetTokens = firstMeaningfulTarget.split(Regex("""\W+""")).filter { it.isNotBlank() }.toSet()
+            for ((index, line) in fileLines.withIndex()) {
+                val trimmed = line.trim()
+                if (trimmed.isEmpty()) continue
+                if (trimmed == firstMeaningfulTarget) {
+                    bestIndex = index
+                    bestScore = 100
+                    break
+                }
+                if (targetTokens.isNotEmpty()) {
+                    val lineTokens = trimmed.split(Regex("""\W+""")).filter { it.isNotBlank() }.toSet()
+                    val overlap = lineTokens.intersect(targetTokens).size
+                    if (overlap > bestScore) {
+                        bestScore = overlap
+                        bestIndex = index
+                    }
+                }
+            }
+        }
+
+        val startLine = (bestIndex - 4).coerceAtLeast(0)
+        val endLine = (bestIndex + 5).coerceAtMost(fileLines.size)
+        val snippet = fileLines.subList(startLine, endLine).mapIndexed { offset, lineText ->
+            val lineNum = startLine + offset + 1
+            val marker = if (startLine + offset == bestIndex) ">>" else "  "
+            "$marker ${lineNum.toString().padStart(4, ' ')}: $lineText"
+        }.joinToString("\n")
+
+        return "Closest matching section around line ${bestIndex + 1}:\n" +
+               "--- File Content Preview ---\n" +
+               snippet + "\n" +
+               "----------------------------"
     }
 
 }

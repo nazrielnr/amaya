@@ -42,7 +42,7 @@ fun ToolArgumentsPreview(
     val args = arguments
     val effectiveCategory = when (toolName) {
         "delegate_agent" -> ToolCategory.TASK_MANAGEMENT
-        "update_memory", "memory_manage" -> ToolCategory.MEMORY
+        "update_memory", "memory_manage", "agent_memory", "agent_memory_internal" -> ToolCategory.MEMORY
         "skill_manage", "skill_view" -> ToolCategory.SKILL
         else -> category
     }
@@ -182,7 +182,7 @@ fun ToolArgumentsPreview(
                                     color = metaColor,
                                     softWrap = false,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Clip
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 if (command.isNotBlank()) {
                                     Text(

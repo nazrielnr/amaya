@@ -245,7 +245,7 @@ internal fun IosRowWithChevron(
                     ),
                     color = colors.primaryText,
                     maxLines = 1,
-                    overflow = TextOverflow.Clip,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.shimmeringText(trailingProgress, colors.primaryText)
                 )
                 subtitle?.takeIf(String::isNotBlank)?.let {
@@ -388,7 +388,7 @@ internal fun IosChildRow(
                     ),
                     color = colors.primaryText,
                     maxLines = 1,
-                    overflow = TextOverflow.Clip,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.shimmeringText(streaming, colors.primaryText)
                 )
                 subtitle?.takeIf(String::isNotBlank)?.let {

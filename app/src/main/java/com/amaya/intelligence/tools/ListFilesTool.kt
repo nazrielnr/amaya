@@ -37,7 +37,7 @@ class ListFilesTool @Inject constructor(
         executionContext: ToolExecutionContext
     ): ToolResult = withContext(Dispatchers.IO) {
 
-        val pathStr = arguments["path"] as? String
+        val pathStr = (arguments["path"] ?: arguments["directory"] ?: arguments["dir"] ?: arguments["folder"]) as? String
             ?: return@withContext ToolResult.Error(
                 "Missing required argument: path",
                 ErrorType.VALIDATION_ERROR

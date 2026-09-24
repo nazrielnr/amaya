@@ -169,7 +169,9 @@ private fun ReviewHeaderCard(pendingCount: Int, approvedCount: Int, onApplyAppro
 
 @Composable
 private fun MemoryOverviewCard(proposals: List<PendingProposal>) {
-    val memorySuggestions = proposals.count { it.type == PendingProposalType.WORKSPACE_FACT }
+    val memorySuggestions = proposals.count {
+        it.type == PendingProposalType.WORKSPACE_FACT || it.type == PendingProposalType.USER_PROFILE
+    }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Memory", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)

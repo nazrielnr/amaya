@@ -19,6 +19,26 @@ object DomInspector {
         })();
     """.trimIndent()
 
+    /**
+     * Scheme G: cheap page fingerprint used to verify that a mutation action (click/type/…) actually
+     * took effect. Captures navigation (url/title), content (body innerText length) and focus state
+     * (active element tag + live value length — so typing into an input is detected even though the
+     * value never appears in innerText). Compared for equality before/after an action.
+     */
+    fun getFingerprintScript(): String = """
+        (function() {
+          var a = document.activeElement;
+          var live = a ? (a.value != null ? String(a.value) : (a.textContent || '')) : '';
+          return JSON.stringify({
+            url: location.href,
+            title: document.title,
+            bodyLen: document.body ? document.body.innerText.length : 0,
+            activeTag: a ? a.tagName : '',
+            activeValueLen: live.length
+          });
+        })();
+    """.trimIndent()
+
     fun findElementScript(query: String): String {
         val q = JSONObject.quote(query)
         return baseInspector(

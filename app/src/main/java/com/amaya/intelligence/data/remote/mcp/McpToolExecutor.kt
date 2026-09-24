@@ -1,7 +1,9 @@
 package com.amaya.intelligence.data.remote.mcp
 
+import com.amaya.intelligence.data.repository.TerminalSettingsRepository
 import com.amaya.intelligence.domain.models.AssistantMode
 import com.amaya.intelligence.impl.bridge.windows.tools.WindowsBridgeToolProvider
+import com.amaya.intelligence.tools.ClarificationRequest
 import com.amaya.intelligence.tools.ConfirmationRequest
 import com.amaya.intelligence.tools.ToolExecutor
 import com.amaya.intelligence.tools.ToolResult
@@ -14,7 +16,8 @@ import javax.inject.Singleton
 class McpToolExecutor @Inject constructor(
     private val toolExecutor: ToolExecutor,
     private val mcpClientManager: McpClientManager,
-    private val windowsBridgeToolProvider: WindowsBridgeToolProvider
+    private val windowsBridgeToolProvider: WindowsBridgeToolProvider,
+    private val terminalSettingsRepository: TerminalSettingsRepository
 ) {
     suspend fun execute(
         toolName: String,
@@ -23,6 +26,7 @@ class McpToolExecutor @Inject constructor(
         toolCallId: String? = null,
         onEvent: (suspend (Any) -> Unit)? = null,
         onConfirmationRequired: suspend (ConfirmationRequest) -> Boolean,
+        onClarificationRequired: suspend (ClarificationRequest) -> String? = { null },
         providerConnection: com.amaya.intelligence.data.remote.api.ProviderConnection? = null,
         selectedModelId: String? = null,
         conversationId: String? = null,
@@ -51,19 +55,38 @@ class McpToolExecutor @Inject constructor(
                     "MCP tool call is missing a call ID; approval cannot be bound safely.",
                     com.amaya.intelligence.tools.ErrorType.VALIDATION_ERROR
                 )
-                val approved = onConfirmationRequired(
-                    ConfirmationRequest(
-                        toolName = wireName,
-                        reason = "External MCP servers are untrusted and may access or modify data",
-                        details = safeArguments.toString(),
-                        riskLevel = com.amaya.intelligence.domain.security.RiskLevel.MEDIUM,
-                        toolCallId = identity
+                // Terminal policy treats MCP invocations as non-destructive by default (see
+                // TerminalSettings.autoApproveNonDestructive), so an enabled auto-approve toggle
+                // lets the model call external MCP tools without prompting. The exception is a
+                // server that explicitly annotates a tool as destructive (destructiveHint): that
+                // call always requires explicit confirmation — auto-approve is never blanket for
+                // tools the server itself flags as destructive.
+                val annotations = mcpClientManager.getToolAnnotations(wireName)
+                val settings = terminalSettingsRepository.getSettings()
+                val autoApprove = settings.autoApproveAll || settings.autoApproveNonDestructive
+                if (!settings.autoApproveAll && mcpConfirmationRequired(autoApprove, annotations.destructiveHint)) {
+                    val approved = onConfirmationRequired(
+                        ConfirmationRequest(
+                            toolName = wireName,
+                            reason = if (annotations.destructiveHint) {
+                                "External MCP server marked this tool as potentially destructive"
+                            } else {
+                                "External MCP servers are untrusted and may access or modify data"
+                            },
+                            details = safeArguments.toString(),
+                            riskLevel = if (annotations.destructiveHint) {
+                                com.amaya.intelligence.domain.security.RiskLevel.HIGH
+                            } else {
+                                com.amaya.intelligence.domain.security.RiskLevel.MEDIUM
+                            },
+                            toolCallId = identity
+                        )
                     )
-                )
-                if (!approved) return ToolResult.Error(
-                    "User declined external MCP tool call",
-                    com.amaya.intelligence.tools.ErrorType.PERMISSION_ERROR
-                )
+                    if (!approved) return ToolResult.Error(
+                        "User declined external MCP tool call",
+                        com.amaya.intelligence.tools.ErrorType.PERMISSION_ERROR
+                    )
+                }
                 mcpClientManager.callTool(wireName, safeArguments)
             }
             windowsBridgeToolProvider.isBridgeTool(wireName) ->
@@ -76,6 +99,7 @@ class McpToolExecutor @Inject constructor(
                     toolCallId,
                     onEvent,
                     onConfirmationRequired,
+                    onClarificationRequired,
                     providerConnection,
                     selectedModelId,
                     conversationId = conversationId,
@@ -87,3 +111,12 @@ class McpToolExecutor @Inject constructor(
         }
     }
 }
+
+/**
+ * Whether an external MCP tool call needs explicit user confirmation. The terminal auto-approve
+ * toggle ([TerminalSettings.autoApproveNonDestructive]) covers non-destructive MCP invocations,
+ * but a server that explicitly annotates a tool as destructive (destructiveHint) always requires
+ * confirmation — auto-approve is never blanket for tools the server itself flags as destructive.
+ */
+internal fun mcpConfirmationRequired(autoApproveNonDestructive: Boolean, destructiveHint: Boolean): Boolean =
+    destructiveHint || !autoApproveNonDestructive

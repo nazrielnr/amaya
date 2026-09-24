@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.*
@@ -31,13 +32,21 @@ internal data class ChatErrorPresentation(
     val message: String
 )
 
-internal fun presentChatError(raw: String): ChatErrorPresentation =
-    ChatErrorPresentation(title = raw.substringBefore(":"), message = raw)
+internal fun presentChatError(raw: String): ChatErrorPresentation {
+    val trimmed = raw.trim()
+    val title = trimmed.substringBefore(":").trim().ifBlank { "Something went wrong" }
+    val detail = trimmed.substringAfter(":", "").trim()
+    // Never echo the same raw string twice (title + body). Errors without a colon
+    // get a friendly hint instead of a verbatim duplicate.
+    val message = if (detail.isNotBlank()) detail else "Check your connection and try again."
+    return ChatErrorPresentation(title = title, message = message)
+}
 
 @Composable
 fun ChatBottomSection(
     modifier: Modifier = Modifier,
     inputText: MutableState<String>,
+    editRequest: Int = 0,
     isRemoteMode: Boolean,
     uiState: ChatUiState,
     connectionState: ConnectionState,
@@ -72,6 +81,8 @@ fun ChatBottomSection(
     effort: com.amaya.intelligence.data.remote.api.ThinkingEffort = com.amaya.intelligence.data.remote.api.ThinkingEffort.MEDIUM,
     onEffortChange: (com.amaya.intelligence.data.remote.api.ThinkingEffort) -> Unit = {},
     onCompactConversation: (String) -> Unit = {},
+    editingMessageId: String? = null,
+    onCancelEdit: () -> Unit = {},
     onInputBarHeightChange: (Int) -> Unit
 ) {
     var attachedPath by remember { mutableStateOf(attachedFilePath) }
@@ -142,8 +153,8 @@ fun ChatBottomSection(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
-                        IconButton(onClick = onClearError, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp),
+                        IconButton(onClick = onClearError) {
+                            Icon(Icons.Default.Close, contentDescription = "Dismiss error", modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onErrorContainer)
                         }
                     }
@@ -172,9 +183,47 @@ fun ChatBottomSection(
                     }
                 }
             }
+            AnimatedVisibility(visible = editingMessageId != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Editing message",
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = onCancelEdit,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Cancel edit",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+            }
             ChatInput(
                 text = inputText.value,
                 onTextChange = { inputText.value = it },
+                editRequest = editRequest,
                 resetKey = uiState.conversationId,
                 isStreaming = uiState.isStreaming,
                 isCompressing = uiState.isCompressing,

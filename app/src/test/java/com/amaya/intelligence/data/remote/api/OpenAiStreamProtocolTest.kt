@@ -112,11 +112,41 @@ class OpenAiStreamProtocolTest {
     }
 
     @Test
-    fun `identity change fails closed`() {
+    fun `id change at a reused index starts a fresh call instead of failing`() {
         val accumulator = OpenAiToolCallAccumulator()
-        accumulator.append(0, "call_a", "read_file", "{")
-        assertThrows(IllegalArgumentException::class.java) {
-            accumulator.append(0, "call_b", null, "}")
-        }
+        accumulator.append(0, "call_a", "read_file", "{\"path\":")
+        // Vendor re-issues index 0 with a different id — treat as a new call, never throw.
+        accumulator.append(0, "call_b", null, "\"other\"}")
+
+        assertEquals(
+            listOf(CompletedOpenAiToolCall("call_b", "", "\"other\"}")),
+            accumulator.complete()
+        )
+    }
+
+    @Test
+    fun `name change at the same index adopts the latest name without failing`() {
+        val accumulator = OpenAiToolCallAccumulator()
+        accumulator.append(0, "call_a", "read_file", "{\"path\":")
+        // Same id, updated name — the arguments keep accumulating, the newest name wins.
+        accumulator.append(0, null, "write_file", "\"other\"}")
+
+        assertEquals(
+            listOf(CompletedOpenAiToolCall("call_a", "write_file", "{\"path\":\"other\"}")),
+            accumulator.complete()
+        )
+    }
+
+    @Test
+    fun `partial call at completion does not throw`() {
+        val accumulator = OpenAiToolCallAccumulator()
+        accumulator.append(0, null, null, "{}")
+
+        // Blank id/name surface to the agent loop, which rejects the call and feeds the model
+        // recoverable feedback instead of terminating the stream with a parse error.
+        assertEquals(
+            listOf(CompletedOpenAiToolCall("", "", "{}")),
+            accumulator.complete()
+        )
     }
 }

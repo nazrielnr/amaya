@@ -5,8 +5,10 @@ import com.amaya.intelligence.data.remote.api.MessageRole
 
 import com.amaya.intelligence.data.repository.AgentEvent
 
+import com.amaya.intelligence.domain.ai.PendingClarification
 import com.amaya.intelligence.domain.models.*
 import com.amaya.intelligence.util.LocalStreamPerfLog
+import com.amaya.intelligence.tools.ClarificationRequest
 import com.amaya.intelligence.tools.ConfirmationRequest
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -34,6 +36,46 @@ internal suspend fun LocalIntelligenceService.awaitInlineToolConfirmation(reques
             pendingApprovalIds.remove(toolCallId, approvalId)
         }
     }
+
+internal suspend fun LocalIntelligenceService.awaitInlineToolClarification(
+    request: ClarificationRequest,
+    turnId: Long
+): String? {
+    val toolCallId = request.toolCallId ?: return null
+    if (turnsById[turnId] == null) return null
+    val clarificationId = "$turnId:$toolCallId"
+    pendingClarificationUi[toolCallId] = request
+    pendingClarificationIds[toolCallId] = clarificationId
+    _pendingClarification.value = PendingClarification(toolCallId, request.question, request.options)
+    return try {
+        pendingClarifications.await(clarificationId, turnId) {
+            if (turnsById[turnId] == null) return@await
+            updateTurnToolExecution(turnsById[turnId]!!, toolCallId) { tool ->
+                tool.copy(
+                    status = ToolStatus.PENDING,
+                    metadata = tool.metadata + clarificationMetadata(request, clarificationId)
+                )
+            }
+        }
+    } finally {
+        pendingClarificationUi.remove(toolCallId, request)
+        pendingClarificationIds.remove(toolCallId, clarificationId)
+        if (_pendingClarification.value?.toolCallId == toolCallId) {
+            _pendingClarification.value = null
+        }
+    }
+}
+
+internal fun LocalIntelligenceService.clarificationMetadata(
+    request: ClarificationRequest,
+    clarificationId: String
+): Map<String, String> = mapOf(
+    "clarificationRequired" to "true",
+    "clarificationState" to "pending",
+    "clarificationId" to clarificationId,
+    "clarificationQuestion" to request.question,
+    "clarificationOptions" to request.options.joinToString("\n")
+)
 
 internal fun LocalIntelligenceService.approvalMetadata(request: ConfirmationRequest, approvalId: String): Map<String, String> = mapOf(
         "approvalRequired" to "true",

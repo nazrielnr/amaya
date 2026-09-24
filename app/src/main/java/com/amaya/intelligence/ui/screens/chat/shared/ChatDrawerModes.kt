@@ -32,6 +32,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -271,6 +272,31 @@ internal fun DrawerNormalContent(
                     Icon(
                         Icons.Default.Search,
                         contentDescription = "Search",
+                        tint = colors.iconTint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            // Terminal button
+            val context = LocalContext.current
+            Surface(
+                onClick = {
+                    com.amaya.intelligence.ui.activities.terminal.TerminalActivity.start(context)
+                },
+                shape = CircleShape,
+                color = colors.iconBackground,
+                border = BorderStroke(1.dp, colors.border),
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Terminal,
+                        contentDescription = "Terminal",
                         tint = colors.iconTint,
                         modifier = Modifier.size(20.dp)
                     )

@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.SettingsSuggest
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 
@@ -14,7 +15,8 @@ fun AmayaHomeScreen(
     onNavigateBack: () -> Unit,
     onMemory: () -> Unit,
     onReview: () -> Unit,
-    onSkills: () -> Unit
+    onSkills: () -> Unit,
+    onRecommendations: () -> Unit
 ) {
     AmayaScaffold("Amaya", snackbarHostState, onNavigateBack) {
         if (state.pendingProposals.isNotEmpty()) {
@@ -27,7 +29,9 @@ fun AmayaHomeScreen(
                 )
             }
         }
-        AmayaSection("Settings") {
+        AmayaSection("Intelligence") {
+            AmayaNavigationRow(Icons.Default.TaskAlt, "Recommendations", "Evidence-grounded next steps with verification", onRecommendations)
+            AmayaDivider()
             AmayaNavigationRow(Icons.Default.Memory, "Memory", "${state.totalMemoryCount} saved items", onMemory)
             AmayaDivider()
             AmayaNavigationRow(Icons.Default.Psychology, "Skills", "${state.enabledSkills} enabled workflows", onSkills)

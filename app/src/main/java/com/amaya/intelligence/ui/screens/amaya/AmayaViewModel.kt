@@ -211,7 +211,8 @@ data class AmayaUiState(
     val totalMemoryCount: Int get() = userMemoryCount + projectMemoryCount
 }
 
-fun PendingProposalType.isMemoryType(): Boolean = this == PendingProposalType.WORKSPACE_FACT
+fun PendingProposalType.isMemoryType(): Boolean =
+    this == PendingProposalType.USER_PROFILE || this == PendingProposalType.WORKSPACE_FACT
 
 fun PendingProposalType.isSkillType(): Boolean = this == PendingProposalType.SKILL_CREATE ||
     this == PendingProposalType.SKILL_PATCH || this == PendingProposalType.SKILL_UPDATE

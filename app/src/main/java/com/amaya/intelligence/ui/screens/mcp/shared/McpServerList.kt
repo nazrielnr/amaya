@@ -15,10 +15,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.data.remote.api.McpServerConfig
+import com.amaya.intelligence.data.remote.mcp.McpServerTestResult
 import com.amaya.intelligence.ui.components.shared.SettingsEmptyState
 import com.amaya.intelligence.ui.screens.amaya.AmayaGroupedSettingsTokens
 import com.amaya.intelligence.ui.screens.settings.shared.SettingsSectionCard
-
 import com.amaya.intelligence.ui.screens.amaya.iosAmayaColors
 
 @Composable
@@ -27,6 +27,9 @@ fun McpServerList(
     onServerClick: (McpServerConfig) -> Unit,
     onToggleEnabled: (McpServerConfig, Boolean) -> Unit,
     onDelete: (McpServerConfig) -> Unit,
+    onTest: ((McpServerConfig) -> Unit)? = null,
+    testResults: Map<String, McpServerTestResult> = emptyMap(),
+    testingServers: Set<String> = emptySet(),
     topPadding: androidx.compose.ui.unit.Dp = 72.dp,
     modifier: Modifier = Modifier
 ) {
@@ -66,7 +69,10 @@ fun McpServerList(
                                 server = server,
                                 onToggle = { enabled -> onToggleEnabled(server, enabled) },
                                 onEdit = { onServerClick(server) },
-                                onDelete = { onDelete(server) }
+                                onDelete = { onDelete(server) },
+                                onTest = onTest?.let { { it(server) } },
+                                testResult = testResults[server.name],
+                                isTesting = testingServers.contains(server.name)
                             )
                             if (index < activeServers.size - 1) {
                                 HorizontalDivider(
@@ -88,7 +94,10 @@ fun McpServerList(
                                 server = server,
                                 onToggle = { enabled -> onToggleEnabled(server, enabled) },
                                 onEdit = { onServerClick(server) },
-                                onDelete = { onDelete(server) }
+                                onDelete = { onDelete(server) },
+                                onTest = onTest?.let { { it(server) } },
+                                testResult = testResults[server.name],
+                                isTesting = testingServers.contains(server.name)
                             )
                             if (index < disabledServers.size - 1) {
                                 HorizontalDivider(

@@ -60,6 +60,7 @@ fun ToolCallCard(
     execution: ToolExecution,
     onAccept: (() -> Unit)? = null,
     onDecline: (() -> Unit)? = null,
+    onClarify: ((String?) -> Unit)? = null,
     onLocalhostLinkClick: ((String) -> Unit)? = null,
     embeddedText: String? = null,
     /**
@@ -87,6 +88,7 @@ fun ToolCallCard(
         execution = execution,
         onAccept = onAccept,
         onDecline = onDecline,
+        onClarify = onClarify,
         onLocalhostLinkClick = onLocalhostLinkClick,
         embeddedText = embeddedText,
         modifier = Modifier.mountFade(shouldAnimate)
@@ -100,6 +102,7 @@ internal fun ToolCardContent(
     execution: ToolExecution,
     onAccept: (() -> Unit)? = null,
     onDecline: (() -> Unit)? = null,
+    onClarify: ((String?) -> Unit)? = null,
     onLocalhostLinkClick: ((String) -> Unit)? = null,
     embeddedText: String? = null,
     modifier: Modifier = Modifier
@@ -117,14 +120,22 @@ internal fun ToolCardContent(
         || (approvalRequired && execution.status == ToolStatus.PENDING)
     val showApprovalActions = approvalRequired && approvalPending && onAccept != null && onDecline != null
 
-    // Auto-expand for an approval prompt, and — the half that was missing — auto-collapse
-    // once, when the tool actually finishes. Both edges are latched, so a card the user
-    // has since opened or closed by hand is never overridden.
+    // An ask_user question waiting on the user. Rendered the same way as an approval
+    // prompt (auto-expanded, section pinned below the header) but answers with free text.
+    val clarificationPending = execution.metadata["clarificationRequired"].equals("true", ignoreCase = true) &&
+        execution.metadata["clarificationState"].equals("pending", ignoreCase = true)
+    val showClarificationActions = clarificationPending && onClarify != null
+    var clarificationAnswer by remember(execution.toolCallId, execution.metadata["clarificationState"]) { mutableStateOf("") }
+    var clarificationSubmitted by remember(execution.toolCallId, execution.metadata["clarificationState"]) { mutableStateOf(false) }
+
+    // Auto-expand for an approval prompt or a pending question, and — the half that was
+    // missing — auto-collapse once, when the tool actually finishes. Both edges are
+    // latched, so a card the user has since opened or closed by hand is never overridden.
     var autoExpandedForApproval by remember(execution.toolCallId) { mutableStateOf(false) }
     var autoCollapsedOnce by remember(execution.toolCallId) { mutableStateOf(false) }
     val isTerminalStatus = execution.status == ToolStatus.SUCCESS || execution.status == ToolStatus.ERROR
-    LaunchedEffect(showApprovalActions) {
-        if (showApprovalActions) {
+    LaunchedEffect(showApprovalActions, showClarificationActions) {
+        if (showApprovalActions || showClarificationActions) {
             expanded = true
             autoExpandedForApproval = true
         }
@@ -149,11 +160,12 @@ internal fun ToolCardContent(
     val isFileRead = execution.name == "read_file"
     val hasLocalSemanticBody = execution.status == ToolStatus.ERROR ||
         showApprovalActions ||
+        showClarificationActions ||
         (!isFileRead && localToolPath(execution.arguments) != null) ||
         (execution.metadata["syntheticBrowserStep"] == "true" && (!execution.result.isNullOrBlank() || execution.arguments.isNotEmpty())) ||
         when (execution.name) {
             "read_file" -> false
-            "list_files", "find_files", "run_shell", "web_search", "update_memory",
+            "list_files", "find_files", "run_shell", "web_search", "update_memory", "agent_memory", "agent_memory_internal",
             "memory_manage", "skill_view", "skill_manage", "session_search", "invoke_subagents", "delegate_agent" ->
                 !execution.result.isNullOrBlank()
             "edit_file" -> execution.hasCanonicalFileDiff() || !execution.result.isNullOrBlank()
@@ -261,7 +273,7 @@ internal fun ToolCardContent(
                     fontWeight = FontWeight.Normal,
                     color      = MaterialTheme.colorScheme.onSurface,
                     maxLines   = 1,
-                    overflow   = TextOverflow.Clip,
+                    overflow   = TextOverflow.Ellipsis,
                     modifier   = Modifier
                         .weight(1f)
                         .toolHeaderShimmer(execution.status == ToolStatus.RUNNING, shimmerProgress)
@@ -362,6 +374,92 @@ internal fun ToolCardContent(
                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text("Approve")
+                        }
+                    }
+                }
+            }
+
+            ToolCallAnimatedSection(visible = showClarificationActions && !clarificationSubmitted, initiallyVisible = showClarificationActions && !clarificationSubmitted) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    HorizontalDivider(
+                        color = if (isDark) Color.White.copy(alpha = 0.18f) else Color.Black.copy(alpha = 0.15f),
+                        thickness = 1.dp
+                    )
+                    Text(
+                        text = "The agent needs your input",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = execution.metadata["clarificationQuestion"]?.takeIf { it.isNotBlank() }
+                            ?: "Answer to continue",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    execution.metadata["clarificationOptions"]?.split("\n")?.filter { it.isNotBlank() }?.forEach { option ->
+                        val selected = clarificationAnswer == option
+                        OutlinedButton(
+                            onClick = { clarificationAnswer = option },
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outlineVariant
+                            ),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = option,
+                                style = MaterialTheme.typography.labelLarge,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = clarificationAnswer,
+                        onValueChange = { clarificationAnswer = it },
+                        placeholder = { Text("Type your answer…") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 1,
+                        maxLines = 4
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        TextButton(
+                            onClick = {
+                                if (!clarificationSubmitted && showClarificationActions) {
+                                    clarificationSubmitted = true
+                                    onClarify?.invoke(null)
+                                }
+                            },
+                            enabled = !clarificationSubmitted,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Dismiss")
+                        }
+                        Button(
+                            onClick = {
+                                if (!clarificationSubmitted && showClarificationActions) {
+                                    clarificationSubmitted = true
+                                    onClarify?.invoke(clarificationAnswer)
+                                }
+                            },
+                            enabled = !clarificationSubmitted && clarificationAnswer.isNotBlank(),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Send")
                         }
                     }
                 }
@@ -604,7 +702,7 @@ internal fun SubagentChildCard(
                                      MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                                  else MaterialTheme.colorScheme.onSurface,
                     maxLines   = 1,
-                    overflow   = TextOverflow.Clip,
+                    overflow   = TextOverflow.Ellipsis,
                     modifier   = Modifier
                         .weight(1f)
                         .toolHeaderShimmer(child.status == ToolStatus.RUNNING, shimmerProgress)

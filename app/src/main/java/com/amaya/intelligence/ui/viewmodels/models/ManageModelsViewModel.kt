@@ -7,9 +7,12 @@ import com.amaya.intelligence.data.remote.api.AiSettingsManager
 import com.amaya.intelligence.data.remote.api.AmayaProviderRegistry
 import com.amaya.intelligence.data.remote.api.CodexAuthManager
 import com.amaya.intelligence.data.remote.api.ConfiguredModel
+import com.amaya.intelligence.data.remote.api.MemoryEmbeddingConfig
+import com.amaya.intelligence.data.remote.api.ProviderAdapter
 import com.amaya.intelligence.data.remote.api.ProviderConfig
 import com.amaya.intelligence.data.remote.api.ProviderConnection
 import com.amaya.intelligence.data.remote.api.ProviderModelService
+import com.amaya.intelligence.data.remote.api.ModelLatencyResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +43,73 @@ class ManageModelsViewModel @Inject constructor(
     private val _operation = MutableStateFlow(OperationState())
     val operation: StateFlow<OperationState> = _operation.asStateFlow()
 
+    private val _modelLatencies = MutableStateFlow<Map<String, ModelLatencyResult>>(emptyMap())
+    val modelLatencies: StateFlow<Map<String, ModelLatencyResult>> = _modelLatencies.asStateFlow()
+
+    private val _testingModelId = MutableStateFlow<String?>(null)
+    val testingModelId: StateFlow<String?> = _testingModelId.asStateFlow()
+
+    fun testModelLatency(
+        connection: ProviderConnection,
+        modelId: String
+    ) {
+        viewModelScope.launch {
+            _testingModelId.value = modelId
+            runCatching {
+                val apiKey = settingsManager.getConnectionApiKey(connection.id)
+                providerModelService.testModelLatency(
+                    providerId = connection.providerId,
+                    baseUrlOverride = connection.baseUrl,
+                    apiKey = apiKey,
+                    modelId = modelId
+                )
+            }.onSuccess { result ->
+                _modelLatencies.update { it + (modelId to result) }
+                _testingModelId.value = null
+            }.onFailure { failure ->
+                _modelLatencies.update {
+                    it + (modelId to ModelLatencyResult(
+                        modelId = modelId,
+                        latencyMs = 0,
+                        isSuccess = false,
+                        errorMessage = failure.message ?: "Failed to test model"
+                    ))
+                }
+                _testingModelId.value = null
+            }
+        }
+    }
+
+    fun testActiveModelsLatency(connection: ProviderConnection) {
+        viewModelScope.launch {
+            val apiKey = settingsManager.getConnectionApiKey(connection.id)
+            val active = connection.visibleModels.filter { it.enabled }
+            for (model in active) {
+                _testingModelId.value = model.id
+                runCatching {
+                    providerModelService.testModelLatency(
+                        providerId = connection.providerId,
+                        baseUrlOverride = connection.baseUrl,
+                        apiKey = apiKey,
+                        modelId = model.id
+                    )
+                }.onSuccess { result ->
+                    _modelLatencies.update { it + (model.id to result) }
+                }.onFailure { failure ->
+                    _modelLatencies.update {
+                        it + (model.id to ModelLatencyResult(
+                            modelId = model.id,
+                            latencyMs = 0,
+                            isSuccess = false,
+                            errorMessage = failure.message ?: "Failed to test model"
+                        ))
+                    }
+                }
+            }
+            _testingModelId.value = null
+        }
+    }
+
     fun connect(
         provider: ProviderConfig,
         name: String,
@@ -53,6 +123,7 @@ class ManageModelsViewModel @Inject constructor(
                 val models = providerModelService
                     .testAndListModels(provider.id, baseUrl, apiKey)
                     .getOrThrow()
+                    .map { it.copy(enabled = false) }
                 val normalizedUrl = providerModelService
                     .validateConnectionUrl(provider.id, baseUrl)
                     .getOrThrow()
@@ -304,6 +375,42 @@ class ManageModelsViewModel @Inject constructor(
                 .onFailure { failure ->
                     _operation.update { it.copy(error = failure.message ?: "Could not delete provider") }
                 }
+        }
+    }
+
+    /**
+     * Saves the semantic memory (embedding recall) configuration, reusing an existing provider
+     * connection for the endpoint + credential. `connection` may be null only when disabling.
+     */
+    fun saveSemanticMemory(
+        enabled: Boolean,
+        connection: ProviderConnection?,
+        modelId: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _operation.update { it.copy(loading = true, error = null) }
+            runCatching {
+                if (enabled) {
+                    require(connection != null) { "Choose a provider connection for embeddings" }
+                    require(connection.baseUrl.isNotBlank()) { "Provider has no base URL" }
+                    require(modelId.isNotBlank()) { "Choose an embedding model" }
+                }
+                val provider = connection?.let { AmayaProviderRegistry.find(it.providerId) }
+                val config = MemoryEmbeddingConfig(
+                    enabled = enabled,
+                    format = if (provider?.adapter == ProviderAdapter.GEMINI) "gemini" else "openai_compatible",
+                    endpoint = connection?.baseUrl.orEmpty().trim().trimEnd('/'),
+                    model = modelId.trim(),
+                    connectionId = connection?.id
+                )
+                settingsManager.saveMemoryEmbedding(config)
+            }.onSuccess {
+                _operation.value = OperationState()
+                onSuccess()
+            }.onFailure { failure ->
+                _operation.update { it.copy(loading = false, error = failure.message ?: "Could not save semantic memory settings") }
+            }
         }
     }
 

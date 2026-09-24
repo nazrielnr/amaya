@@ -25,12 +25,15 @@ import com.amaya.intelligence.ui.screens.mcp.shared.McpServerList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.amaya.intelligence.data.remote.mcp.McpClientManager
+import com.amaya.intelligence.data.remote.mcp.McpServerTestResult
 import com.amaya.intelligence.ui.screens.amaya.iosAmayaColors
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocalMcpScreen(
     onNavigateBack: () -> Unit,
-    aiSettingsManager: AiSettingsManager
+    aiSettingsManager: AiSettingsManager,
+    mcpClientManager: McpClientManager? = null
 ) {
     val colors = iosAmayaColors()
     val scope = rememberCoroutineScope()
@@ -47,7 +50,24 @@ fun LocalMcpScreen(
 
     var showAddSheet by remember { mutableStateOf(false) }
     var editorJson by remember { mutableStateOf(settings.mcpConfigJson) }
+    var testResults by remember { mutableStateOf(mapOf<String, McpServerTestResult>()) }
+    var testingServers by remember { mutableStateOf(setOf<String>()) }
     val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 72.dp
+
+    fun testServer(server: com.amaya.intelligence.data.remote.api.McpServerConfig) {
+        if (mcpClientManager == null) return
+        testingServers = testingServers + server.name
+        scope.launch {
+            val result = mcpClientManager.testServer(server)
+            testResults = testResults + (server.name to result)
+            testingServers = testingServers - server.name
+            if (result.isSuccess) {
+                snackbarHostState.showSnackbar("✓ ${server.name}: ${result.message} (${result.latencyMs}ms)")
+            } else {
+                snackbarHostState.showSnackbar("✕ ${server.name}: ${result.message}")
+            }
+        }
+    }
 
     fun openEditor() {
         scope.launch {
@@ -95,6 +115,9 @@ fun LocalMcpScreen(
                         snackbarHostState.showSnackbar("${server.name} removed")
                     }
                 },
+                onTest = { server -> testServer(server) },
+                testResults = testResults,
+                testingServers = testingServers,
                 topPadding = topPadding
             )
 
@@ -142,7 +165,8 @@ fun LocalMcpScreen(
                     aiSettingsManager.setMcpConfigJson(json)
                     snackbarHostState.showSnackbar("mcp.json saved ✓")
                 }
-            }
+            },
+            onTestConnection = mcpClientManager?.let { mgr -> { server -> mgr.testServer(server) } }
         )
     }
 }

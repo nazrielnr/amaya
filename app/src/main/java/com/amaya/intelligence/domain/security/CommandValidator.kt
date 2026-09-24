@@ -56,6 +56,41 @@ class CommandValidator @Inject constructor(
             ProtectedPath("/data/app", "Installed APKs"),
             ProtectedPath("/data/system", "System settings")
         )
+
+        // ====================================================================
+        // NON-DESTRUCTIVE COMMAND CLASSIFIER (auto-approve)
+        // ====================================================================
+
+        /**
+         * Read-only git invocations (exact prefix match; the following token must be a flag/arg,
+         * never a subcommand that writes). Effectful ones like commit/push/checkout/reset/fetch are
+         * deliberately absent: they fall through to user review via [isEffectfulGitCommand].
+         */
+        private val NON_DESTRUCTIVE_GIT_PREFIXES = listOf(
+            "git status", "git diff", "git log", "git show", "git blame", "git describe",
+            "git rev-parse", "git ls-files", "git ls-tree",
+            "git remote -v", "git remote show", "git remote get-url", "git remote list",
+            "git var", "git reflog", "git help", "git --version", "git -h", "git --help",
+            "git stash list", "git stash show",
+            "git tag -l", "git tag --list", "git tag -n",
+            "git branch", "git branch -a", "git branch -r", "git branch --list", "git branch -v", "git branch --show-current",
+            "git config -l", "git config --list", "git config --get", "git check-ignore"
+        )
+
+        /** Redirection/appends are writes — they require review even when the verb itself is safe. */
+        private const val NON_DESTRUCTIVE_WRITE_MARKER = '>'
+
+        /** Command/process substitution and backticks are opaque — they require review. */
+        private val NON_DESTRUCTIVE_SUBSTITUTION_MARKERS = listOf("$(", "`", "<(")
+
+        /**
+         * Dangerous verbs that can appear anywhere in a command (including inside chains and
+         * `find … -exec`). Deletion, overwrite, permission changes, privilege escalation,
+         * process control, power, mounts, and network downloads all require review.
+         */
+        private val NON_DESTRUCTIVE_DANGEROUS_VERBS = Regex(
+            "\\b(rm|rmdir|unlink|shred|mv|dd|mkfs|fdisk|parted|format|wipe|erase|chmod|chown|chgrp|sudo|su|kill|pkill|killall|reboot|shutdown|halt|poweroff|mount|umount|tee|truncate|ln|curl|wget|exec|delete|uninstall)\\b"
+        )
     }
 
     // Current app's data directory (safe to access)
@@ -79,7 +114,16 @@ class CommandValidator @Inject constructor(
         if (settings.declinedCommands.any { commandMatchesWildcard(normalized, it) }) {
             return ValidationResult.Denied("Command matches a declined terminal pattern", command)
         }
+        if (settings.autoApproveAll) {
+            return ValidationResult.Allowed
+        }
         if (settings.trustedCommands.any { commandMatchesWildcard(normalized, it) }) {
+            return ValidationResult.Allowed
+        }
+        // Auto-approve commands that are not in Trusted Commands but have no destructive impact
+        // (read-only commands, MCP invocations, builds, scripts, …). Only destructive commands
+        // fall through to the review dialog.
+        if (settings.autoApproveNonDestructive && isNonDestructiveCommand(normalized)) {
             return ValidationResult.Allowed
         }
         return ValidationResult.RequiresConfirmation(
@@ -165,7 +209,8 @@ class CommandValidator @Inject constructor(
     fun validateToolCall(
         toolName: String,
         arguments: Map<String, Any?>,
-        terminalSettings: TerminalSettings = TerminalSettings()
+        terminalSettings: TerminalSettings = TerminalSettings(),
+        workspacePath: String? = null
     ): ValidationResult {
         missingToolTarget(toolName, arguments)?.let { return ValidationResult.Denied(it, "") }
         return when (toolName) {
@@ -175,7 +220,18 @@ class CommandValidator @Inject constructor(
                 val workingDir = arguments["working_dir"] as? String
                 val pathResult = if (workingDir.isNullOrBlank()) ValidationResult.Allowed
                     else validatePath(workingDir, isWrite = false)
-                combineValidation(commandResult, pathResult)
+                val combined = combineValidation(commandResult, pathResult)
+                // Host-enforced workspace containment: the AI must never leave the active
+                // workspace through the host shell. Inside the Linux sandbox, the filesystem is
+                // already contained within the Alpine PRoot jail.
+                if (!terminalSettings.useLinuxSandbox) {
+                    workspacePath?.takeIf { it.isNotBlank() }?.let { root ->
+                        shellWorkspaceViolation(command, root)?.let { violation ->
+                            return ValidationResult.Denied(violation, command)
+                        }
+                    }
+                }
+                combined
             }
 
             "read_file" -> {
@@ -194,13 +250,17 @@ class CommandValidator @Inject constructor(
                 val path = arguments["path"] as? String ?: ""
                 val result = validatePath(path, isWrite = true)
 
-                // Deletion always requires confirmation
+                // Deletion requires confirmation unless autoApproveAll is active
                 if (result is ValidationResult.Allowed) {
-                    ValidationResult.RequiresConfirmation(
-                        "Confirm file deletion",
-                        path,
-                        RiskLevel.MEDIUM
-                    )
+                    if (terminalSettings.autoApproveAll) {
+                        ValidationResult.Allowed
+                    } else {
+                        ValidationResult.RequiresConfirmation(
+                            "Confirm file deletion",
+                            path,
+                            RiskLevel.MEDIUM
+                        )
+                    }
                 } else result
             }
 
@@ -264,6 +324,91 @@ class CommandValidator @Inject constructor(
         val normalizedRoot = root.trimEnd('/', '\\')
         return candidate == normalizedRoot || candidate.startsWith("$normalizedRoot/") || candidate.startsWith("$normalizedRoot\\")
     }
+
+    private fun isWithin(candidate: java.io.File, root: java.io.File): Boolean =
+        candidate.path == root.path || candidate.path.startsWith(root.path.trimEnd(java.io.File.separatorChar) + java.io.File.separator)
+
+    /**
+     * Returns a violation message when [command] references absolute paths outside the active
+     * workspace or changes directory outside it; null when the command stays inside. Runs for
+     * every shell command regardless of trusted patterns so the AI cannot escape the workspace
+     * through the shell (the host-injected working directory alone cannot stop `cd`/absolute
+     * paths).
+     */
+    private fun shellWorkspaceViolation(command: String, workspaceRoot: String): String? {
+        val root = runCatching { java.io.File(workspaceRoot).canonicalFile }.getOrNull() ?: return null
+        // Absolute paths: `cat /sdcard/x`, `rm -rf /data/…`, `git -C /other/repo`, `WORKDIR=/x`, …
+        command.split(Regex("\\s+")).forEach { rawToken ->
+            val token = rawToken.trim('"', '\'', '(', '[', '=', '<', '>')
+            if (token.startsWith('/')) {
+                val path = token.trimEnd(',', ';', '&', '|', ')', ']', '"', '\'', '>', '<')
+                if (path.startsWith('/')) {
+                    val canonical = runCatching { java.io.File(path).canonicalFile }.getOrNull()
+                    if (canonical != null && !isWithin(canonical, root)) {
+                        return "Shell command references a path outside the active workspace: $path"
+                    }
+                }
+            }
+        }
+        // Directory changes: `cd` (goes home = outside) and `cd …` that resolves outside.
+        command.split(Regex("""(?:;|&&|\|\||\|)""")).forEach { rawSegment ->
+            val segment = rawSegment.trim()
+            if (segment != "cd" && !segment.startsWith("cd ")) return@forEach
+            val target = if (segment == "cd") "" else segment.removePrefix("cd ").trim().substringBefore(' ').trim('"', '\'')
+            val resolved = when {
+                target.isBlank() -> java.io.File("/")
+                java.io.File(target).isAbsolute -> java.io.File(target)
+                else -> java.io.File(root, target)
+            }
+            val canonical = runCatching { resolved.canonicalFile }.getOrNull() ?: return@forEach
+            if (!isWithin(canonical, root)) {
+                return "Shell command changes directory outside the active workspace: cd ${target.ifBlank { "(home)" }}"
+            }
+        }
+        return null
+    }
+
+    // ========================================================================
+    // NON-DESTRUCTIVE COMMAND CLASSIFIER (auto-approve)
+    // ========================================================================
+
+    /**
+     * True when [command] is safe to run without a confirmation prompt.
+     *
+     * Auto-approve covers commands that are NOT in Trusted Commands but have no destructive
+     * impact — read-only commands, MCP invocations, builds, scripts, and so on. Approval is
+     * only requested for destructive commands (deletion, overwrite, permission changes,
+     * privilege escalation, process control, effectful git subcommands, …). Conservative by
+     * design: any ambiguity (redirection, substitution, dangerous verb, hard-block pattern)
+     * returns false, which falls back to the normal user-review flow — never to denial.
+     */
+    fun isNonDestructiveCommand(command: String): Boolean {
+        val trimmed = command.trim()
+        if (trimmed.isEmpty()) return false
+        if (HARD_BLOCK_PATTERNS.any { it.containsMatchIn(trimmed) }) return false
+        if (trimmed.contains(NON_DESTRUCTIVE_WRITE_MARKER)) return false
+        if (NON_DESTRUCTIVE_SUBSTITUTION_MARKERS.any { trimmed.contains(it) }) return false
+        if (NON_DESTRUCTIVE_DANGEROUS_VERBS.containsMatchIn(trimmed)) return false
+        if (isEffectfulGitCommand(trimmed)) return false
+        return true
+    }
+
+    /**
+     * True when any `git` segment of [command] uses a subcommand that writes (commit, push,
+     * checkout, reset, fetch, …). Read-only git invocations listed in [NON_DESTRUCTIVE_GIT_PREFIXES]
+     * stay safe; everything else (including writes inside chains like `git status && git push`)
+     * requires review.
+     */
+    private fun isEffectfulGitCommand(command: String): Boolean =
+        command.split(Regex("""\s*(?:;|&&|\|\||\|)\s*""")).any { rawSegment ->
+            val segment = rawSegment.trim()
+            if (!segment.startsWith("git")) return@any false
+            val normalized = segment.replace(Regex("\\s+"), " ")
+            if (normalized == "git") return@any false // bare `git` prints help — safe
+            NON_DESTRUCTIVE_GIT_PREFIXES.none { prefix ->
+                normalized == prefix || normalized.startsWith("$prefix ")
+            }
+        }
 
     private fun normalizePath(path: String): String {
         // Resolve all . and .. segments, remove double slashes

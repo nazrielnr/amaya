@@ -67,6 +67,8 @@ data class ToolExecutionContext(
     val agentCapabilityProfile: com.amaya.intelligence.domain.models.AgentCapabilityProfile? = null,
     val assistantMode: com.amaya.intelligence.domain.models.AssistantMode = com.amaya.intelligence.domain.models.AssistantMode.PROJECT,
     val onConfirmationRequired: suspend (ConfirmationRequest) -> Boolean = { false },
+    /** Host-gated clarification: returns the user's free-text answer, or null when dismissed. */
+    val onClarificationRequired: suspend (ClarificationRequest) -> String? = { null },
     val confirmed: Boolean = false,
     /** Host-enforced subagent mode. Model arguments cannot change this. */
     val readOnly: Boolean = false

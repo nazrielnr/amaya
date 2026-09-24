@@ -33,7 +33,7 @@ import com.amaya.intelligence.ui.screens.amaya.AmayaGroupedSettingsTokens
 import com.amaya.intelligence.ui.screens.amaya.amayaFloatingActionButtonBottomPadding
 import com.amaya.intelligence.ui.viewmodels.models.ManageModelsViewModel
 
-private enum class ModelsSheet { PROVIDERS, SETUP, SELECT_MODEL }
+private enum class ModelsSheet { PROVIDERS, SETUP, SELECT_MODEL, SEMANTIC }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +60,8 @@ fun ManageModelsScreen(
                 colors = colors,
                 onConnection = { onNavigateToProvider(it.id) },
                 onSelectModel = { sheet = ModelsSheet.SELECT_MODEL },
-                onAddProvider = { sheet = ModelsSheet.PROVIDERS }
+                onAddProvider = { sheet = ModelsSheet.PROVIDERS },
+                onSemanticMemory = { sheet = ModelsSheet.SEMANTIC }
             )
 
             com.amaya.intelligence.ui.screens.amaya.AmayaTopScrim(
@@ -152,6 +153,15 @@ fun ManageModelsScreen(
             },
             onDismiss = { sheet = null }
         )
+        ModelsSheet.SEMANTIC -> SemanticMemorySheet(
+            settings = settings,
+            operation = operation,
+            hasCredential = viewModel::hasCredential,
+            onDismiss = { sheet = null },
+            onSave = { enabled, connection, modelId ->
+                viewModel.saveSemanticMemory(enabled, connection, modelId) { sheet = null }
+            }
+        )
         null -> Unit
     }
 }
@@ -162,7 +172,8 @@ private fun ConnectionsOverview(
     colors: com.amaya.intelligence.ui.screens.amaya.IosAmayaColors,
     onConnection: (ProviderConnection) -> Unit,
     onSelectModel: () -> Unit,
-    onAddProvider: () -> Unit
+    onAddProvider: () -> Unit,
+    onSemanticMemory: () -> Unit
 ) {
     val active = settings.activeSelection?.let { selection ->
         settings.connections.firstOrNull { it.id == selection.connectionId }
@@ -220,6 +231,28 @@ private fun ConnectionsOverview(
                         )
                         if (index < settings.connections.lastIndex) ModelDivider(colors)
                     }
+                }
+            }
+            item {
+                com.amaya.intelligence.ui.screens.amaya.AmayaSection("Semantic Memory") {
+                    val embedding = settings.memoryEmbedding
+                    val refConnection = embedding.connectionId?.let { id -> settings.connections.firstOrNull { it.id == id } }
+                    ModelSettingsRow(
+                        icon = Icons.Default.Grain,
+                        title = if (embedding.enabled) "Enabled" else "Off",
+                        subtitle = when {
+                            embedding.enabled && refConnection != null && embedding.model.isNotBlank() ->
+                                "${embedding.model} · ${refConnection.name}"
+                            embedding.enabled && refConnection == null ->
+                                "Configured provider was removed — re-select a model"
+                            settings.connections.isEmpty() ->
+                                "Add a provider connection to configure"
+                            else ->
+                                "Re-rank memory with an embedding model"
+                        },
+                        colors = colors,
+                        onClick = onSemanticMemory
+                    )
                 }
             }
         }
@@ -516,4 +549,151 @@ private fun subscriptionStateLabel(state: CodexAuthState): String = when (state)
     is CodexAuthState.ExchangingToken -> "Finishing sign in…"
     is CodexAuthState.Error -> state.message
     else -> "Sign in to continue"
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SemanticMemorySheet(
+    settings: AiSettings,
+    operation: ManageModelsViewModel.OperationState,
+    hasCredential: (String) -> Boolean,
+    onDismiss: () -> Unit,
+    onSave: (Boolean, ProviderConnection?, String) -> Unit
+) {
+    val colors = com.amaya.intelligence.ui.screens.amaya.iosAmayaColors()
+    val current = settings.memoryEmbedding
+    val eligible = settings.connections.filter { connection ->
+        AmayaProviderRegistry.find(connection.providerId)?.isSubscription != true &&
+            connection.baseUrl.isNotBlank()
+    }
+    var enabled by remember { mutableStateOf(current.enabled) }
+    var selectedConnectionId by remember {
+        mutableStateOf(
+            current.connectionId?.takeIf { id -> eligible.any { it.id == id } }
+                ?: eligible.firstOrNull()?.id
+        )
+    }
+    var modelId by remember { mutableStateOf(current.model) }
+    var connectionExpanded by remember { mutableStateOf(false) }
+    var modelExpanded by remember { mutableStateOf(false) }
+    val selectedConnection = eligible.firstOrNull { it.id == selectedConnectionId }
+    val models = selectedConnection?.visibleModels.orEmpty()
+
+    com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
+        onDismissRequest = onDismiss,
+        title = "Semantic Memory",
+        scrollable = true
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                "When enabled, memory recall re-ranks its top local matches by embedding similarity. " +
+                    "The provider connection below supplies the endpoint and API key — no separate credential is stored.",
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.secondaryText
+            )
+            com.amaya.intelligence.ui.screens.amaya.AmayaSwitchRow(
+                title = "Enable semantic recall",
+                subtitle = "Re-rank saved memories with an embedding model",
+                checked = enabled,
+                onCheckedChange = { enabled = it }
+            )
+            if (eligible.isEmpty()) {
+                Text(
+                    "No provider with a base URL yet. Add or edit a provider under Providers first.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            } else {
+                ExposedDropdownMenuBox(
+                    expanded = connectionExpanded,
+                    onExpandedChange = { connectionExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = selectedConnection?.let { "${it.name} · ${AmayaProviderRegistry.displayName(it.providerId)}" }.orEmpty(),
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = enabled,
+                        label = { Text("Embedding provider") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = connectionExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        )
+                    )
+                    ExposedDropdownMenu(
+                        expanded = connectionExpanded,
+                        onDismissRequest = { connectionExpanded = false }
+                    ) {
+                        eligible.forEach { connection ->
+                            DropdownMenuItem(
+                                text = { Text("${connection.name} · ${AmayaProviderRegistry.displayName(connection.providerId)}") },
+                                onClick = {
+                                    selectedConnectionId = connection.id
+                                    modelId = connection.visibleModels.firstOrNull()?.id ?: modelId
+                                    connectionExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                if (selectedConnection != null && !hasCredential(selectedConnection.id)) {
+                    Text(
+                        "This provider has no API key saved — semantic recall stays off until you add one in the provider's settings.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                Text(
+                    "Embedding model",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = modelId,
+                    onValueChange = { modelId = it },
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Model ID") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    )
+                )
+                if (models.isNotEmpty()) {
+                    Text(
+                        "Quick pick",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    models.take(12).forEach { model ->
+                        FilterChip(
+                            selected = model.id == modelId,
+                            onClick = { modelId = model.id },
+                            enabled = enabled,
+                            label = { Text(model.displayName.ifBlank { model.id }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            modifier = Modifier.padding(end = 8.dp, bottom = 8.dp)
+                        )
+                    }
+                }
+            }
+            operation.error?.let { InlineError(it) }
+            Button(
+                onClick = { onSave(enabled, selectedConnection, modelId.trim()) },
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                enabled = !operation.loading
+            ) {
+                if (operation.loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) else Text("Save")
+            }
+        }
+    }
 }

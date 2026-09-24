@@ -75,10 +75,10 @@ internal suspend fun BrowserConversationSession.executeBrowserTask(
                 pendingApprovalStepIndex = null
             }
             if (sub.optString("status") in setOf("paused", "cancelled", "error", "timeout")) {
-                return parentSnapshot(lastLabel, index + 1, totalSteps).toString(2)
+                return parentTaskJsonWithSiteMemory(lastLabel, index + 1, totalSteps).toString(2)
             }
         }
-        parentSnapshot(lastLabel, totalSteps, totalSteps).toString(2)
+        parentTaskJsonWithSiteMemory(lastLabel, totalSteps, totalSteps).toString(2)
         } finally {
             // The offscreen display stays attached between tool calls on purpose. An agent
             // thinks for seconds between browser actions, and a detached session is reclaimed
@@ -101,12 +101,19 @@ private suspend fun BrowserConversationSession.executeNormalizedSubtool(
         val started = System.currentTimeMillis()
         val internalName = actionToInternalTool(action)
         _uiState.update { it.copy(progress = currentStep.toFloat() / totalSteps.toFloat(), currentAction = readableAction(action)) }
+        // Scheme G: capture a pre-action page fingerprint for mutation actions so a silent no-op
+        // (wrong selector, JS-blocked click, unsubmitted form) is reported to the model explicitly
+        // instead of being swallowed as a success.
+        val verifyMutation = internalName in VERIFY_MUTATION_TOOLS
+        val beforeFingerprint = if (verifyMutation) pageFingerprint() else null
         val rawResponse = when (action) {
             "get_status" -> BrowserToolResponse.Success("Browser status read", currentSessionMetadata())
             "analyze_page" -> execute("get_dom", params)
             else -> execute(internalName, params)
         }
-        val response = rawResponse
+        val response = if (verifyMutation && rawResponse is BrowserToolResponse.Success) {
+            attachActionVerification(rawResponse, beforeFingerprint)
+        } else rawResponse
         val duration = System.currentTimeMillis() - started
         return BrowserResponseFormatter.subToolResponse(
             id = BrowserResponseFormatter.newCallId(),
@@ -123,6 +130,43 @@ private suspend fun BrowserConversationSession.executeNormalizedSubtool(
             error = BrowserResponseFormatter.errorFor(action, response, _uiState.value.activeUrl, params)
         )
     }
+/** Scheme G: mutation actions whose silent no-op is worth detecting via page fingerprint. */
+private val VERIFY_MUTATION_TOOLS = setOf(
+    "click_element", "tap", "type_text", "press_key", "select_option", "clear_input", "search", "focus", "swipe"
+)
+
+/** Scheme G: cheap page fingerprint before/after a mutation action (see DomInspector.getFingerprintScript). */
+private suspend fun BrowserConversationSession.pageFingerprint(): String? = try {
+    when (val resp = execute("page_fingerprint", emptyMap())) {
+        is BrowserToolResponse.Success -> resp.output.take(400)
+        else -> null
+    }
+} catch (e: Exception) {
+    null
+}
+
+/**
+ * Scheme G: if the page fingerprint is unchanged after a successful mutation, the action very
+ * likely did not take effect — surface that explicitly instead of a bare success. A missing or
+ * unreadable fingerprint (page still loading, headless hiccup) skips verification rather than
+ * reporting a false positive.
+ */
+private suspend fun BrowserConversationSession.attachActionVerification(
+    response: BrowserToolResponse.Success,
+    before: String?
+): BrowserToolResponse {
+    if (before == null) return response
+    val after = pageFingerprint()
+    return if (after == null || after != before) {
+        response
+    } else {
+        BrowserToolResponse.Success(
+            output = response.output + "\n\n[verification] No observable page change after this action (URL, title, visible content, and focus state are all unchanged). The action may not have taken effect — verify the target selector/state and retry if needed.",
+            metadata = response.metadata + ("verification" to "no_observable_change")
+        )
+    }
+}
+
 private fun BrowserConversationSession.parentSnapshot(label: String, currentStep: Int, totalSteps: Int): JSONObject {
         val lastStatus = parentSubToolcalls.lastOrNull()?.optString("status") ?: "running"
         val parentStatus = when (lastStatus) {
@@ -146,6 +190,35 @@ private fun BrowserConversationSession.parentSnapshot(label: String, currentStep
             label = label,
             subToolcalls = parentSubToolcalls.takeLast(12)
         )
+    }
+
+    /**
+     * Parent task snapshot enriched with site memory: saved workspace facts that mention the
+     * active site's host are attached to the browser result, so the agent can reuse previously
+     * learned knowledge about that site (login flows, known selectors, recurring patterns)
+     * instead of re-learning it every session.
+     */
+    private suspend fun BrowserConversationSession.parentTaskJsonWithSiteMemory(label: String, currentStep: Int, totalSteps: Int): JSONObject {
+        val snapshot = parentSnapshot(label, currentStep, totalSteps)
+        val host = siteHostFromActiveUrl(_uiState.value.activeUrl)
+        if (host != null) {
+            val facts = memoryRepository.listMemoryRecords(
+                type = com.amaya.intelligence.domain.memory.MemoryType.WORKSPACE_FACT,
+                query = host,
+                limit = 4,
+                workspacePath = workspacePath
+            )
+            if (facts.isNotEmpty()) {
+                snapshot.put("site", host)
+                snapshot.put("site_memory", org.json.JSONArray(facts.map { "- ${it.title}: ${it.content}" }))
+            }
+        }
+        return snapshot
+    }
+
+    private fun BrowserConversationSession.siteHostFromActiveUrl(url: String?): String? {
+        if (url.isNullOrBlank()) return null
+        return runCatching { java.net.URI(url).host?.removePrefix("www.") }.getOrNull()
     }
 private fun BrowserConversationSession.parseSteps(arguments: Map<String, Any?>): List<Pair<String, Map<String, Any?>>> {
         val rawSteps = arguments["steps"]

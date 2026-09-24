@@ -345,7 +345,7 @@ private fun FloatingPillTabBar(
                                             }
                                         },
                                     maxLines = 1,
-                                    overflow = TextOverflow.Clip
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -409,7 +409,8 @@ private fun GlobalSettings(
     com.amaya.intelligence.ui.screens.amaya.AmayaSection("Knowledge") {
         IosSettingsRow(Icons.Default.Person, "About You", "Global saved profile and preferences", true, false, onAboutYou)
         IosSettingsDivider()
-        IosSettingsRow(Icons.Default.Psychology, "Skills", "Universal reusable workflows", false, true, onSkills)
+        IosSettingsRow(Icons.Default.Psychology, "Skills", "Universal reusable workflows", true, true, onSkills)
+        IosSettingsDivider()
     }
     com.amaya.intelligence.ui.screens.amaya.AmayaSection("Execution") {
         IosSettingsRow(Icons.Default.Terminal, "Terminal Policy", "Global trusted and declined commands", true, true, onTerminal)

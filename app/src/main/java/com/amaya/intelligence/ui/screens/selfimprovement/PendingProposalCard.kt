@@ -106,7 +106,9 @@ private fun DetailPill(label: String, value: String, modifier: Modifier = Modifi
 }
 
 private fun PendingProposalType.friendlyType(): String = when (this) {
+    PendingProposalType.USER_PROFILE -> "User preference"
     PendingProposalType.WORKSPACE_FACT -> "Project memory"
+    PendingProposalType.DECISION -> "Project decision"
     PendingProposalType.SKILL_CREATE -> "New skill"
     PendingProposalType.SKILL_PATCH -> "Skill update"
     PendingProposalType.SKILL_UPDATE -> "Skill rewrite"

@@ -4,12 +4,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class ModelLatencyResult(
+    val modelId: String,
+    val latencyMs: Long,
+    val isSuccess: Boolean,
+    val sampleResponse: String? = null,
+    val errorMessage: String? = null
+) {
+    fun formatLatency(): String = if (isSuccess) "${latencyMs} ms" else "Failed"
+}
 
 @Singleton
 class ProviderModelService @Inject constructor(
@@ -43,6 +55,202 @@ class ProviderModelService @Inject constructor(
             }
         }
     }
+
+    suspend fun testModelLatency(
+        providerId: String,
+        baseUrlOverride: String,
+        apiKey: String,
+        modelId: String
+    ): ModelLatencyResult = withContext(Dispatchers.IO) {
+        val provider = AmayaProviderRegistry.require(providerId)
+        if (provider.isSubscription) {
+            return@withContext ModelLatencyResult(
+                modelId = modelId,
+                latencyMs = 0,
+                isSuccess = false,
+                errorMessage = "Subscription models cannot be pinged directly"
+            )
+        }
+        if (provider.credentialRequired && apiKey.isBlank()) {
+            return@withContext ModelLatencyResult(
+                modelId = modelId,
+                latencyMs = 0,
+                isSuccess = false,
+                errorMessage = "API key is required"
+            )
+        }
+
+        val baseUrl = resolveBaseUrl(provider, baseUrlOverride)
+        val request = when {
+            provider.adapter in setOf(ProviderAdapter.OPENAI_RESPONSES, ProviderAdapter.OPENAI_COMPATIBLE) ->
+                openAiTestRequest(baseUrl, apiKey, modelId)
+            provider.adapter == ProviderAdapter.ANTHROPIC ->
+                anthropicTestRequest(baseUrl, apiKey, modelId)
+            provider.adapter == ProviderAdapter.GEMINI ->
+                geminiTestRequest(baseUrl, apiKey, modelId)
+            else -> {
+                return@withContext ModelLatencyResult(
+                    modelId = modelId,
+                    latencyMs = 0,
+                    isSuccess = false,
+                    errorMessage = "Unsupported provider adapter"
+                )
+            }
+        }
+
+        val startNano = System.nanoTime()
+        try {
+            val callClient = httpClient.newBuilder()
+                .callTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+
+            callClient.newCall(request).execute().use { response ->
+                val elapsedMs = ((System.nanoTime() - startNano) / 1_000_000).coerceAtLeast(1)
+                val body = response.body?.readUtf8Limited(
+                    if (response.isSuccessful) MAX_REMOTE_BODY_BYTES else MAX_ERROR_BODY_BYTES
+                ).orEmpty()
+
+                if (!response.isSuccessful) {
+                    val errorMsg = providerError(provider, response.code, body, response.message)
+                    ModelLatencyResult(
+                        modelId = modelId,
+                        latencyMs = elapsedMs,
+                        isSuccess = false,
+                        errorMessage = errorMsg
+                    )
+                } else {
+                    val sample = extractSampleResponse(provider.adapter, body)
+                    ModelLatencyResult(
+                        modelId = modelId,
+                        latencyMs = elapsedMs,
+                        isSuccess = true,
+                        sampleResponse = sample
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            val elapsedMs = ((System.nanoTime() - startNano) / 1_000_000).coerceAtLeast(1)
+            ModelLatencyResult(
+                modelId = modelId,
+                latencyMs = elapsedMs,
+                isSuccess = false,
+                errorMessage = e.message ?: "Network error"
+            )
+        }
+    }
+
+    private fun openAiTestRequest(baseUrl: HttpUrl, apiKey: String, modelId: String): Request {
+        val url = baseUrl.newBuilder().addPathSegment("chat").addPathSegment("completions").build()
+        val isReasoning = modelId.startsWith("o1") || modelId.startsWith("o3")
+        val json = JSONObject().apply {
+            put("model", modelId)
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", "ping")
+                })
+            })
+            if (isReasoning) {
+                put("max_completion_tokens", 10)
+            } else {
+                put("max_tokens", 1)
+            }
+            put("stream", false)
+        }
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val body = json.toString().toRequestBody(mediaType)
+        val builder = Request.Builder()
+            .url(url)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .post(body)
+        if (apiKey.isNotBlank()) builder.header("Authorization", "Bearer $apiKey")
+        return builder.build()
+    }
+
+    private fun anthropicTestRequest(baseUrl: HttpUrl, apiKey: String, modelId: String): Request {
+        val url = baseUrl.newBuilder().addPathSegment("messages").build()
+        val json = JSONObject().apply {
+            put("model", modelId)
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", "ping")
+                })
+            })
+            put("max_tokens", 1)
+        }
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val body = json.toString().toRequestBody(mediaType)
+        return Request.Builder()
+            .url(url)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .header("x-api-key", apiKey)
+            .header("anthropic-version", "2023-06-01")
+            .post(body)
+            .build()
+    }
+
+    private fun geminiTestRequest(baseUrl: HttpUrl, apiKey: String, modelId: String): Request {
+        val cleanModel = if (modelId.startsWith("models/")) modelId.removePrefix("models/") else modelId
+        val url = baseUrl.newBuilder()
+            .addPathSegment("models")
+            .addPathSegment("$cleanModel:generateContent")
+            .build()
+        val json = JSONObject().apply {
+            put("contents", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("parts", JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("text", "ping")
+                        })
+                    })
+                })
+            })
+            put("generationConfig", JSONObject().apply {
+                put("maxOutputTokens", 1)
+            })
+        }
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val body = json.toString().toRequestBody(mediaType)
+        return Request.Builder()
+            .url(url)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .header("x-goog-api-key", apiKey)
+            .post(body)
+            .build()
+    }
+
+    private fun extractSampleResponse(adapter: ProviderAdapter, body: String): String? = runCatching {
+        val json = JSONObject(body)
+        when (adapter) {
+            ProviderAdapter.OPENAI_RESPONSES, ProviderAdapter.OPENAI_COMPATIBLE -> {
+                json.optJSONArray("choices")
+                    ?.optJSONObject(0)
+                    ?.optJSONObject("message")
+                    ?.optString("content")
+                    ?.takeIf { it.isNotBlank() }
+            }
+            ProviderAdapter.ANTHROPIC -> {
+                json.optJSONArray("content")
+                    ?.optJSONObject(0)
+                    ?.optString("text")
+                    ?.takeIf { it.isNotBlank() }
+            }
+            ProviderAdapter.GEMINI -> {
+                json.optJSONArray("candidates")
+                    ?.optJSONObject(0)
+                    ?.optJSONObject("content")
+                    ?.optJSONArray("parts")
+                    ?.optJSONObject(0)
+                    ?.optString("text")
+                    ?.takeIf { it.isNotBlank() }
+            }
+            else -> null
+        }
+    }.getOrNull()
 
     fun validateConnectionUrl(providerId: String, baseUrlOverride: String): Result<String> = runCatching {
         val provider = AmayaProviderRegistry.require(providerId)
@@ -135,8 +343,8 @@ class ProviderModelService @Inject constructor(
             val displayName = item.optString("display_name").ifBlank {
                 item.optString("displayName").ifBlank { item.optString("name").ifBlank { id } }
             }
-            val contextWindow = firstPositiveInt(item, "context_window", "contextWindow", "context_length", "inputTokenLimit")
-            val maxOutput = firstPositiveInt(item, "max_output_tokens", "maxOutputTokens", "outputTokenLimit")
+            val contextWindow = ModelContextDetector.detectContextWindow(id, item)
+            val maxOutput = ModelContextDetector.detectMaxOutputTokens(id, item, contextWindow)
             val capabilities = item.optJSONArray("capabilities")?.let { array ->
                 (0 until array.length()).map { array.optString(it).lowercase() }
             }.orEmpty()
@@ -145,6 +353,7 @@ class ProviderModelService @Inject constructor(
                 displayName = displayName,
                 contextWindowTokens = contextWindow,
                 maxOutputTokens = maxOutput,
+                enabled = false,
                 supportsTools = capabilities.isEmpty() || capabilities.any { "tool" in it || "function" in it },
                 supportsImages = capabilities.any { "image" in it || "vision" in it || "multimodal" in it }
             )

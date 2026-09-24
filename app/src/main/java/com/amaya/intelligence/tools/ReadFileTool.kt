@@ -40,7 +40,7 @@ class ReadFileTool @Inject constructor(
 
     override val name = "read_file"
 
-    override val description = "Read text files and document formats (DOCX, XLSX, PPTX, ODT, ODS, RTF). Pass 'path' for single file or 'paths' array for batch. Use 'info_only' for metadata only. Documents are automatically extracted to plain text. Note: PDF support currently unavailable."
+    override val description = "Read text files and document formats (DOCX, XLSX, PPTX, ODT, ODS, RTF). Pass 'path' for single file or 'paths' array for batch. Use 'outline: true' to extract structural definitions (classes, functions, headers) with line numbers to conserve context. Use 'info_only' for metadata only. Documents are automatically extracted to plain text."
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult =
         execute(arguments, ToolExecutionContext())
@@ -67,7 +67,7 @@ class ReadFileTool @Inject constructor(
             return@withContext executeBatch(pathsList, arguments, executionContext)
         }
 
-        val pathStr = arguments["path"] as? String
+        val pathStr = (arguments["path"] ?: arguments["file_path"] ?: arguments["filePath"] ?: arguments["file"]) as? String
             ?: return@withContext ToolResult.Error(
                 "Missing required argument: path or paths",
                 ErrorType.VALIDATION_ERROR
@@ -94,15 +94,32 @@ class ReadFileTool @Inject constructor(
         val file = File(pathStr)
 
         if (!file.exists()) {
+            val parent = file.parentFile
+            val suggestions = if (parent != null && parent.exists() && parent.isDirectory) {
+                parent.listFiles()?.filter { it.isFile }?.map { it.name }
+                    ?.filter { it.contains(file.nameWithoutExtension, ignoreCase = true) || file.nameWithoutExtension.contains(it.substringBeforeLast('.'), ignoreCase = true) }
+                    ?.take(3)
+                    .orEmpty()
+            } else emptyList()
+
+            val suggestionHint = if (suggestions.isNotEmpty()) {
+                " (Possible matches in directory: ${suggestions.joinToString(", ")})"
+            } else ""
+
             return@withContext ToolResult.Error(
-                "File does not exist: $pathStr",
+                "File does not exist: $pathStr$suggestionHint",
                 ErrorType.NOT_FOUND
             )
         }
 
         if (!file.isFile) {
+            val message = if (file.isDirectory) {
+                "Path is a directory, not a file: $pathStr. Use list_files to inspect directory contents."
+            } else {
+                "Path is not a regular file: $pathStr"
+            }
             return@withContext ToolResult.Error(
-                "Path is not a regular file: $pathStr",
+                message,
                 ErrorType.VALIDATION_ERROR
             )
         }
@@ -114,15 +131,16 @@ class ReadFileTool @Inject constructor(
         val startLine = (arguments["start_line"] as? Number)?.toInt()?.coerceAtLeast(1)
         val endLine = (arguments["end_line"] as? Number)?.toInt()
         val encoding = arguments["encoding"] as? String ?: "UTF-8"
+        val outline = arguments["outline"] as? Boolean ?: false
 
         try {
             val fileSize = file.length()
 
             // Size check
-            if (fileSize > maxSize) {
+            if (fileSize > maxSize && !outline) {
                 return@withContext ToolResult.Error(
                     "File too large: ${formatSize(fileSize)} (max: ${formatSize(maxSize)}). " +
-                    "Use start_line/end_line to read a portion.",
+                    "Use outline: true or start_line/end_line to read a portion.",
                     ErrorType.SIZE_LIMIT,
                     recoverable = true
                 )
@@ -157,17 +175,54 @@ class ReadFileTool @Inject constructor(
             val allLines = content.lines()
             val totalLines = allLines.size
 
+            val lineCountOnly = arguments["line_count"] as? Boolean ?: false
+            if (lineCountOnly) {
+                return@withContext ToolResult.Success(
+                    output = "Total lines: $totalLines",
+                    metadata = mapOf(
+                        "path" to pathStr,
+                        "size" to fileSize,
+                        "total_lines" to totalLines
+                    )
+                )
+            }
+
+            if (outline) {
+                val outlineText = extractOutline(allLines)
+                return@withContext ToolResult.Success(
+                    output = outlineText,
+                    metadata = mapOf(
+                        "path" to pathStr,
+                        "size" to fileSize,
+                        "total_lines" to totalLines,
+                        "mode" to "outline"
+                    )
+                )
+            }
+
             // Smart line limiting
             val maxDisplayLines = 200
 
             // Handle line range if specified
             val (output, displayedRange) = if (startLine != null || endLine != null) {
+                if (startLine != null && endLine != null && endLine < startLine) {
+                    return@withContext ToolResult.Error(
+                        "end_line ($endLine) must be greater than or equal to start_line ($startLine)",
+                        ErrorType.VALIDATION_ERROR
+                    )
+                }
                 val start = (startLine ?: 1) - 1
                 val end = (endLine ?: totalLines).coerceAtMost(totalLines)
 
                 if (start >= totalLines) {
                     return@withContext ToolResult.Error(
                         "start_line ($startLine) exceeds file length ($totalLines lines)",
+                        ErrorType.VALIDATION_ERROR
+                    )
+                }
+                if (end < start) {
+                    return@withContext ToolResult.Error(
+                        "end_line ($endLine) resolved before start_line ($startLine)",
                         ErrorType.VALIDATION_ERROR
                     )
                 }
@@ -517,5 +572,46 @@ class ReadFileTool @Inject constructor(
         }
     }
 
+    private fun extractOutline(lines: List<String>): String {
+        val structuralKeywords = listOf(
+            "class ", "interface ", "enum ", "object ", "fun ", "val ", "var ",
+            "def ", "async def ", "function ", "type ", "export ", "public ",
+            "private ", "protected ", "#", "package ", "import "
+        )
+        val outlineEntries = mutableListOf<String>()
+        var importCount = 0
 
+        lines.forEachIndexed { index, line ->
+            val trimmed = line.trim()
+            if (trimmed.startsWith("import ") || trimmed.startsWith("package ")) {
+                importCount++
+                if (importCount == 1) {
+                    outlineEntries.add("L${index + 1}: $trimmed (and subsequent imports...)")
+                }
+                return@forEachIndexed
+            }
+            if (trimmed.isBlank() || trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*")) {
+                return@forEachIndexed
+            }
+            val matches = structuralKeywords.any { keyword ->
+                trimmed.startsWith(keyword) || trimmed.contains(" fun ") || trimmed.contains(" class ") || trimmed.contains(" interface ")
+            }
+            if (matches) {
+                val preview = if (trimmed.length > 120) trimmed.take(117) + "..." else trimmed
+                outlineEntries.add("L${index + 1}: $preview")
+            }
+        }
+
+        return buildString {
+            appendLine("=== FILE OUTLINE (${outlineEntries.size} structural declarations found in ${lines.size} lines) ===")
+            appendLine("Use start_line and end_line with read_file to inspect specific implementations:")
+            appendLine()
+            if (outlineEntries.isEmpty()) {
+                appendLine("No top-level class/function declarations found. File contains plain text/data.")
+            } else {
+                outlineEntries.forEach { appendLine(it) }
+            }
+            appendLine("=== END OF OUTLINE ===")
+        }.trim()
+    }
 }

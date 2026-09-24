@@ -17,11 +17,13 @@ import org.json.JSONObject
 import org.mozilla.geckoview.GeckoView
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.amaya.intelligence.data.repository.MemoryRepository
 import com.amaya.intelligence.tools.ToolExecutionContext
 
 @Singleton
 class BrowserSessionManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val memoryRepository: MemoryRepository,
 ) {
     private data class SessionKey(val conversationKey: String, val agentId: Long)
 
@@ -48,7 +50,7 @@ class BrowserSessionManager @Inject constructor(
     @Synchronized
     private fun sessionFor(key: SessionKey): BrowserConversationSession {
         sessions[key]?.let { return it }
-        val session = BrowserConversationSession(context, headlessSurfaceSlots, ::evictIdleHeadlessSurface).apply {
+        val session = BrowserConversationSession(context, headlessSurfaceSlots, ::evictIdleHeadlessSurface, memoryRepository).apply {
             resetForConversation(key.conversationKey, key.agentId)
             setWorkspace(workspacePath)
         }

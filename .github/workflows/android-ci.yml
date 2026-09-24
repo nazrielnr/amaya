@@ -1,0 +1,151 @@
+name: Android CI/CD
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["v*"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-perf:
+    name: Build perf APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      # Catatan: step android-actions/setup-android@v3 sengaja DIHAPUS. Action ini
+      # menjalankan `sdkmanager tools`, tetapi paket "tools" sudah dihapus dari
+      # repositori Android SDK sehingga step selalu crash (lihat run #34981122936).
+      # Image ubuntu-latest sudah memuat Android SDK lengkap dengan lisensi yang
+      # disetujui, dan AGP otomatis menginstal platform/build-tools yang belum ada.
+
+      # gradle-wrapper.jar di-commit dan di-pin ke tag gradle v8.14.3 (bukan branch
+      # bergerak "master" — tidak reprodusibel dan berisiko supply-chain), lalu
+      # checksumnya divalidasi sebelum dipakai.
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # Hanya hasilkan APK versi perf (R8-optimized, debug-signed, applicationId .perf).
+      - name: Build perf APK
+        run: ./gradlew :app:assemblePerf --stacktrace
+
+      - name: Run unit tests (perf)
+        run: ./gradlew :app:testPerfUnitTest --stacktrace
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: |
+            app/build/test-results/testPerfUnitTest/*.xml
+            app/build/reports/tests/testPerfUnitTest/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Print failing unit test XML
+        if: failure()
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for f in app/build/test-results/testPerfUnitTest/*.xml; do
+            if grep -q "<failure" "$f"; then
+              echo "===== $f ====="
+              sed 's/&quot;/"/g; s/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g' "$f"
+            fi
+          done
+
+      - name: Upload perf APK(s)
+        uses: actions/upload-artifact@v4
+        with:
+          name: amaya-perf-apk
+          path: app/build/outputs/apk/perf/*.apk
+          if-no-files-found: error
+
+  build-release:
+    name: Build signed release APK + GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      # Catatan: step android-actions/setup-android@v3 sengaja DIHAPUS. Action ini
+      # menjalankan `sdkmanager tools`, tetapi paket "tools" sudah dihapus dari
+      # repositori Android SDK sehingga step selalu crash (lihat run #34981122936).
+      # Image ubuntu-latest sudah memuat Android SDK lengkap dengan lisensi yang
+      # disetujui, dan AGP otomatis menginstal platform/build-tools yang belum ada.
+
+      # gradle-wrapper.jar di-commit dan di-pin ke tag gradle v8.14.3 (bukan branch
+      # bergerak "master" — tidak reprodusibel dan berisiko supply-chain), lalu
+      # checksumnya divalidasi sebelum dipakai.
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # The build reads rootProject/.env.local for signing (see app/build.gradle.kts).
+      # Secrets cannot be referenced directly in `if:` conditions, so they are checked here.
+      - name: Configure release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.AMAYA_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.AMAYA_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.AMAYA_KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
+            echo "::error::Release signing secrets are missing. Add AMAYA_KEYSTORE_BASE64 (base64 of release.keystore), AMAYA_KEYSTORE_PASSWORD and AMAYA_KEY_ALIAS under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+          echo "AMAYA_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" > .env.local
+          echo "AMAYA_KEY_ALIAS=$KEY_ALIAS" >> .env.local
+
+      - name: Build signed release APK
+        run: ./gradlew :app:assembleRelease --stacktrace
+
+      - name: Upload release APK(s)
+        uses: actions/upload-artifact@v4
+        with:
+          name: amaya-release-apk
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/release/*.apk
+          generate_release_notes: true

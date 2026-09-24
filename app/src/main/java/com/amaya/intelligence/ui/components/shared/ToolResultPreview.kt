@@ -44,7 +44,7 @@ fun ToolResultPreview(
     @Suppress("UNCHECKED_CAST")
     val args = arguments
     val effectiveCategory = when (toolName) {
-        "update_memory", "memory_manage" -> ToolCategory.MEMORY
+        "update_memory", "memory_manage", "agent_memory", "agent_memory_internal" -> ToolCategory.MEMORY
         "skill_manage", "skill_view" -> ToolCategory.SKILL
         else -> category
     }

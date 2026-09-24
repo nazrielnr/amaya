@@ -164,9 +164,10 @@ fun MarkdownText(
     val typo     = MaterialTheme.typography
     val spacing  = blockSpacing ?: if (compact) 4.dp else 12.dp
 
-    // One body style for every text block. `PremiumTypography.bodyMedium` is ExtraLight (W200)
-    // with 0.25sp tracking; inheriting that made body text hairline-thin and pushed the jump to
-    // bold out to 500 weight units. Markdown pins its own weight and tracking instead.
+    // One body style for every text block. Weight and tracking are pinned here (Normal,
+    // 0.sp) instead of inherited from `PremiumTypography.bodyMedium`, so markdown keeps
+    // stable reading metrics no matter how the theme's body style is tuned — and the jump
+    // to bold never drifts.
     val bodyStyle = if (compact) {
         typo.bodySmall.copy(
             fontSize = 11.sp, lineHeight = 16.sp,
@@ -246,8 +247,9 @@ fun MarkdownText(
                                         clipboard.setText(AnnotatedString(block.code))
                                         copied = true
                                         scope.launch { delay(2000); copied = false }
-                                    }, modifier = Modifier.size(28.dp)) {
-                                        Icon(if (copied) Icons.Default.Done else Icons.Default.ContentCopy, null,
+                                    }, modifier = Modifier.size(32.dp)) {
+                                        Icon(if (copied) Icons.Default.Done else Icons.Default.ContentCopy,
+                                            contentDescription = "Copy code",
                                             modifier = Modifier.size(14.dp), tint = codeColor.copy(alpha = 0.6f))
                                     }
                                 }

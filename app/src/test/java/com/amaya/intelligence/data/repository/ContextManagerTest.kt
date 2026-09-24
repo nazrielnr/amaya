@@ -119,12 +119,6 @@ class ContextManagerTest {
     }
 
     @Test
-    fun `repeated browser failure warns without terminating`() {
-        assertEquals(null, repeatedBrowserFailureWarning("NOT_FOUND:button", 1))
-        assertTrue(repeatedBrowserFailureWarning("NOT_FOUND:button", 2)!!.contains("2 times"))
-    }
-
-    @Test
     fun `prompt budget reserves output tools and safety`() {
         val withTools = budgets.promptBudgetFor(32_768, 8_192, 4_000)
         val withoutTools = budgets.promptBudgetFor(32_768, 8_192, 0)

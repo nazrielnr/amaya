@@ -2,6 +2,7 @@ package com.amaya.intelligence.impl.local
 
 import com.amaya.intelligence.domain.ai.IntelligenceService
 import com.amaya.intelligence.domain.ai.IntelligenceSessionManager
+import com.amaya.intelligence.domain.ai.PendingClarification
 import com.amaya.intelligence.data.remote.api.AiSettingsManager
 
 import com.amaya.intelligence.data.remote.api.MessageRole
@@ -19,6 +20,7 @@ import com.amaya.intelligence.impl.common.mappers.ModelUiMapper
 import com.amaya.intelligence.impl.local.browser.BrowserSessionManager
 import com.amaya.intelligence.impl.local.tools.LocalToolMapper
 import com.amaya.intelligence.di.ApplicationScope
+import com.amaya.intelligence.tools.ClarificationRequest
 import com.amaya.intelligence.tools.ConfirmationRequest
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -87,6 +89,12 @@ class LocalIntelligenceService @Inject constructor(
     internal val pendingToolConfirmations = ToolConfirmationRegistry()
     internal val pendingConfirmationUi = ConcurrentHashMap<String, ConfirmationRequest>()
     internal val pendingApprovalIds = ConcurrentHashMap<String, String>()
+
+    internal val pendingClarifications = ToolClarificationRegistry()
+    internal val pendingClarificationUi = ConcurrentHashMap<String, ClarificationRequest>()
+    internal val pendingClarificationIds = ConcurrentHashMap<String, String>()
+    internal val _pendingClarification = MutableStateFlow<PendingClarification?>(null)
+    override val pendingClarification: StateFlow<PendingClarification?> = _pendingClarification
     internal val titleJobs = ConcurrentHashMap<Long, Job>()
     internal val nextTurnId = AtomicLong(0L)
     internal val targetEpoch = AtomicLong(0L)
@@ -443,11 +451,93 @@ class LocalIntelligenceService @Inject constructor(
         }
     }
 
+    override fun editMessage(messageId: String, newContent: String) {
+        val trimmed = newContent.trim()
+        if (trimmed.isBlank()) return
+        val currentState = _uiState.value
+        if (currentState.isStreaming) {
+            stopGeneration()
+        }
+        val targetIdx = currentState.messages.indexOfFirst { it.id == messageId }
+        if (targetIdx < 0) return
+        val targetMsg = currentState.messages[targetIdx]
+        if (targetMsg.role != MessageRole.USER) return
+
+        val updatedUserMsg = targetMsg.copy(
+            content = trimmed,
+            metadata = targetMsg.metadata + mapOf(
+                "isEdited" to "true",
+                "editedAt" to System.currentTimeMillis().toString()
+            )
+        )
+        val truncatedMessages = currentState.messages.take(targetIdx) + updatedUserMsg
+        val contextIdx = currentState.contextMessages.indexOfFirst { it.id == messageId }
+        val truncatedContext = if (contextIdx >= 0) {
+            currentState.contextMessages.take(contextIdx) + updatedUserMsg
+        } else {
+            truncatedMessages
+        }
+        val updatedState = currentState.copy(
+            messages = truncatedMessages,
+            contextMessages = truncatedContext,
+            error = null,
+            isLoading = true,
+            isStreaming = true
+        )
+        _uiState.value = updatedState
+        saveCurrentConversation()
+        scope.launch {
+            startTurn(
+                content = trimmed,
+                images = updatedUserMsg.attachments.map { com.amaya.intelligence.data.remote.api.ChatImage(it.dataBase64, it.mimeType, it.fileName) },
+                initialState = updatedState,
+                projectVisible = true,
+                preexistingUserMessage = true
+            )
+        }
+    }
+
+    override fun resendMessage(messageId: String) {
+        val currentState = _uiState.value
+        if (currentState.isStreaming) return
+        val targetIdx = currentState.messages.indexOfFirst { it.id == messageId }
+        if (targetIdx < 0) return
+        val targetMsg = currentState.messages[targetIdx]
+        if (targetMsg.role != MessageRole.USER) return
+
+        val truncatedMessages = currentState.messages.take(targetIdx + 1)
+        val contextIdx = currentState.contextMessages.indexOfFirst { it.id == messageId }
+        val truncatedContext = if (contextIdx >= 0) {
+            currentState.contextMessages.take(contextIdx + 1)
+        } else {
+            truncatedMessages
+        }
+        val updatedState = currentState.copy(
+            messages = truncatedMessages,
+            contextMessages = truncatedContext,
+            error = null,
+            isLoading = true,
+            isStreaming = true
+        )
+        _uiState.value = updatedState
+        saveCurrentConversation()
+        scope.launch {
+            startTurn(
+                content = targetMsg.content,
+                images = targetMsg.attachments.map { com.amaya.intelligence.data.remote.api.ChatImage(it.dataBase64, it.mimeType, it.fileName) },
+                initialState = updatedState,
+                projectVisible = true,
+                preexistingUserMessage = true
+            )
+        }
+    }
+
     override fun stopGeneration() {
         currentConversationId?.let { conversationId ->
             activeTurns[conversationId]?.let { turn ->
                 stoppingConversations.add(conversationId)
                 pendingToolConfirmations.cancel(turn.turnId)
+                pendingClarifications.cancel(turn.turnId)
                 turn.job?.cancel()
                 return
             }
@@ -462,6 +552,10 @@ class LocalIntelligenceService @Inject constructor(
         pendingToolConfirmations.cancelAll()
         pendingConfirmationUi.clear()
         pendingApprovalIds.clear()
+        pendingClarifications.cancelAll()
+        pendingClarificationUi.clear()
+        pendingClarificationIds.clear()
+        _pendingClarification.value = null
         flushAssistantThinkingBuffer()
         flushAssistantTextBuffer()
         markActiveToolsStopped()
@@ -775,6 +869,67 @@ class LocalIntelligenceService @Inject constructor(
                         metadata = tool.metadata + mapOf(
                             "approvalRequired" to "false",
                             "approvalState" to if (confirmed) "accepted" else "declined"
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    override fun regenerateLastResponse() {
+        val conversationId = currentConversationId ?: return
+        if (activeTurns.containsKey(conversationId)) {
+            _uiState.update { it.copy(error = "Wait for the current response before regenerating") }
+            return
+        }
+        val state = _uiState.value
+        val lastUserIdx = state.messages.indexOfLast { it.role == MessageRole.USER }
+        if (lastUserIdx < 0) return
+        val lastUser = state.messages[lastUserIdx]
+        if (lastUser.content.isBlank() && lastUser.attachments.isEmpty()) return
+        // Drop everything after the last user prompt (the trailing assistant turn) and re-run
+        // that prompt. The trimmed state is persisted by the turn machinery (preexistingUserMessage
+        // means startTurn does not append a duplicate user bubble).
+        val trimmedMessages = state.messages.take(lastUserIdx + 1)
+        val trimmedContext = state.contextMessages.take(lastUserIdx + 1)
+        val regeneratedState = state.copy(
+            messages = trimmedMessages,
+            contextMessages = trimmedContext,
+            isLoading = false,
+            isStreaming = false,
+            error = null
+        )
+        _uiState.value = regeneratedState
+        scope.launch {
+            startTurn(
+                content = lastUser.content,
+                images = lastUser.attachments.map { com.amaya.intelligence.data.remote.api.ChatImage(it.dataBase64, it.mimeType, it.fileName) },
+                initialState = regeneratedState,
+                projectVisible = currentConversationId == conversationId,
+                preexistingUserMessage = true
+            )
+        }
+    }
+
+    override fun respondToClarification(executionId: String, answer: String?) {
+        // Both id forms are accepted: the full "$turnId:$toolCallId" id from the inline tool-card
+        // metadata, or a bare toolCallId (used by the pendingClarification dialog).
+        val toolCallId = executionId.substringAfter(':', executionId)
+        val fullId = if (':' in executionId) executionId else pendingClarificationIds[toolCallId]
+        val turnId = fullId?.substringBefore(':')?.toLongOrNull() ?: return
+        pendingClarifications.resolve(fullId, turnId, answer) {
+            pendingClarificationUi.remove(toolCallId)
+            pendingClarificationIds.remove(toolCallId, fullId)
+            _pendingClarification.value = null
+            turnsById[turnId]?.let { turn ->
+                val dismissed = answer.isNullOrBlank()
+                updateTurnToolExecution(turn, toolCallId) { tool ->
+                    tool.copy(
+                        status = if (dismissed) ToolStatus.ERROR else ToolStatus.RUNNING,
+                        result = if (dismissed) "User dismissed the question" else "User answered: $answer",
+                        metadata = tool.metadata + mapOf(
+                            "clarificationState" to if (dismissed) "dismissed" else "answered",
+                            "clarificationAnswer" to answer.orEmpty()
                         )
                     )
                 }

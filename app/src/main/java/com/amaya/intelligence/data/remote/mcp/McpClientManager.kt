@@ -10,7 +10,11 @@ import com.amaya.intelligence.data.remote.api.McpServerConfig
 import com.amaya.intelligence.data.remote.api.MAX_REMOTE_BODY_BYTES
 import com.amaya.intelligence.data.remote.api.awaitResponse
 import com.amaya.intelligence.data.remote.api.readUtf8Limited
+import com.amaya.intelligence.tools.AgentToolRegistry
+import com.amaya.intelligence.tools.Tool
+import com.amaya.intelligence.tools.ToolRegistration
 import com.amaya.intelligence.tools.ToolResult
+import com.amaya.intelligence.tools.ToolVisibility
 import com.amaya.intelligence.util.debugLog
 import com.amaya.intelligence.util.errorLog
 import kotlinx.coroutines.Dispatchers
@@ -25,18 +29,33 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Result of testing connectivity and capabilities of an MCP server.
+ */
+data class McpServerTestResult(
+    val isSuccess: Boolean,
+    val message: String,
+    val toolCount: Int = 0,
+    val latencyMs: Long = 0,
+    val toolNames: List<String> = emptyList()
+)
 
 @Singleton
 class McpClientManager @Inject constructor(
     private val httpClient: OkHttpClient,
-    private val settingsManager: AiSettingsManager
+    private val settingsManager: AiSettingsManager? = null,
+    private val toolRegistry: AgentToolRegistry
 ) {
     companion object {
         const val TOOL_PREFIX = "mcp__"
         private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
     }
+
+    private val registeredMcpToolNames = ConcurrentHashMap.newKeySet<String>()
 
     // FIX 3.10: Replace two separate @Volatile vars with a single @Volatile Pair so that
     // toolCache and toolDefinitionsCache are always updated atomically in one assignment.
@@ -46,10 +65,23 @@ class McpClientManager @Inject constructor(
         val handles: Map<String, McpToolHandle>,
         val definitions: List<AiToolDefinition>
     )
+    /**
+     * Per-tool risk metadata announced by the MCP server via the `annotations` field of
+     * tools/list (MCP spec). `destructiveHint` is the authoritative signal that a tool can
+     * make irreversible changes; such calls always require explicit user confirmation, even
+     * when terminal auto-approve is enabled (auto-approve is never blanket for tools the
+     * server itself flags as destructive).
+     */
+    data class McpToolAnnotations(
+        val readOnlyHint: Boolean = false,
+        val destructiveHint: Boolean = false,
+        val idempotentHint: Boolean = false
+    )
+
     @Volatile private var mcpState = McpState(emptyMap(), emptyList())
 
     suspend fun refreshTools(): List<AiToolDefinition> {
-        val settings = settingsManager.getSettings()
+        val settings = settingsManager?.getSettings() ?: com.amaya.intelligence.data.remote.api.AiSettings()
         val config = McpConfig.fromJson(settings.mcpConfigJson)
         val tools = mutableListOf<AiToolDefinition>()
         val handles = mutableMapOf<String, McpToolHandle>()
@@ -76,18 +108,48 @@ class McpClientManager @Inject constructor(
                     continue
                 }
                 tools.add(tool.toAiToolDefinition(fullName))
-                handles[fullName] = McpToolHandle(server, tool.name)
+                handles[fullName] = McpToolHandle(server, tool.name, tool.annotations)
                 debugLog("MCP") { "Registered tool: $fullName" }
             }
         }
 
         // FIX 3.10: Single atomic assignment — no window of inconsistency between handles and definitions
         mcpState = McpState(handles, tools)
-        debugLog("MCP") { "MCP tool cache size=${tools.size}" }
+
+        // Sync with AgentToolRegistry for dynamic discovery and unified tool access
+        registeredMcpToolNames.forEach { toolRegistry.unregister(it) }
+        registeredMcpToolNames.clear()
+
+        for ((fullName, handle) in handles) {
+            val toolDef = tools.find { it.name == fullName }
+            val dynamicTool = object : Tool {
+                override val name: String = fullName
+                override val description: String = toolDef?.description ?: "MCP tool"
+                override val visibility: ToolVisibility = ToolVisibility.MODEL
+                override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+                    return callTool(fullName, arguments)
+                }
+            }
+            toolRegistry.register(
+                ToolRegistration(
+                    name = fullName,
+                    tool = dynamicTool,
+                    isWorkspaceRequired = false,
+                    isReadOnlyAllowed = handle.annotations.readOnlyHint
+                )
+            )
+            registeredMcpToolNames.add(fullName)
+        }
+
+        debugLog("MCP") { "MCP tool cache size=${tools.size}, synced to AgentToolRegistry" }
         return tools
     }
 
     fun getCachedToolDefinitions(): List<AiToolDefinition> = mcpState.definitions
+
+    /** Risk metadata for a cached MCP tool; empty (all hints off) when unknown or not annotated. */
+    fun getToolAnnotations(toolName: String): McpToolAnnotations =
+        mcpState.handles[toolName]?.annotations ?: McpToolAnnotations()
 
     suspend fun callTool(toolName: String, arguments: Map<String, Any?>): ToolResult {
         val handle = mcpState.handles[toolName]
@@ -96,7 +158,7 @@ class McpClientManager @Inject constructor(
         // Always read the LATEST config from DataStore at call time, not from the cached snapshot.
         // This ensures enable/disable and header changes take effect immediately without needing
         // a full refresh cycle.
-        val latestConfig = McpConfig.fromJson(settingsManager.getSettings().mcpConfigJson)
+        val latestConfig = settingsManager?.let { McpConfig.fromJson(it.getSettings().mcpConfigJson) } ?: McpConfig()
         val latestServer = latestConfig.servers.find { it.name == handle.server.name }
             ?: return ToolResult.Error("MCP server '${handle.server.name}' no longer exists in config")
 
@@ -158,6 +220,121 @@ class McpClientManager @Inject constructor(
         }
     }
 
+    suspend fun testServer(server: McpServerConfig): McpServerTestResult {
+        if (server.serverUrl.isBlank()) {
+            return McpServerTestResult(isSuccess = false, message = "Server URL is empty")
+        }
+        runCatching {
+            val uri = java.net.URI(server.serverUrl)
+            if (uri.scheme == null || (!uri.scheme.equals("http", ignoreCase = true) && !uri.scheme.equals("https", ignoreCase = true))) {
+                throw IllegalArgumentException("URL scheme must be http:// or https://")
+            }
+        }.onFailure {
+            return McpServerTestResult(
+                isSuccess = false,
+                message = "Invalid URL: ${it.message ?: "Must start with http:// or https://"}"
+            )
+        }
+
+        val emptyHeaders = server.headers.entries.filter { (k, v) -> k.isNotBlank() && v.isBlank() }
+        if (emptyHeaders.isNotEmpty()) {
+            val keys = emptyHeaders.joinToString(", ") { it.key }
+            return McpServerTestResult(isSuccess = false, message = "Missing value for header(s): $keys")
+        }
+
+        val start = System.currentTimeMillis()
+        val payload = JSONObject().apply {
+            put("jsonrpc", "2.0")
+            put("id", UUID.randomUUID().toString())
+            put("method", "tools/list")
+            put("params", JSONObject())
+        }
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val testResult = withTimeout(10_000L) {
+                    val requestBody = payload.toString().toRequestBody(JSON_MEDIA)
+                    val requestBuilder = Request.Builder()
+                        .url(server.serverUrl)
+                        .post(requestBody)
+                        .addHeader("Accept", "application/json, text/event-stream")
+                        .addHeader("Content-Type", "application/json")
+
+                    server.headers.forEach { (key, value) ->
+                        if (key.isNotBlank() && value.isNotBlank()) {
+                            requestBuilder.addHeader(key, value)
+                        }
+                    }
+
+                    val response = httpClient.newCall(requestBuilder.build()).awaitResponse()
+                    val latency = System.currentTimeMillis() - start
+                    response.use { resp ->
+                        if (!resp.isSuccessful) {
+                            return@use McpServerTestResult(
+                                isSuccess = false,
+                                message = "HTTP ${resp.code} ${resp.message}".trim(),
+                                latencyMs = latency
+                            )
+                        }
+                        val body = resp.body?.readUtf8Limited(MAX_REMOTE_BODY_BYTES)
+                        if (body.isNullOrBlank()) {
+                            return@use McpServerTestResult(
+                                isSuccess = false,
+                                message = "Server returned empty response body",
+                                latencyMs = latency
+                            )
+                        }
+                        val json = parseMcpResponse(body)
+                            ?: return@use McpServerTestResult(
+                                isSuccess = false,
+                                message = "Failed to parse JSON-RPC / SSE response",
+                                latencyMs = latency
+                            )
+                        if (json.has("error")) {
+                            val errMsg = json.optJSONObject("error")?.optString("message") ?: "MCP error returned"
+                            return@use McpServerTestResult(
+                                isSuccess = false,
+                                message = errMsg,
+                                latencyMs = latency
+                            )
+                        }
+                        val result = json.optJSONObject("result")
+                            ?: return@use McpServerTestResult(
+                                isSuccess = false,
+                                message = "Response missing 'result' object",
+                                latencyMs = latency
+                            )
+                        val toolsArray = result.optJSONArray("tools") ?: JSONArray()
+                        val toolNames = mutableListOf<String>()
+                        for (i in 0 until toolsArray.length()) {
+                            val toolObj = toolsArray.optJSONObject(i) ?: continue
+                            val name = toolObj.optString("name")
+                            if (name.isNotBlank()) toolNames.add(name)
+                        }
+                        McpServerTestResult(
+                            isSuccess = true,
+                            message = "Connected successfully (${toolNames.size} tool${if (toolNames.size != 1) "s" else ""} found)",
+                            toolCount = toolNames.size,
+                            latencyMs = latency,
+                            toolNames = toolNames
+                        )
+                    }
+                }
+                testResult
+            } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+                val latency = System.currentTimeMillis() - start
+                McpServerTestResult(isSuccess = false, message = "Connection timed out (>10s)", latencyMs = latency)
+            } catch (e: Exception) {
+                val latency = System.currentTimeMillis() - start
+                McpServerTestResult(
+                    isSuccess = false,
+                    message = "Connection failed: ${e.message ?: e.javaClass.simpleName}",
+                    latencyMs = latency
+                )
+            }
+        }
+    }
+
     private suspend fun fetchTools(server: McpServerConfig): List<McpTool> {
         val payload = JSONObject().apply {
             put("jsonrpc", "2.0")
@@ -182,7 +359,14 @@ class McpClientManager @Inject constructor(
                 McpTool(
                     name = name,
                     description = toolObj.optString("description"),
-                    inputSchema = toolObj.optJSONObject("inputSchema") ?: JSONObject()
+                    inputSchema = toolObj.optJSONObject("inputSchema") ?: JSONObject(),
+                    annotations = toolObj.optJSONObject("annotations")?.let { obj ->
+                        McpToolAnnotations(
+                            readOnlyHint = obj.optBoolean("readOnlyHint", false),
+                            destructiveHint = obj.optBoolean("destructiveHint", false),
+                            idempotentHint = obj.optBoolean("idempotentHint", false)
+                        )
+                    } ?: McpToolAnnotations()
                 )
             )
         }
@@ -278,13 +462,15 @@ class McpClientManager @Inject constructor(
 
     private data class McpToolHandle(
         val server: McpServerConfig,
-        val toolName: String
+        val toolName: String,
+        val annotations: McpToolAnnotations = McpToolAnnotations()
     )
 
     private data class McpTool(
         val name: String,
         val description: String,
-        val inputSchema: JSONObject
+        val inputSchema: JSONObject,
+        val annotations: McpToolAnnotations = McpToolAnnotations()
     ) {
         fun toAiToolDefinition(fullName: String): AiToolDefinition {
             val schemaType = inputSchema.optString("type", "object")
@@ -316,7 +502,8 @@ class McpClientManager @Inject constructor(
             }
             return AiToolDefinition(
                 name = fullName,
-                description = description.ifBlank { "MCP tool" },
+                description = (description.ifBlank { "MCP tool" }
+                    + if (annotations.destructiveHint) " (requires user approval)" else ""),
                 parameters = AiToolParameters(
                     type = schemaType,
                     properties = properties,

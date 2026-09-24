@@ -449,6 +449,13 @@ internal suspend fun AndroidBrowserController.getVisibleText(): BrowserToolRespo
         BrowserToolResponse.Success(text, currentMetadata() + ("length" to text.length))
     }
 
+    /** Scheme G: page fingerprint for post-action verification (see DomInspector.getFingerprintScript). */
+    internal suspend fun AndroidBrowserController.pageFingerprint(): BrowserToolResponse = withContext(Dispatchers.Main.immediate) {
+        val json = runCatching { evaluateString(DomInspector.getFingerprintScript(), timeoutMs = 6_000) }
+            .getOrElse { "{}" }
+        BrowserToolResponse.Success(json)
+    }
+
 internal suspend fun AndroidBrowserController.findElement(query: String): BrowserToolResponse = withContext(Dispatchers.Main.immediate) {
         val json = evaluateJson(DomInspector.findElementScript(query))
         if (json == "null" || json.isBlank()) {

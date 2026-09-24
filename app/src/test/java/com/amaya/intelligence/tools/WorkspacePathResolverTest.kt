@@ -65,4 +65,16 @@ class WorkspacePathResolverTest {
             root.deleteRecursively()
         }
     }
+
+    @Test
+    fun `path aliases resolve correctly to canonical path`() {
+        val root = workspace()
+        try {
+            val result = WorkspacePathResolver.resolve("write_file", mapOf("file_path" to "hello.txt"), root.path).getOrThrow()
+            assertEquals(File(root, "hello.txt").canonicalPath, result["path"])
+            assertEquals(File(root, "hello.txt").canonicalPath, result["file_path"])
+        } finally {
+            root.deleteRecursively()
+        }
+    }
 }

@@ -1,30 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--
-        DayNight theme — AppCompatDelegate.setDefaultNightMode() controls light/dark.
-        The OS reads android:windowBackground BEFORE Compose renders, so predictive
-        back gestures and activity transitions show the correct colour from frame 0.
-    -->
-    <style name="Theme.Amaya" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="android:windowBackground">@color/window_background_light</item>
+    <style name="Theme.Amaya" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
-
-    <!--
-        Launch theme for MainActivity. Deliberately NO
-        windowSplashScreenIconBackgroundColor, so the gradient plate
-        (@mipmap/ic_launcher_background) the launcher icon sits on is absent and
-        only the flower shows, over a flat colour.
-
-        The icon is @drawable/ic_splash_flower, NOT @mipmap/ic_launcher_foreground:
-        the splash renders the icon at 288dp and masks it to a 192dp circle (2/3),
-        and the launcher foreground's art reaches 73% of its canvas, so petal tips
-        fell outside the mask. ic_splash_flower is the same artwork re-centred on
-        its enclosing circle and scaled to 62%, shipped per density.
-        installSplashScreen() swaps to postSplashScreenTheme before super.onCreate().
-    -->
-    <style name="Theme.Amaya.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/window_background_light</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_flower</item>
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#1C1B1F</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Amaya</item>
     </style>
 </resources>

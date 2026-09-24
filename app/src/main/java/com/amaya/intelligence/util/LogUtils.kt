@@ -12,13 +12,13 @@ import com.amaya.intelligence.BuildConfig
  */
 inline fun debugLog(tag: String, message: () -> String) {
     if (BuildConfig.DEBUG) {
-        Log.d(tag, message())
+        runCatching { Log.d(tag, message()) }
     }
 }
 
 fun debugLog(tag: String, message: String) {
     if (BuildConfig.DEBUG) {
-        Log.d(tag, message)
+        runCatching { Log.d(tag, message) }
     }
 }
 
@@ -26,9 +26,11 @@ fun debugLog(tag: String, message: String) {
  * Error logging - always logs regardless of build type.
  */
 fun errorLog(tag: String, message: String, throwable: Throwable? = null) {
-    if (throwable != null) {
-        Log.e(tag, message, throwable)
-    } else {
-        Log.e(tag, message)
+    runCatching {
+        if (throwable != null) {
+            Log.e(tag, message, throwable)
+        } else {
+            Log.e(tag, message)
+        }
     }
 }

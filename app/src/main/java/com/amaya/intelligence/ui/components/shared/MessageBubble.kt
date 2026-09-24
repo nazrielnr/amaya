@@ -2,14 +2,19 @@ package com.amaya.intelligence.ui.components.shared
 
 import com.amaya.intelligence.domain.models.*
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -33,12 +39,18 @@ import androidx.compose.ui.graphics.asImageBitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageBubble(
     message: UiMessage,
     hideThinkingHeader: Boolean = false,
     onToolAccept: ((ToolExecution) -> Unit)? = null,
     onToolDecline: ((ToolExecution) -> Unit)? = null,
+    onClarify: ((ToolExecution, String?) -> Unit)? = null,
+    onCopyMessage: ((String) -> Unit)? = null,
+    onEditUserMessage: ((id: String, content: String) -> Unit)? = null,
+    onResendUserMessage: ((id: String) -> Unit)? = null,
+    onRegenerate: (() -> Unit)? = null,
     onLocalhostLinkClick: ((String) -> Unit)? = null
 ) {
     // Host continuations are provider input, never transcript content. Hide legacy persisted
@@ -56,8 +68,12 @@ fun MessageBubble(
         val hPad = 14.dp
         val vPad = 10.dp
 
+        var userMenuOpen by remember(message.id) { mutableStateOf(false) }
+        Box(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(onClick = {}, onLongClick = { userMenuOpen = true }),
             horizontalAlignment = Alignment.End
         ) {
             // Display image attachments
@@ -118,17 +134,90 @@ fun MessageBubble(
                             start = hPad,
                             top = if (delegationSource == null) vPad else 9.dp,
                             end = hPad,
-                            bottom = vPad
+                            bottom = if (message.isEdited) 2.dp else vPad
                         ),
                         fontSize = 16.sp,
                         lineHeight = 24.sp
                     )
+                    if (message.isEdited) {
+                        Text(
+                            text = "edited",
+                            color = Color.White.copy(alpha = 0.72f),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .padding(end = hPad, bottom = 6.dp)
+                        )
+                    }
                 }
             }
+            // Quick actions: always-visible icons, so copy/edit/resend don't depend on discovering the
+            // long-press menu. Both entry points invoke the same callbacks wired by the chat host.
+            Row(
+                modifier = Modifier.padding(top = 4.dp, end = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MessageQuickAction(
+                    icon = Icons.Default.ContentCopy,
+                    label = "Copy message",
+                    onClick = onCopyMessage?.let { callback ->
+                        { callback(message.formattedContent ?: message.content) }
+                    }
+                )
+                MessageQuickAction(
+                    icon = Icons.Default.Edit,
+                    label = "Edit message",
+                    onClick = onEditUserMessage?.let { callback ->
+                        { callback(message.id, message.formattedContent ?: message.content) }
+                    }
+                )
+                MessageQuickAction(
+                    icon = Icons.Default.Refresh,
+                    label = "Resend message",
+                    onClick = onResendUserMessage?.let { callback ->
+                        { callback(message.id) }
+                    }
+                )
+            }
+            DropdownMenu(
+                expanded = userMenuOpen,
+                onDismissRequest = { userMenuOpen = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Copy") },
+                    leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
+                    onClick = {
+                        userMenuOpen = false
+                        onCopyMessage?.invoke(message.formattedContent ?: message.content)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Edit") },
+                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                    onClick = {
+                        userMenuOpen = false
+                        onEditUserMessage?.invoke(message.id, message.formattedContent ?: message.content)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Resend") },
+                    leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+                    onClick = {
+                        userMenuOpen = false
+                        onResendUserMessage?.invoke(message.id)
+                    }
+                )
+            }
+        }
         }
     } else {
+        var assistantMenuOpen by remember(message.id) { mutableStateOf(false) }
+        Box(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(onClick = {}, onLongClick = { assistantMenuOpen = true })
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 if (message.steps.isNotEmpty()) {
@@ -154,27 +243,38 @@ fun MessageBubble(
                                     hideThinkingHeader = hideThinkingHeader,
                                     onToolAccept = onToolAccept,
                                     onToolDecline = onToolDecline,
+                                    onClarify = onClarify,
                                     onLocalhostLinkClick = onLocalhostLinkClick,
                                     insideCard = true
                                 )
                             }
-                            val answerStep = split.answerStep
-                            if (answerStep != null) {
-                                val answerText = if (
-                                    message.metadata["source"].equals("remote", ignoreCase = true) &&
-                                    message.content.isNotBlank()
-                                ) {
-                                    message.formattedContent ?: message.content
-                                } else {
-                                    answerStep.formattedContent ?: answerStep.content
-                                }
-                                if (answerText.isNotBlank()) {
-                                    key(answerStep.id) {
-                                        AssistantTextWithThinking(
-                                            text = answerText,
-                                            onLocalhostLinkClick = onLocalhostLinkClick
-                                        )
+                            if (split.answerSteps.isNotEmpty()) {
+                                split.answerSteps.forEach { answerStep ->
+                                    val answerText = if (
+                                        message.metadata["source"].equals("remote", ignoreCase = true) &&
+                                        message.content.isNotBlank() &&
+                                        split.answerSteps.size == 1
+                                    ) {
+                                        message.formattedContent ?: message.content
+                                    } else {
+                                        answerStep.formattedContent ?: answerStep.content
                                     }
+                                    if (answerText.isNotBlank()) {
+                                        key(answerStep.id) {
+                                            AssistantTextWithThinking(
+                                                text = answerText,
+                                                onLocalhostLinkClick = onLocalhostLinkClick
+                                            )
+                                        }
+                                    }
+                                }
+                            } else if (message.content.isNotBlank()) {
+                                val fallbackText = message.formattedContent ?: message.content
+                                if (fallbackText.isNotBlank()) {
+                                    AssistantTextWithThinking(
+                                        text = fallbackText,
+                                        onLocalhostLinkClick = onLocalhostLinkClick
+                                    )
                                 }
                             }
                             split.trailingEvents.forEach { eventStep ->
@@ -195,6 +295,7 @@ fun MessageBubble(
                                 hideThinkingHeader = hideThinkingHeader,
                                 onToolAccept = onToolAccept,
                                 onToolDecline = onToolDecline,
+                                onClarify = onClarify,
                                 onLocalhostLinkClick = onLocalhostLinkClick
                             )
                         }
@@ -227,6 +328,7 @@ fun MessageBubble(
                                                     group = group,
                                                     onToolAccept = onToolAccept,
                                                     onToolDecline = onToolDecline,
+                                                    onClarify = onClarify,
                                                     onLocalhostLinkClick = onLocalhostLinkClick
                                                 )
                                             }
@@ -238,6 +340,7 @@ fun MessageBubble(
                                                     execution = execution,
                                                     onAccept = onToolAccept?.let { callback -> { callback(execution) } },
                                                     onDecline = onToolDecline?.let { callback -> { callback(execution) } },
+                                                    onClarify = onClarify?.let { callback -> { answer -> callback(execution, answer) } },
                                                     onLocalhostLinkClick = onLocalhostLinkClick
                                                 )
                                             }
@@ -266,10 +369,78 @@ fun MessageBubble(
                         }
                     }
                 }
+                // Quick actions for assistant responses (same callbacks as the long-press menu).
+                // Rendered inside the content column so they flow below the message instead of
+                // overlaying it (a Box sibling would sit on top of the first card).
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp, end = 2.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    MessageQuickAction(
+                        icon = Icons.Default.ContentCopy,
+                        label = "Copy response",
+                        onClick = onCopyMessage?.let { callback ->
+                            { callback(message.formattedContent ?: message.content) }
+                        }
+                    )
+                    if (message.content.isNotBlank()) {
+                        MessageQuickAction(
+                            icon = Icons.Default.Refresh,
+                            label = "Regenerate response",
+                            onClick = onRegenerate
+                        )
+                    }
+                }
             }
         }
+            DropdownMenu(
+                expanded = assistantMenuOpen,
+                onDismissRequest = { assistantMenuOpen = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Copy") },
+                    leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
+                    onClick = {
+                        assistantMenuOpen = false
+                        onCopyMessage?.invoke(message.formattedContent ?: message.content)
+                    }
+                )
+                if (message.content.isNotBlank()) {
+                    DropdownMenuItem(
+                        text = { Text("Regenerate response") },
+                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+                        onClick = {
+                            assistantMenuOpen = false
+                            onRegenerate?.invoke()
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
 
-
+@Composable
+private fun MessageQuickAction(
+    icon: ImageVector,
+    label: String,
+    onClick: (() -> Unit)?
+) {
+    if (onClick == null) return
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        modifier = Modifier.size(30.dp)
+    ) {
+        IconButton(onClick = onClick, modifier = Modifier.size(30.dp)) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+            )
+        }
     }
 }
 
@@ -279,6 +450,7 @@ private fun StepTimeline(
     hideThinkingHeader: Boolean,
     onToolAccept: ((ToolExecution) -> Unit)?,
     onToolDecline: ((ToolExecution) -> Unit)?,
+    onClarify: ((ToolExecution, String?) -> Unit)?,
     onLocalhostLinkClick: ((String) -> Unit)?,
     /**
      * True when this timeline is rendered inside the work-summary card. Tool and
@@ -331,6 +503,7 @@ private fun StepTimeline(
                                         group = group,
                                         onToolAccept = onToolAccept,
                                         onToolDecline = onToolDecline,
+                                        onClarify = onClarify,
                                         onLocalhostLinkClick = onLocalhostLinkClick
                                     )
                                 }
@@ -342,6 +515,7 @@ private fun StepTimeline(
                                         execution = step.execution,
                                         onAccept = onToolAccept?.let { callback -> { callback(step.execution) } },
                                         onDecline = onToolDecline?.let { callback -> { callback(step.execution) } },
+                                        onClarify = onClarify?.let { callback -> { answer -> callback(step.execution, answer) } },
                                         onLocalhostLinkClick = onLocalhostLinkClick
                                     )
                                 }
@@ -460,7 +634,7 @@ private fun WorkSummaryCard(
                     fontWeight = FontWeight.Normal,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Clip,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .weight(1f)
                         .toolHeaderShimmer(isLive, shimmerProgress)
@@ -514,47 +688,67 @@ private fun WorkSummaryCard(
  * The rule is the same during and after the turn, which is what lets completion be a
  * pure state change rather than a re-layout.
  */
-private data class AssistantTurnSplit(
+internal data class AssistantTurnSplit(
     val workSteps: List<MessageStep>,
-    val answerStep: MessageStep.Text?,
+    val answerSteps: List<MessageStep.Text>,
     val trailingEvents: List<MessageStep.Event>,
     val wrapInSummary: Boolean
 )
 
-private fun splitAssistantTurn(message: UiMessage): AssistantTurnSplit {
+internal fun isHousekeepingTool(name: String): Boolean {
+    return name in setOf(
+        "memory_manage", "update_memory", "agent_memory", "agent_memory_internal",
+        "skill_manage", "skill_view", "update_todo", "recommendation_manage", "session_search"
+    )
+}
+
+internal fun splitAssistantTurn(message: UiMessage): AssistantTurnSplit {
     val steps = message.steps
     val isRemote = message.metadata["source"].equals("remote", ignoreCase = true)
     val browserRanges = browserToolRanges(steps)
 
-    val answerIndex = if (isRemote) {
-        // Antigravity state snapshots carry cumulative/duplicated text fragments, so the
-        // answer is the last non-blank Text step wherever it sits, not necessarily last.
-        steps.indices.lastOrNull { index ->
-            val text = steps[index] as? MessageStep.Text ?: return@lastOrNull false
-            (text.formattedContent ?: text.content).isNotBlank()
-        }
+    // All valid non-blank Text steps outside browser ranges
+    val candidateTextIndices = steps.indices.filter { index ->
+        val text = steps[index] as? MessageStep.Text ?: return@filter false
+        (text.formattedContent ?: text.content).isNotBlank() && browserRanges.none { index in it }
+    }
+
+    // Index of the last substantive (non-housekeeping) work tool
+    val lastActionToolIndex = steps.indexOfLast { step ->
+        step is MessageStep.ToolCall && !isThinkingExecution(step.execution) && !isHousekeepingTool(step.execution.name)
+    }
+
+    // Determine which text steps constitute the final answer:
+    // 1. Text steps that occur AFTER the last substantive work tool are post-work answer steps.
+    // 2. If there are multiple post-work text steps (e.g. substantive answer + trailing memory/note),
+    //    all post-work text steps are surfaced in answerSteps so no substantive text is hidden in the work card.
+    // 3. If there are no text steps after the last action tool, fall back to the last candidate text step.
+    val answerIndices: Set<Int> = if (candidateTextIndices.isEmpty()) {
+        emptySet()
+    } else if (lastActionToolIndex < 0) {
+        candidateTextIndices.toSet()
     } else {
-        steps.indices.lastOrNull { index ->
-            val text = steps[index] as? MessageStep.Text
-            val onlyPostAnswerMarkers = steps.drop(index + 1).all { it is MessageStep.Event }
-            text != null &&
-                (text.formattedContent ?: text.content).isNotBlank() &&
-                browserRanges.none { index in it } &&
-                (index == steps.lastIndex || onlyPostAnswerMarkers)
+        val postWorkTextIndices = candidateTextIndices.filter { it > lastActionToolIndex }
+        if (postWorkTextIndices.isNotEmpty()) {
+            postWorkTextIndices.toSet()
+        } else {
+            setOf(candidateTextIndices.last())
         }
     }
-    val answerStep = answerIndex?.let { steps[it] as? MessageStep.Text }
-    val trailingEvents = answerIndex?.let { answer ->
-        steps.drop(answer + 1).filterIsInstance<MessageStep.Event>()
-    }.orEmpty()
+
+    val answerSteps = answerIndices.sorted().mapNotNull { steps[it] as? MessageStep.Text }
+    val firstAnswerIndex = answerIndices.minOrNull()
+    val trailingEvents = if (firstAnswerIndex != null) {
+        steps.drop(firstAnswerIndex + 1).filterIsInstance<MessageStep.Event>()
+    } else emptyList()
 
     val workSteps = steps.filterIndexed { index, step ->
-        index != answerIndex && when (step) {
+        index !in answerIndices && when (step) {
             is MessageStep.Thinking -> true
             is MessageStep.ToolCall -> step.execution.name != "update_todo"
             // An event after the answer is a conversation-level update, not work belonging
             // to the completed answer. Keeping it outside avoids a one-event work card.
-            is MessageStep.Event -> answerIndex == null || index < answerIndex
+            is MessageStep.Event -> firstAnswerIndex == null || index < firstAnswerIndex
             // Remote keeps only tools and reasoning inside the card; local preserves its
             // interleaved intermediate text so the timeline still reads in order.
             is MessageStep.Text -> !isRemote && (step.formattedContent ?: step.content).isNotBlank()
@@ -566,7 +760,7 @@ private fun splitAssistantTurn(message: UiMessage): AssistantTurnSplit {
     val wrapInSummary = workSteps.any {
         it is MessageStep.Thinking || it is MessageStep.ToolCall
     }
-    return AssistantTurnSplit(workSteps, answerStep, trailingEvents, wrapInSummary)
+    return AssistantTurnSplit(workSteps, answerSteps, trailingEvents, wrapInSummary)
 }
 
 private fun browserToolRanges(steps: List<MessageStep>): List<IntRange> {

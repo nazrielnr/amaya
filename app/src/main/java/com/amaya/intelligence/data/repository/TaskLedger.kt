@@ -17,6 +17,7 @@ internal data class TaskLedger(
     val constraints: List<String> = emptyList(),
     val decisions: List<String> = emptyList(),
     val filesTouched: List<String> = emptyList(),
+    val checkpoints: List<String> = emptyList(),
     val openQuestions: List<String> = emptyList(),
     val lastState: String = "",
     val evictedMessages: Int = 0,
@@ -26,6 +27,7 @@ internal data class TaskLedger(
         appendLine("GOAL: ${goal.take(MAX_GOAL_CHARS)}")
         appendSection("CONSTRAINTS", constraints)
         appendSection("DECISIONS", decisions)
+        appendSection("CHECKPOINTS", checkpoints)
         appendSection("FILES TOUCHED", filesTouched)
         appendSection("OPEN QUESTIONS", openQuestions)
         if (lastState.isNotBlank()) appendLine("LAST STATE: $lastState")
@@ -41,6 +43,7 @@ internal data class TaskLedger(
     fun mergedWith(delta: LedgerDelta, newlyEvicted: Int, newlyEvictedToolResults: Int): TaskLedger = copy(
         constraints = (constraints + delta.constraints).cleaned(),
         decisions = (decisions + delta.decisions).cleaned(),
+        checkpoints = (checkpoints + delta.checkpoints).cleaned(),
         filesTouched = (filesTouched + delta.filesTouched).cleaned(),
         // An open question leaves the list only by being answered into DECISIONS.
         openQuestions = (openQuestions + delta.openQuestions)
@@ -74,12 +77,13 @@ internal data class TaskLedger(
 internal data class LedgerDelta(
     val constraints: List<String> = emptyList(),
     val decisions: List<String> = emptyList(),
+    val checkpoints: List<String> = emptyList(),
     val filesTouched: List<String> = emptyList(),
     val openQuestions: List<String> = emptyList(),
     val lastState: String = ""
 ) {
     val isEmpty: Boolean
-        get() = constraints.isEmpty() && decisions.isEmpty() && filesTouched.isEmpty() &&
+        get() = constraints.isEmpty() && decisions.isEmpty() && checkpoints.isEmpty() && filesTouched.isEmpty() &&
             openQuestions.isEmpty() && lastState.isBlank()
 }
 
@@ -110,6 +114,7 @@ internal fun parseLedgerDelta(markdown: String): LedgerDelta {
     return LedgerDelta(
         constraints = bullets("CONSTRAINTS"),
         decisions = bullets("DECISIONS"),
+        checkpoints = bullets("CHECKPOINTS"),
         filesTouched = bullets("FILES TOUCHED"),
         openQuestions = bullets("OPEN QUESTIONS"),
         lastState = sections["LAST STATE"]?.toString()?.trim()?.lines()
@@ -120,7 +125,7 @@ internal fun parseLedgerDelta(markdown: String): LedgerDelta {
     )
 }
 
-private val RENDERED_SECTIONS = listOf("CONSTRAINTS", "DECISIONS", "FILES TOUCHED", "OPEN QUESTIONS")
+private val RENDERED_SECTIONS = listOf("CONSTRAINTS", "DECISIONS", "CHECKPOINTS", "FILES TOUCHED", "OPEN QUESTIONS")
 private val EVICTED_COUNTS = Regex("EVICTED:\\s*(\\d+)\\s*messages?,\\s*(\\d+)\\s*tool results?")
 
 /**
@@ -159,6 +164,7 @@ internal fun parseRenderedLedger(text: String, fallbackGoal: String): TaskLedger
         goal = goal?.takeIf(String::isNotBlank) ?: fallbackGoal,
         constraints = bullets["CONSTRAINTS"].orEmpty(),
         decisions = bullets["DECISIONS"].orEmpty(),
+        checkpoints = bullets["CHECKPOINTS"].orEmpty(),
         filesTouched = bullets["FILES TOUCHED"].orEmpty(),
         openQuestions = bullets["OPEN QUESTIONS"].orEmpty(),
         lastState = lastState.orEmpty(),

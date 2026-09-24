@@ -138,19 +138,24 @@ private fun SuggestionCard(
 
 private fun PendingProposalType.reviewGroup(): String = when {
     isSkillType() -> "Skills"
+    this == PendingProposalType.USER_PROFILE -> "User Memory"
     this == PendingProposalType.WORKSPACE_FACT -> "Project Memory"
     else -> "Memory"
 }
 
 private fun PendingProposalType.friendlyTitle(): String = when (this) {
+    PendingProposalType.USER_PROFILE -> "User preference"
     PendingProposalType.WORKSPACE_FACT -> "Project fact"
+    PendingProposalType.DECISION -> "Project decision"
     PendingProposalType.SKILL_CREATE -> "New reusable workflow"
     PendingProposalType.SKILL_PATCH -> "Skill improvement"
     PendingProposalType.SKILL_UPDATE -> "Skill update"
 }
 
 private fun PendingProposalType.destinationLabel(): String = when (this) {
+    PendingProposalType.USER_PROFILE -> "Memory > User Profile"
     PendingProposalType.WORKSPACE_FACT -> "Memory > Project Memory"
+    PendingProposalType.DECISION -> "Memory > Project Memory"
     PendingProposalType.SKILL_CREATE,
     PendingProposalType.SKILL_PATCH,
     PendingProposalType.SKILL_UPDATE -> "Skills"

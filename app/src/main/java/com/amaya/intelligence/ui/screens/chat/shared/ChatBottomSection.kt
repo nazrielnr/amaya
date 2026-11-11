@@ -208,6 +208,7 @@ fun ChatBottomSection(
                 onCancelCompactConversation = onCancelCompactConversation,
                 onSendMessage = send@{ text ->
                     if (attachedImageBase64 != null && !supportsImages) {
+                        inputText.value = text
                         attachmentError = context.getString(R.string.model_does_not_support_images)
                         return@send
                     }

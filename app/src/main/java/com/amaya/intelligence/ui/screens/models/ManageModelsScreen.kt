@@ -351,7 +351,7 @@ private fun ProviderSetupSheet(
             if (provider.isCustom) {
                 OutlinedTextField(baseUrl, { baseUrl = it }, label = { Text(stringResource(R.string.base_url)) }, placeholder = { Text("https://example.com/v1") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             } else {
-                Text(stringResource(R.string.requests_use_url, provider.defaultBaseUrl), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.requests_use_url, provider.defaultBaseUrl.orEmpty()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             OutlinedTextField(
                 apiKey,

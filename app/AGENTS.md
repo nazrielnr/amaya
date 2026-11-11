@@ -26,6 +26,9 @@
 
 - `src/test/java/com/amaya/intelligence/data/repository/ReferenceFileNameTest.kt` checks Unicode reference names and filename boundary protection.
 
+- `ui/screens/chat/shared/ChatAttachmentLoader.kt` reads picker URI grants and routes photos to image messages; the composer keeps one owner-scoped attachment state.
+- Local Chat and Project conversation rows expose rename/delete on long press; renaming preserves history and takes precedence over automatic title generation.
+
 ## Testing and Runtime
 - Keep JVM test behavior stable. If you touch local unit tests that call Android logging APIs, preserve the existing default-values setup used by the project.
 - Respect existing foreground service, WorkManager, and persistence patterns.

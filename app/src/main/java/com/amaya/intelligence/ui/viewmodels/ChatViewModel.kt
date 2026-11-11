@@ -147,6 +147,9 @@ class ChatViewModel @Inject constructor(
         intelligenceService.deleteConversation(conversationId.toString())
     }
 
+    suspend fun renameConversation(conversationId: Long, title: String): Boolean =
+        intelligenceService.renameConversation(conversationId.toString(), title)
+
     fun clearVisibleHistory(deleteContext: Boolean) {
         intelligenceService.clearVisibleHistory(deleteContext)
     }

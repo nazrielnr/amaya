@@ -75,6 +75,7 @@ fun ChatDrawerContent(
     conversations: List<ConversationEntity>,
     onLoadConversation: (Long) -> Unit,
     onDeleteConversation: (Long) -> Unit,
+    onRenameConversation: (suspend (Long, String) -> Boolean)? = null,
     onClearConversation: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToWorkspace: () -> Unit,
@@ -123,6 +124,8 @@ fun ChatDrawerContent(
     val searchFocusRequester = remember { FocusRequester() }
     val conversationListState = rememberLazyListState()
     var conversationToDelete by remember { mutableStateOf<ConversationEntity?>(null) }
+    var conversationActions by remember { mutableStateOf<ConversationEntity?>(null) }
+    var conversationToRename by remember { mutableStateOf<ConversationEntity?>(null) }
     val closeDrawerThen: ((() -> Unit) -> Unit) = { action ->
         scope.launch {
             drawerState.close()
@@ -239,7 +242,9 @@ fun ChatDrawerContent(
                     onNavigateToSettings = { closeDrawerThen(onNavigateToSettings) },
                     onExit = { closeDrawerThen(onExit) },
                     onLoadConversation = { id -> closeDrawerThen { onLoadConversation(id) } },
-                    onConversationLongClick = { conversationToDelete = it },
+                    onConversationLongClick = {
+                        if (onRenameConversation == null) conversationToDelete = it else conversationActions = it
+                    },
                     onSearchClick = { isSearchExpanded = true },
                     onCloseDrawer = { scope.launch { drawerState.close() } },
                     scope = scope
@@ -303,6 +308,68 @@ fun ChatDrawerContent(
                     .background(colors.border)
             )
         }
+    }
+
+    conversationActions?.let { conversation ->
+        AlertDialog(
+            onDismissRequest = { conversationActions = null },
+            title = { Text(stringResource(R.string.conversation_actions)) },
+            text = {
+                Column {
+                    Text(conversation.title)
+                    TextButton(onClick = {
+                        conversationActions = null
+                        conversationToRename = conversation
+                    }) { Text(stringResource(R.string.rename_conversation)) }
+                    TextButton(onClick = {
+                        conversationActions = null
+                        conversationToDelete = conversation
+                    }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { conversationActions = null }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
+    }
+    conversationToRename?.let { conversation ->
+        var title by remember(conversation.id) { mutableStateOf(conversation.title) }
+        var saving by remember(conversation.id) { mutableStateOf(false) }
+        var failed by remember(conversation.id) { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { if (!saving) conversationToRename = null },
+            title = { Text(stringResource(R.string.rename_conversation)) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it; failed = false },
+                        label = { Text(stringResource(R.string.conversation_title)) },
+                        singleLine = true,
+                        enabled = !saving,
+                        isError = failed
+                    )
+                    if (failed) Text(stringResource(R.string.could_not_rename_conversation), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = title.isNotBlank() && !saving, onClick = {
+                    saving = true
+                    scope.launch {
+                        val saved = try {
+                            onRenameConversation?.invoke(conversation.id, title.trim()) == true
+                        } catch (error: kotlinx.coroutines.CancellationException) {
+                            throw error
+                        } catch (_: Exception) { false }
+                        saving = false
+                        if (saved) conversationToRename = null else failed = true
+                    }
+                }) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = {
+                TextButton(enabled = !saving, onClick = { conversationToRename = null }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
     }
 
     // Delete confirmation dialog

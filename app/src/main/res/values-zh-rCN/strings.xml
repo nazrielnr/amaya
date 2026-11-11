@@ -506,4 +506,10 @@
     <string name="provider_url_no_query_or_fragment">API 基础地址中不能包含查询参数或片段标识</string>
     <string name="provider_api_root_required">基础地址应指向 API 根路径，例如 https://example.com/v1</string>
     <string name="provider_public_https_required">公网模型服务商地址必须使用 HTTPS</string>
+    <string name="could_not_read_photo">无法读取这张照片，请选择其他图片。</string>
+    <string name="model_does_not_support_images">当前模型不支持图片，请选择支持图片的模型。</string>
+    <string name="conversation_actions">对话操作</string>
+    <string name="rename_conversation">重命名对话</string>
+    <string name="conversation_title">对话名称</string>
+    <string name="could_not_rename_conversation">无法重命名此对话，请重试。</string>
 </resources>

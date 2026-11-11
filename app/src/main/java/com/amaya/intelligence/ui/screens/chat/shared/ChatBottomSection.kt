@@ -47,6 +47,9 @@ fun ChatBottomSection(
     drawerOpen: Boolean,
     bgColor: Color,
     attachedFilePath: String?,
+    onClearFileAttachment: () -> Unit,
+    pickerError: String? = null,
+    onClearPickerError: () -> Unit = {},
     attachedImageBase64: String? = null,
     attachedImageMimeType: String? = null,
     attachedImageName: String? = null,
@@ -78,16 +81,8 @@ fun ChatBottomSection(
     onInputBarHeightChange: (Int) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    var attachedPath by remember { mutableStateOf(attachedFilePath) }
-    var currentImageBase64 by remember { mutableStateOf(attachedImageBase64) }
-    var currentImageMimeType by remember { mutableStateOf(attachedImageMimeType) }
-    var currentImageName by remember { mutableStateOf(attachedImageName) }
-    var attachmentError by remember { mutableStateOf<String?>(null) }
-
-    // Sync with parent state changes
-    LaunchedEffect(attachedImageBase64) { currentImageBase64 = attachedImageBase64 }
-    LaunchedEffect(attachedImageMimeType) { currentImageMimeType = attachedImageMimeType }
-    LaunchedEffect(attachedImageName) { currentImageName = attachedImageName }
+    var attachmentError by remember(uiState.assistantMode, uiState.ownerId, uiState.agentId, uiState.conversationId) { mutableStateOf<String?>(null) }
+    val displayedAttachmentError = pickerError ?: attachmentError
 
     Column(
         modifier = modifier
@@ -110,7 +105,7 @@ fun ChatBottomSection(
                 .fillMaxWidth()
                 .onSizeChanged { onInputBarHeightChange(it.height) }
         ) {
-            AnimatedVisibility(visible = attachmentError != null) {
+            AnimatedVisibility(visible = displayedAttachmentError != null) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -119,8 +114,8 @@ fun ChatBottomSection(
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.width(12.dp))
-                        Text(attachmentError.orEmpty(), Modifier.weight(1f), color = MaterialTheme.colorScheme.onErrorContainer)
-                        IconButton(onClick = { attachmentError = null }) { Icon(Icons.Default.Close, stringResource(R.string.dismiss)) }
+                        Text(displayedAttachmentError.orEmpty(), Modifier.weight(1f), color = MaterialTheme.colorScheme.onErrorContainer)
+                        IconButton(onClick = { attachmentError = null; onClearPickerError() }) { Icon(Icons.Default.Close, stringResource(R.string.dismiss)) }
                     }
                 }
             }
@@ -183,18 +178,13 @@ fun ChatBottomSection(
                 isStreaming = uiState.isStreaming,
                 isCompressing = uiState.isCompressing,
                 isAutoCompacting = uiState.isAutoCompacting,
-                attachedFilePath = attachedPath,
-                attachedImageBase64 = currentImageBase64,
-                attachedImageName = currentImageName,
+                attachedFilePath = attachedFilePath,
+                attachedImageBase64 = attachedImageBase64,
+                attachedImageName = attachedImageName,
                 onAttachFile = { filePicker.launch("*/*") },
                 onAttachImage = if (supportsImages) ({ imagePicker?.launch("image/*") }) else null,
-                onClearAttachment = { attachedPath = null },
-                onClearImageAttachment = {
-                    currentImageBase64 = null
-                    currentImageMimeType = null
-                    currentImageName = null
-                    onClearImageAttachment()
-                },
+                onClearAttachment = onClearFileAttachment,
+                onClearImageAttachment = onClearImageAttachment,
                 conversationMode = uiState.conversationMode,
                 conversationModeLabel = resolveConversationModeLabel(uiState),
                 conversationModeIsFast = resolveConversationModeIsFast(uiState),
@@ -216,16 +206,19 @@ fun ChatBottomSection(
                 onEffortChange = onEffortChange,
                 onCompactConversation = onCompactConversation,
                 onCancelCompactConversation = onCancelCompactConversation,
-                onSendMessage = { text ->
+                onSendMessage = send@{ text ->
+                    if (attachedImageBase64 != null && !supportsImages) {
+                        attachmentError = context.getString(R.string.model_does_not_support_images)
+                        return@send
+                    }
+                    attachmentError = null
+                    onClearPickerError()
                     keyboardController?.hide()
-                    val path = attachedPath
-                    val imgBase64 = currentImageBase64
-                    val imgMime = currentImageMimeType
-                    val imgName = currentImageName
-                    attachedPath = null
-                    currentImageBase64 = null
-                    currentImageMimeType = null
-                    currentImageName = null
+                    val path = attachedFilePath
+                    val imgBase64 = attachedImageBase64
+                    val imgMime = attachedImageMimeType
+                    val imgName = attachedImageName
+                    onClearFileAttachment()
                     onClearImageAttachment()
                     scope.launch {
                         when {

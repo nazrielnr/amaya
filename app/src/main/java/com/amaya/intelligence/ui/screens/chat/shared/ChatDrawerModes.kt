@@ -419,7 +419,8 @@ internal fun DrawerNormalContent(
                                             streaming = runningSessions.any { it.conversationId == session.id },
                                             unread = unreadSet.contains(session.id),
                                             isLastChild = sIndex == sessions.lastIndex,
-                                            onClick = { onOpenProject(project, session.id) }
+                                            onClick = { onOpenProject(project, session.id) },
+                                            onLongClick = { onConversationLongClick(session) }
                                         )
                                     }
                                 }

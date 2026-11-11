@@ -521,4 +521,10 @@
     <string name="provider_url_no_query_or_fragment">Base URL must not contain a query or fragment</string>
     <string name="provider_api_root_required">Base URL must point to the API root, such as https://example.com/v1</string>
     <string name="provider_public_https_required">Public provider URLs must use HTTPS</string>
+    <string name="could_not_read_photo">Could not read this photo. Choose another image.</string>
+    <string name="model_does_not_support_images">This model does not support images. Select a model with image support.</string>
+    <string name="conversation_actions">Conversation actions</string>
+    <string name="rename_conversation">Rename conversation</string>
+    <string name="conversation_title">Conversation name</string>
+    <string name="could_not_rename_conversation">Could not rename this conversation. Try again.</string>
 </resources>

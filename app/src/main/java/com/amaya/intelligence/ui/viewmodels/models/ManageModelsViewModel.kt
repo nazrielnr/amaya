@@ -1,6 +1,9 @@
 package com.amaya.intelligence.ui.viewmodels.models
 
 import com.amaya.intelligence.R
+import android.content.Context
+import androidx.core.content.ContextCompat
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,7 +27,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ManageModelsViewModel @Inject constructor(
-    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
+    @ApplicationContext private val context: Context,
     private val settingsManager: AiSettingsManager,
     private val providerModelService: ProviderModelService,
     private val codexAuthManager: CodexAuthManager
@@ -71,7 +74,7 @@ class ManageModelsViewModel @Inject constructor(
                 _operation.value = OperationState()
                 onSuccess(connection, models)
             }.onFailure { failure ->
-                _operation.value = OperationState(error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.connection_failed))
+                _operation.value = OperationState(error = failure.message ?: ContextCompat.getString(context, R.string.connection_failed))
             }
         }
     }
@@ -79,7 +82,7 @@ class ManageModelsViewModel @Inject constructor(
     fun saveSubscriptionConnection(onSuccess: (ProviderConnection) -> Unit) {
         viewModelScope.launch {
             runCatching {
-                require(codexAuthManager.isAuthenticated()) { androidx.core.content.ContextCompat.getString(context, R.string.sign_in_to_openai_first) }
+                require(codexAuthManager.isAuthenticated()) { ContextCompat.getString(context, R.string.sign_in_to_openai_first) }
                 val existing = settings.value.connections.firstOrNull {
                     it.providerId == "openai_codex_bridge"
                 }
@@ -91,7 +94,7 @@ class ManageModelsViewModel @Inject constructor(
                 connection
             }.onSuccess(onSuccess)
                 .onFailure { failure ->
-                    _operation.value = OperationState(error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.could_not_save_openai_account))
+                    _operation.value = OperationState(error = failure.message ?: ContextCompat.getString(context, R.string.could_not_save_openai_account))
                 }
         }
     }
@@ -113,7 +116,7 @@ class ManageModelsViewModel @Inject constructor(
                 _operation.value = OperationState()
                 onSuccess(models)
             }.onFailure { failure ->
-                _operation.value = OperationState(error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.could_not_refresh_models))
+                _operation.value = OperationState(error = failure.message ?: ContextCompat.getString(context, R.string.could_not_refresh_models))
                 onFailure()
             }
         }
@@ -133,7 +136,7 @@ class ManageModelsViewModel @Inject constructor(
                 _operation.value = OperationState()
                 onSuccess()
             }.onFailure { failure ->
-                _operation.value = OperationState(error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.could_not_save_models))
+                _operation.value = OperationState(error = failure.message ?: ContextCompat.getString(context, R.string.could_not_save_models))
                 onFailure()
             }
         }
@@ -148,7 +151,7 @@ class ManageModelsViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             runCatching {
-                require(provider.isCustom) { androidx.core.content.ContextCompat.getString(context, R.string.manual_model_entry_is_only_available_for_custom_endpoints) }
+                require(provider.isCustom) { ContextCompat.getString(context, R.string.manual_model_entry_is_only_available_for_custom_endpoints) }
                 val normalizedUrl = providerModelService
                     .validateConnectionUrl(provider.id, baseUrl)
                     .getOrThrow()
@@ -163,7 +166,7 @@ class ManageModelsViewModel @Inject constructor(
                 _operation.value = OperationState()
                 onSuccess(connection)
             }.onFailure { failure ->
-                _operation.value = OperationState(error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.could_not_save_provider))
+                _operation.value = OperationState(error = failure.message ?: ContextCompat.getString(context, R.string.could_not_save_provider))
             }
         }
     }
@@ -191,7 +194,7 @@ class ManageModelsViewModel @Inject constructor(
                 _operation.value = OperationState()
                 onSuccess(models)
             }.onFailure { failure ->
-                _operation.value = OperationState(error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.credential_rejected))
+                _operation.value = OperationState(error = failure.message ?: ContextCompat.getString(context, R.string.credential_rejected))
             }
         }
     }
@@ -209,7 +212,7 @@ class ManageModelsViewModel @Inject constructor(
                 _operation.value = OperationState()
                 onSuccess()
             }.onFailure { failure ->
-                _operation.update { it.copy(loading = false, error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.could_not_rename_provider)) }
+                _operation.update { it.copy(loading = false, error = failure.message ?: ContextCompat.getString(context, R.string.could_not_rename_provider)) }
             }
         }
     }
@@ -230,7 +233,7 @@ class ManageModelsViewModel @Inject constructor(
                 _operation.value = OperationState()
                 onSuccess()
             }.onFailure { failure ->
-                _operation.update { it.copy(loading = false, error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.could_not_update_base_url)) }
+                _operation.update { it.copy(loading = false, error = failure.message ?: ContextCompat.getString(context, R.string.could_not_update_base_url)) }
             }
         }
     }
@@ -251,7 +254,7 @@ class ManageModelsViewModel @Inject constructor(
                 _operation.value = OperationState()
                 onSuccess(needsSelection)
             }.onFailure { failure ->
-                _operation.update { it.copy(loading = false, error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.could_not_save_models)) }
+                _operation.update { it.copy(loading = false, error = failure.message ?: ContextCompat.getString(context, R.string.could_not_save_models)) }
             }
         }
     }
@@ -265,7 +268,7 @@ class ManageModelsViewModel @Inject constructor(
                 _operation.value = OperationState()
                 onSuccess()
             }.onFailure { failure ->
-                _operation.update { it.copy(loading = false, error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.could_not_save_model)) }
+                _operation.update { it.copy(loading = false, error = failure.message ?: ContextCompat.getString(context, R.string.could_not_save_model)) }
             }
         }
     }
@@ -279,7 +282,7 @@ class ManageModelsViewModel @Inject constructor(
                 _operation.value = OperationState()
                 onSuccess()
             }.onFailure { failure ->
-                _operation.update { it.copy(loading = false, error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.could_not_add_model)) }
+                _operation.update { it.copy(loading = false, error = failure.message ?: ContextCompat.getString(context, R.string.could_not_add_model)) }
             }
         }
     }
@@ -290,7 +293,7 @@ class ManageModelsViewModel @Inject constructor(
                 settingsManager.setActiveModel(ActiveModelSelection(connectionId, modelId))
             }.onSuccess { onSuccess() }
                 .onFailure { failure ->
-                    _operation.update { it.copy(error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.could_not_select_model)) }
+                    _operation.update { it.copy(error = failure.message ?: ContextCompat.getString(context, R.string.could_not_select_model)) }
                 }
         }
     }
@@ -305,7 +308,7 @@ class ManageModelsViewModel @Inject constructor(
                 if (isCodexSubscription) codexAuthManager.logout()
             }.onSuccess { onSuccess() }
                 .onFailure { failure ->
-                    _operation.update { it.copy(error = failure.message ?: androidx.core.content.ContextCompat.getString(context, R.string.could_not_delete_provider)) }
+                    _operation.update { it.copy(error = failure.message ?: ContextCompat.getString(context, R.string.could_not_delete_provider)) }
                 }
         }
     }

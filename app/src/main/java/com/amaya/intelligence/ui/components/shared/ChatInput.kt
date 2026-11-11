@@ -268,12 +268,10 @@ fun ChatInput(
             }
         }
 
-        val placeholderText = remember(assistantMode, hasWorkspace, wsName) {
-            when (assistantMode) {
-                AssistantMode.CHAT -> stringResource(R.string.ask_anything)
-                AssistantMode.PROJECT -> stringResource(R.string.ask_about_workspace, wsName)
-                AssistantMode.AGENT -> stringResource(R.string.message_the_agent_group)
-            }
+        val placeholderText = when (assistantMode) {
+            AssistantMode.CHAT -> stringResource(R.string.ask_anything)
+            AssistantMode.PROJECT -> stringResource(R.string.ask_about_workspace, wsName)
+            AssistantMode.AGENT -> stringResource(R.string.message_the_agent_group)
         }
         val placeholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.46f)
         val canSend = text.isNotBlank() || hasAttachment

@@ -24,6 +24,8 @@
 - `src/main/res/xml/locales_config.xml` declares English and Simplified Chinese. Settings uses AppCompat per-app locales, with automatic persistence on Android 12 and earlier and platform language settings on Android 13+. An empty locale list follows the system.
 - Preserve format argument indices and types, plural quantities, protocol strings, model identifiers, paths, commands, and user-authored content when maintaining translations.
 
+- `src/test/java/com/amaya/intelligence/data/repository/ReferenceFileNameTest.kt` checks Unicode reference names and filename boundary protection.
+
 ## Testing and Runtime
 - Keep JVM test behavior stable. If you touch local unit tests that call Android logging APIs, preserve the existing default-values setup used by the project.
 - Respect existing foreground service, WorkManager, and persistence patterns.

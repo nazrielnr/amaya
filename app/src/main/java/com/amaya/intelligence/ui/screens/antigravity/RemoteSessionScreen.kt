@@ -674,7 +674,7 @@ private fun ConnectionSetupSheet(
     var showScanner by remember { mutableStateOf(false) }
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = stringResource(R.string.connect_to_workspace)ION_SETUP
+        title = stringResource(R.string.connection_setup)
     ) {
         if (showScanner) {
             QrScannerOverlay(

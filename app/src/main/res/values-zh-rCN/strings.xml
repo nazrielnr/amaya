@@ -478,4 +478,6 @@
     <string name="opencode_ready">Opencode 已就绪</string>
     <string name="language">语言</string>
     <string name="follow_system">跟随系统</string>
+    <string name="report_issues_or_suggest_features">报告问题或提出建议</string>
+    <string name="connection_setup">连接设置</string>
 </resources>

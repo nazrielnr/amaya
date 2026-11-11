@@ -465,7 +465,7 @@ private fun GlobalSettings(
         }
         IosSettingsDivider()
         val context = androidx.compose.ui.platform.LocalContext.current
-        IosSettingsRow(Icons.AutoMirrored.Filled.Help, stringResource(R.string.help_feedback), stringResource(R.string.help_feedback)_SUBTITLE, false, true) {
+        IosSettingsRow(Icons.AutoMirrored.Filled.Help, stringResource(R.string.help_feedback), stringResource(R.string.report_issues_or_suggest_features), false, true) {
             context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/nazrielnr/amaya/pulls")))
         }
     }

@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.agent.local
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,9 +41,9 @@ fun LocalAgentMemoryScreen(
     var adding by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<AgentMemoryRecord?>(null) }
     var content by remember { mutableStateOf("") }
-    AmayaScaffold("Agent Memory", snackbarHostState, onNavigateBack) {
-        AmayaSection("Private to this agent") {
-            AmayaNavigationRow(Icons.Default.Add, "Add Memory", "Saved only for this agent", onClick = { adding = true })
+    AmayaScaffold(stringResource(R.string.agent_memory), snackbarHostState, onNavigateBack) {
+        AmayaSection(stringResource(R.string.private_to_this_agent)) {
+            AmayaNavigationRow(Icons.Default.Add, stringResource(R.string.add_memory), stringResource(R.string.saved_only_for_this_agent), onClick = { adding = true })
             records.forEach { record ->
                 AmayaDivider()
                 androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)) {
@@ -49,7 +52,7 @@ fun LocalAgentMemoryScreen(
                         Text(record.content)
                     }
                     IconButton(onClick = { deleting = record }) {
-                        Icon(Icons.Default.Delete, "Delete memory", tint = androidx.compose.material3.MaterialTheme.colorScheme.error)
+                        Icon(Icons.Default.Delete, stringResource(R.string.delete_memory), tint = androidx.compose.material3.MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -57,16 +60,16 @@ fun LocalAgentMemoryScreen(
     }
     if (adding) AlertDialog(
         onDismissRequest = { adding = false },
-        title = { Text("Add Agent Memory") },
-        text = { OutlinedTextField(content, { content = it }, Modifier.fillMaxWidth(), label = { Text("Memory") }, minLines = 3) },
-        confirmButton = { TextButton(enabled = content.isNotBlank(), onClick = { onAdd(content.trim()); content = ""; adding = false }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = { adding = false }) { Text("Cancel") } }
+        title = { Text(stringResource(R.string.add_agent_memory)) },
+        text = { OutlinedTextField(content, { content = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.memory)) }, minLines = 3) },
+        confirmButton = { TextButton(enabled = content.isNotBlank(), onClick = { onAdd(content.trim()); content = ""; adding = false }) { Text(stringResource(R.string.save)) } },
+        dismissButton = { TextButton(onClick = { adding = false }) { Text(stringResource(R.string.cancel)) } }
     )
     deleting?.let { record -> AlertDialog(
         onDismissRequest = { deleting = null },
-        title = { Text("Delete memory?") },
+        title = { Text(stringResource(R.string.delete_memory_sentence)) },
         text = { Text(record.content) },
-        confirmButton = { TextButton(onClick = { onDelete(record); deleting = null }) { Text("Delete") } },
-        dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } }
+        confirmButton = { TextButton(onClick = { onDelete(record); deleting = null }) { Text(stringResource(R.string.delete)) } },
+        dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } }
     ) }
 }

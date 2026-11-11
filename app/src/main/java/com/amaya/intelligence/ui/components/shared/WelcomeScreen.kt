@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.components.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -36,13 +39,13 @@ fun WelcomeScreen(
     header: (@Composable () -> Unit)? = null
 ) {
     val greetings = listOf(
-        "What's on your mind?",
-        "Ready when you are",
-        "Let's get started",
-        "How can I help?",
-        "What should we tackle?",
-        "Ask me anything",
-        "Let's figure it out"
+        stringResource(R.string.what_s_on_your_mind),
+        stringResource(R.string.ready_when_you_are),
+        stringResource(R.string.let_s_get_started),
+        stringResource(R.string.how_can_i_help),
+        stringResource(R.string.what_should_we_tackle),
+        stringResource(R.string.ask_me_anything),
+        stringResource(R.string.let_s_figure_it_out)
     )
     val now = remember { LocalDateTime.now() }
     val greeting = greetings[(now.dayOfYear + now.hour) % greetings.size]
@@ -77,13 +80,13 @@ fun ScrollablePills(
     data class PillItem(val icon: ImageVector, val label: String, val prompt: String)
 
     val pills = listOf(
-        PillItem(Icons.Default.Description, "Summarize", "Summarize this document"),
-        PillItem(Icons.Default.Email, "Draft email", "Draft an email to "),
-        PillItem(Icons.Default.Lightbulb, "Explain", "Explain this concept"),
-        PillItem(Icons.Default.Code, "Write code", "Write a script"),
-        PillItem(Icons.Default.Edit, "Rewrite", "Rewrite this text"),
-        PillItem(Icons.Default.Search, "Research", "Research this topic"),
-        PillItem(Icons.Default.CheckCircle, "Review", "Review this code")
+        PillItem(Icons.Default.Description, stringResource(R.string.summarize), "Summarize this document"),
+        PillItem(Icons.Default.Email, stringResource(R.string.draft_email), "Draft an email to "),
+        PillItem(Icons.Default.Lightbulb, stringResource(R.string.explain), "Explain this concept"),
+        PillItem(Icons.Default.Code, stringResource(R.string.write_code), "Write a script"),
+        PillItem(Icons.Default.Edit, stringResource(R.string.rewrite), "Rewrite this text"),
+        PillItem(Icons.Default.Search, stringResource(R.string.research), "Research this topic"),
+        PillItem(Icons.Default.CheckCircle, stringResource(R.string.review), "Review this code")
     )
 
     Row(

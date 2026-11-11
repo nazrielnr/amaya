@@ -1,5 +1,7 @@
 package com.amaya.intelligence.ui.activities.agent.local
 
+import com.amaya.intelligence.R
+
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -42,11 +44,11 @@ class LocalAgentMemoryActivity : AppCompatActivity() {
                     snackbarHostState = snackbarHostState,
                     onNavigateBack = ::finish,
                     onAdd = { content -> lifecycleScope.launch {
-                        repository.save(agentId, null, content).onFailure { message.value = "Save failed: ${it.message}" }
+                        repository.save(agentId, null, content).onFailure { message.value = getString(R.string.save_failed_detail, it.message.orEmpty()) }
                         refresh()
                     } },
                     onDelete = { record -> lifecycleScope.launch {
-                        repository.delete(agentId, record.id, record.version).onSuccess { message.value = "Deleted" }.onFailure { message.value = "Delete failed: ${it.message}" }
+                        repository.delete(agentId, record.id, record.version).onSuccess { message.value = getString(R.string.deleted) }.onFailure { message.value = getString(R.string.delete_failed_detail, it.message.orEmpty()) }
                         refresh()
                     } }
                 )

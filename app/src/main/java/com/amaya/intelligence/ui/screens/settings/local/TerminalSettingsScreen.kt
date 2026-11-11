@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.settings.local
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +34,7 @@ fun TerminalSettingsScreen(
 ) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val savedMessage = stringResource(R.string.terminal_settings_saved)
     var trusted by remember { mutableStateOf("") }
     var declined by remember { mutableStateOf("") }
     var loaded by remember { mutableStateOf(false) }
@@ -42,14 +46,14 @@ fun TerminalSettingsScreen(
         loaded = true
     }
 
-    AmayaScaffold("Terminal", snackbar, onNavigateBack) {
-        AmayaSection("Command Policy") {
+    AmayaScaffold(stringResource(R.string.terminal), snackbar, onNavigateBack) {
+        AmayaSection(stringResource(R.string.command_policy)) {
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    "One wildcard pattern per line. Trusted commands run automatically. Declined commands are blocked. Other commands require review.",
+                    stringResource(R.string.one_wildcard_pattern_per_line_trusted_commands_run_automatically),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -57,8 +61,8 @@ fun TerminalSettingsScreen(
                     value = trusted,
                     onValueChange = { trusted = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Trusted Commands") },
-                    supportingText = { Text("Examples: npm * or npm run *") },
+                    label = { Text(stringResource(R.string.trusted_commands)) },
+                    supportingText = { Text(stringResource(R.string.examples_npm_or_npm_run)) },
                     minLines = 6,
                     enabled = loaded,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
@@ -72,8 +76,8 @@ fun TerminalSettingsScreen(
                     value = declined,
                     onValueChange = { declined = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Declined Commands") },
-                    supportingText = { Text("Matched commands are rejected without review") },
+                    label = { Text(stringResource(R.string.declined_commands)) },
+                    supportingText = { Text(stringResource(R.string.matched_commands_are_rejected_without_review)) },
                     minLines = 4,
                     enabled = loaded,
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
@@ -92,12 +96,12 @@ fun TerminalSettingsScreen(
                                     declinedCommands = declined.lines()
                                 )
                             )
-                            snackbar.showSnackbar("Terminal settings saved")
+                            snackbar.showSnackbar(savedMessage)
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = loaded
-                ) { Text("Save") }
+                ) { Text(stringResource(R.string.save)) }
             }
         }
     }

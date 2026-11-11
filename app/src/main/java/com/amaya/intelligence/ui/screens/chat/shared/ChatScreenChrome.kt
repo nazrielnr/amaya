@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.chat.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 
 
 import androidx.compose.foundation.BorderStroke
@@ -57,7 +60,7 @@ internal fun ChatFloatingTopBar(
     ) {
         LiquidOrbButton(
             icon = Icons.Default.Menu,
-            contentDescription = "Menu",
+            contentDescription = stringResource(R.string.menu),
             color = orbColor,
             borderColor = borderColor,
             onClick = onMenuClick
@@ -90,7 +93,7 @@ internal fun ChatFloatingTopBar(
             showAgentMenu -> Box {
                 LiquidOrbButton(
                     icon = Icons.Default.MoreVert,
-                    contentDescription = "Agent menu",
+                    contentDescription = stringResource(R.string.agent_menu),
                     color = orbColor,
                     borderColor = borderColor,
                     onClick = onAgentMenuClick
@@ -99,7 +102,7 @@ internal fun ChatFloatingTopBar(
             }
             showNewChat -> LiquidOrbButton(
                 icon = Icons.Default.Add,
-                contentDescription = "New Chat",
+                contentDescription = stringResource(R.string.new_chat),
                 color = orbColor,
                 borderColor = borderColor,
                 onClick = onNewChatClick
@@ -124,17 +127,17 @@ internal fun AgentChatMenu(
         placement = com.amaya.intelligence.ui.components.shared.AmayaMenuPlacement.Below
     ) {
         com.amaya.intelligence.ui.components.shared.AmayaDropdownMenuItem(
-            text = "Open browser",
+            text = stringResource(R.string.open_browser),
             icon = Icons.Default.OpenInBrowser,
             onClick = onOpenBrowser
         )
         com.amaya.intelligence.ui.components.shared.AmayaDropdownMenuItem(
-            text = "Configure agent",
+            text = stringResource(R.string.configure_agent),
             icon = Icons.Default.Settings,
             onClick = onConfigure
         )
         com.amaya.intelligence.ui.components.shared.AmayaDropdownMenuItem(
-            text = "Delete chat",
+            text = stringResource(R.string.delete_chat),
             icon = Icons.Default.Delete,
             destructive = true,
             onClick = onDeleteChat
@@ -203,7 +206,7 @@ private fun FadingTitleLayout(
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Session Info",
+                contentDescription = stringResource(R.string.session_info),
                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 modifier = Modifier.padding(start = 4.dp).size(20.dp)
             )

@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.chat.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import com.amaya.intelligence.ui.viewmodels.ChatViewModel
 
 import android.net.Uri
@@ -246,7 +249,7 @@ fun ChatScreen(
     val activeModelKey = uiState.activeModelKey
     val selectedModelItem = uiState.modelOptions.firstOrNull { it.id == activeModelKey }
     val selectedModel = uiState.selectedModel.ifBlank { selectedModelItem?.modelId.orEmpty() }
-    val selectedModelFallbackLabel = config?.selectedModelFallbackLabel ?: "Select Model"
+    val selectedModelFallbackLabel = stringResource(config?.selectedModelFallbackLabel ?: R.string.select_model)
 
     val onToolAccept: ((ToolExecution) -> Unit)? = remember(viewModel) {
         { execution: ToolExecution ->
@@ -299,7 +302,7 @@ fun ChatScreen(
     val activeAgentName = allAgents.firstOrNull { it.id == uiState.agentId }?.name
     val topBarTitle = when (uiState.assistantMode) {
         com.amaya.intelligence.domain.models.AssistantMode.CHAT -> activeConversationTitle?.takeIf { uiState.messages.isNotEmpty() }.orEmpty()
-        com.amaya.intelligence.domain.models.AssistantMode.PROJECT -> activeConversationTitle?.takeIf { uiState.messages.isNotEmpty() } ?: "New Chat"
+        com.amaya.intelligence.domain.models.AssistantMode.PROJECT -> activeConversationTitle?.takeIf { uiState.messages.isNotEmpty() } ?: stringResource(R.string.new_chat)
         com.amaya.intelligence.domain.models.AssistantMode.AGENT -> activeAgentName ?: ownerLabel
     }
     val topBarSubtitle = if (isRemoteMode) null else when (uiState.assistantMode) {
@@ -549,16 +552,16 @@ fun ChatScreen(
         var deleteContext by remember(uiState.conversationId) { mutableStateOf(false) }
         StandardModalBottomSheet(
             onDismissRequest = { showDeleteAgentChatSheet = false },
-            title = "Delete chat"
+            title = stringResource(R.string.delete_chat)
         ) {
-            Text("Clear this agent chat from the screen and history.")
+            Text(stringResource(R.string.clear_this_agent_chat_from_the_screen_and_history))
             Row(
                 modifier = Modifier.fillMaxWidth().clickable { deleteContext = !deleteContext },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Checkbox(checked = deleteContext, onCheckedChange = { deleteContext = it })
                 Spacer(Modifier.width(8.dp))
-                Text("Delete context too")
+                Text(stringResource(R.string.delete_context_too))
             }
             Button(
                 onClick = {
@@ -567,11 +570,11 @@ fun ChatScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) { Text("Yes") }
+            ) { Text(stringResource(R.string.yes)) }
             OutlinedButton(
                 onClick = { showDeleteAgentChatSheet = false },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("No") }
+            ) { Text(stringResource(R.string.no)) }
         }
     }
 

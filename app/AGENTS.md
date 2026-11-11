@@ -19,6 +19,11 @@
 - Bridge work is handled by the shared bridge contract and Android bridge runtime under `domain/bridge/` and `impl/bridge/windows/`. The current bridge direction is on hold; modify only for blockers or explicit requests.
 - If a change touches both, update the shared Android file first, then the more specific subtree file.
 
+## Localization
+- User-visible UI text belongs in `src/main/res/values/strings.xml` and `values-zh-rCN/strings.xml`; use `stringResource`/`pluralStringResource` in Compose and locale-aware Context resource access outside composition. `ui/res/UiStrings.kt` has been replaced by Android resources.
+- `src/main/res/xml/locales_config.xml` declares English and Simplified Chinese. Settings uses AppCompat per-app locales, with automatic persistence on Android 12 and earlier and platform language settings on Android 13+. An empty locale list follows the system.
+- Preserve format argument indices and types, plural quantities, protocol strings, model identifiers, paths, commands, and user-authored content when maintaining translations.
+
 ## Testing and Runtime
 - Keep JVM test behavior stable. If you touch local unit tests that call Android logging APIs, preserve the existing default-values setup used by the project.
 - Respect existing foreground service, WorkManager, and persistence patterns.

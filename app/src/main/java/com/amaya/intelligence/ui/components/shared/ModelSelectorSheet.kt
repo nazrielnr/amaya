@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.components.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,19 +42,20 @@ fun ModelSelectorSheet(
                 it.providerName.lowercase().contains(value)
         }
     }
-    val grouped = remember(filtered) {
-        filtered.groupBy { it.providerName.ifBlank { "Models" } }
+    val modelsLabel = stringResource(R.string.models)
+    val grouped = remember(filtered, modelsLabel) {
+        filtered.groupBy { it.providerName.ifBlank { modelsLabel } }
     }
 
     StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Select Model",
+        title = stringResource(R.string.select_model),
         scrollable = false,
         actions = {
             com.amaya.intelligence.ui.components.shared.AmayaTopBarButton(
                 icon = Icons.Default.Search,
                 onClick = { showSearch = !showSearch },
-                contentDescription = "Search"
+                contentDescription = stringResource(R.string.search)
             )
         }
     ) {
@@ -71,10 +75,10 @@ fun ModelSelectorSheet(
                             leadingIcon = { Icon(Icons.Default.Search, null) },
                             trailingIcon = {
                                 if (query.isNotBlank()) IconButton(onClick = { query = "" }) {
-                                    Icon(Icons.Default.Close, "Clear search")
+                                    Icon(Icons.Default.Close, stringResource(R.string.clear_search))
                                 }
                             },
-                            placeholder = { Text("Search models…") },
+                            placeholder = { Text(stringResource(R.string.search_models)) },
                             shape = RoundedCornerShape(14.dp)
                         )
                     }
@@ -82,14 +86,14 @@ fun ModelSelectorSheet(
                 if (modelOptions.isEmpty()) {
                     item {
                         Text(
-                            "No models shown in chat. Add models in Settings → Manage Models.",
+                            stringResource(R.string.no_models_shown_in_chat_add_models_in_settings_manage_models),
                             modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else if (filtered.isEmpty()) {
                     item {
-                        Text("No models found", modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.no_models_found), modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
                     grouped.forEach { (provider, options) ->

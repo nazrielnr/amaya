@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,24 +54,24 @@ fun ReferenceListScreen(
         AmayaScaffold(title, snackbarHostState, onNavigateBack) {
             if (paths.isEmpty()) {
                 com.amaya.intelligence.ui.components.shared.SettingsEmptyState(
-                    title = "No references",
-                    subtitle = "Add a text document for this context.",
+                    title = stringResource(R.string.no_references),
+                    subtitle = stringResource(R.string.add_a_text_document_for_this_context),
                     icon = Icons.Default.Description,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = AmayaGroupedSettingsTokens.emptyStateScreenTopSpacing)
                 )
-            } else AmayaSection("References") {
+            } else AmayaSection(stringResource(R.string.references)) {
                 paths.forEachIndexed { index, path ->
                     if (index > 0) AmayaDivider()
-                    AmayaNavigationRow(Icons.Default.Description, File(path).name.substringAfter('_'), "Tap to remove", onClick = { deleting = path })
+                    AmayaNavigationRow(Icons.Default.Description, File(path).name.substringAfter('_'), stringResource(R.string.tap_to_remove), onClick = { deleting = path })
                 }
             }
         }
         ExtendedFloatingActionButton(
             onClick = onAdd,
-            icon = { Icon(Icons.Default.Add, "Add reference") },
-            text = { Text("Import") },
+            icon = { Icon(Icons.Default.Add, stringResource(R.string.add_reference)) },
+            text = { Text(stringResource(R.string.action_import)) },
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(4.dp),
@@ -79,8 +82,8 @@ fun ReferenceListScreen(
         )
         ExtendedFloatingActionButton(
             onClick = { manual = true },
-            icon = { Icon(Icons.Default.Add, "Add note") },
-            text = { Text("Note") },
+            icon = { Icon(Icons.Default.Add, stringResource(R.string.add_note)) },
+            text = { Text(stringResource(R.string.note)) },
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(4.dp),
@@ -92,21 +95,21 @@ fun ReferenceListScreen(
     }
     if (manual) AlertDialog(
         onDismissRequest = { manual = false },
-        title = { Text("Add reference note") },
+        title = { Text(stringResource(R.string.add_reference_note)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Name") }, singleLine = true)
-                OutlinedTextField(content, { content = it }, Modifier.fillMaxWidth(), label = { Text("Content") }, minLines = 4)
+                OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.name)) }, singleLine = true)
+                OutlinedTextField(content, { content = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.content)) }, minLines = 4)
             }
         },
-        confirmButton = { TextButton(enabled = content.isNotBlank(), onClick = { onAddManual(name, content); name = ""; content = ""; manual = false }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = { manual = false }) { Text("Cancel") } }
+        confirmButton = { TextButton(enabled = content.isNotBlank(), onClick = { onAddManual(name, content); name = ""; content = ""; manual = false }) { Text(stringResource(R.string.save)) } },
+        dismissButton = { TextButton(onClick = { manual = false }) { Text(stringResource(R.string.cancel)) } }
     )
     deleting?.let { path -> AlertDialog(
         onDismissRequest = { deleting = null },
-        title = { Text("Remove reference?") },
+        title = { Text(stringResource(R.string.remove_reference)) },
         text = { Text(File(path).name.substringAfter('_')) },
-        confirmButton = { TextButton(onClick = { onDelete(path); deleting = null }) { Text("Remove") } },
-        dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } }
+        confirmButton = { TextButton(onClick = { onDelete(path); deleting = null }) { Text(stringResource(R.string.remove)) } },
+        dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } }
     ) }
 }

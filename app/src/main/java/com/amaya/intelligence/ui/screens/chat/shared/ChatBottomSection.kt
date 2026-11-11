@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.chat.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -74,6 +77,7 @@ fun ChatBottomSection(
     onCompactConversation: (String) -> Unit = {},
     onInputBarHeightChange: (Int) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var attachedPath by remember { mutableStateOf(attachedFilePath) }
     var currentImageBase64 by remember { mutableStateOf(attachedImageBase64) }
     var currentImageMimeType by remember { mutableStateOf(attachedImageMimeType) }
@@ -116,7 +120,7 @@ fun ChatBottomSection(
                         Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.width(12.dp))
                         Text(attachmentError.orEmpty(), Modifier.weight(1f), color = MaterialTheme.colorScheme.onErrorContainer)
-                        IconButton(onClick = { attachmentError = null }) { Icon(Icons.Default.Close, "Dismiss") }
+                        IconButton(onClick = { attachmentError = null }) { Icon(Icons.Default.Close, stringResource(R.string.dismiss)) }
                     }
                 }
             }
@@ -132,7 +136,7 @@ fun ChatBottomSection(
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                text = error.title,
+                                text = stringResource(R.string.could_not_complete_action),
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 style = MaterialTheme.typography.titleSmall
                             )
@@ -164,7 +168,7 @@ fun ChatBottomSection(
                         Spacer(Modifier.width(12.dp))
                         val sessionName = uiState.sessionMode.displayName()
                         Text(
-                            text = if (connectionState == ConnectionState.CONNECTING) "Reconnecting to $sessionName server..." else "Disconnected from $sessionName server. Attempting to reconnect...",
+                            text = if (connectionState == ConnectionState.CONNECTING) stringResource(R.string.reconnecting_named_server, sessionName) else stringResource(R.string.disconnected_named_server, sessionName),
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f)
@@ -233,7 +237,7 @@ fun ChatBottomSection(
                                 val content = withContext(kotlinx.coroutines.Dispatchers.IO) {
                                     runCatching {
                                         val file = java.io.File(path)
-                                        require(file.isFile && file.length() <= 1_000_000) { "File must be text and at most 1 MB" }
+                                        require(file.isFile && file.length() <= 1_000_000) { context.getString(R.string.file_must_be_text_and_at_most_1_mb) }
                                         file.readText()
                                     }
                                 }
@@ -248,7 +252,7 @@ fun ChatBottomSection(
                                             append("\n</attachment>")
                                         })
                                     },
-                                    onFailure = { attachmentError = it.message ?: "Could not read attachment" }
+                                    onFailure = { attachmentError = it.message ?: context.getString(R.string.could_not_read_attachment) }
                                 )
                             }
                             else -> {
@@ -271,7 +275,7 @@ private fun resolveConversationModeLabel(state: ChatUiState): String? {
 }
 
 private fun resolveConversationModeIsFast(state: ChatUiState): Boolean {
-    // Treat "Build"/"Fast" style modes as execute-immediately. Everything else
+    // Treat "Build"/stringResource(R.string.fast) style modes as execute-immediately. Everything else
     // (Plan/Planning/Architect/Review) maps to the Lightbulb icon.
     val modeId = (state.conversationModeId ?: state.conversationMode.wireValue).lowercase()
     return modeId == "build" || modeId == "fast"

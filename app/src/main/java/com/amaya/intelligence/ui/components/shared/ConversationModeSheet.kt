@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.components.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,7 +32,7 @@ import com.amaya.intelligence.domain.models.ConversationModeOption
 fun ConversationModeSheet(
     options: List<ConversationModeOption>,
     selectedId: String?,
-    title: String = "Conversation Mode",
+    title: String = stringResource(R.string.conversation_mode),
     onSelect: (ConversationModeOption) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -39,7 +42,7 @@ fun ConversationModeSheet(
     ) {
         if (options.isEmpty()) {
             Text(
-                text = "This provider has no conversation modes.",
+                text = stringResource(R.string.this_provider_has_no_conversation_modes),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 modifier = Modifier.padding(16.dp)

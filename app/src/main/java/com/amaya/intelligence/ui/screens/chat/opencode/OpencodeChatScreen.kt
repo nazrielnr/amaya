@@ -1,5 +1,7 @@
 package com.amaya.intelligence.ui.screens.chat.opencode
 
+import com.amaya.intelligence.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -104,9 +106,9 @@ fun OpencodeChatScreen(
         // that lives inside the chat input bar. Turning it on here lets the
         // shared ChatInput surface the pill + bottom sheet.
         showConversationModeSelector = true,
-        selectedModelFallbackLabel = "Select Opencode Model",
-        streamingLabel = "Opencode streaming",
-        idleLabel = "Opencode ready"
+        selectedModelFallbackLabel = R.string.select_opencode_model,
+        streamingLabel = R.string.opencode_streaming,
+        idleLabel = R.string.opencode_ready
     )
 
     Box(modifier = Modifier.fillMaxSize()) {

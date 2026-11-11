@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.components.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -194,15 +197,15 @@ fun ThinkingCard(
         delta
     }
 
-    // Label mapping: processing → "Thinking", done → "Thought for {duration}".
+    // Label mapping: processing → stringResource(R.string.thinking), done → "Thought for {duration}".
     // Follows the latched lifecycle so the label is stable across isStreaming
-    // blips (a blip must not flip "Thought for Xs" back to "Thinking").
+    // blips (a blip must not flip "Thought for Xs" back to stringResource(R.string.thinking)).
     val headerText = if (isProcessing) {
-        "Thinking"
+        stringResource(R.string.thinking)
     } else {
         val ms = durationMs
             ?: startedAt?.let { ((completedAt ?: System.currentTimeMillis()) - it).coerceAtLeast(0L) }
-        ms?.let { "Thought for ${formatThinkingDuration(it)}" } ?: "Thought"
+        ms?.let { stringResource(R.string.thought_duration, formatThinkingDuration(it)) } ?: stringResource(R.string.thought)
     }
 
     val shimmerProgress = rememberToolShimmerProgress(isProcessing)

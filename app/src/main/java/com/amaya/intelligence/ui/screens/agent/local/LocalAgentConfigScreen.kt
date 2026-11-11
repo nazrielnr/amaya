@@ -1,5 +1,9 @@
 package com.amaya.intelligence.ui.screens.agent.local
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -73,57 +77,57 @@ fun LocalAgentConfigScreen(
     var identitySheet by remember(agent.id) { mutableStateOf<String?>(null) }
 
     AmayaScaffold(agent.name, snackbarHostState, onNavigateBack) {
-        AmayaSection("Default Models") {
+        AmayaSection(stringResource(R.string.default_models)) {
             AmayaNavigationRow(
                 Icons.Default.Psychology,
-                "Models",
-                if (defaultModelKeys.isEmpty()) "Use global model · ${globalModelKey.orEmpty()}" else "${defaultModelKeys.size} selected",
+                stringResource(R.string.models),
+                if (defaultModelKeys.isEmpty()) stringResource(R.string.use_global_model, globalModelKey.orEmpty()) else pluralStringResource(R.plurals.selected_models, defaultModelKeys.size, defaultModelKeys.size),
                 onClick = { showModelSheet = true }
             )
         }
-        AmayaSection("Agent") {
-            AmayaNavigationRow(Icons.Default.Badge, "Agent name", name, onClick = { identitySheet = "name" })
+        AmayaSection(stringResource(R.string.agent)) {
+            AmayaNavigationRow(Icons.Default.Badge, stringResource(R.string.agent_name), name, onClick = { identitySheet = "name" })
             AmayaDivider()
-            AmayaNavigationRow(Icons.Default.Work, "Role", role.ifBlank { "No role" }, onClick = { identitySheet = "role" })
+            AmayaNavigationRow(Icons.Default.Work, stringResource(R.string.role), role.ifBlank { stringResource(R.string.no_role) }, onClick = { identitySheet = "role" })
             AmayaDivider()
-            AmayaNavigationRow(Icons.Default.Description, "Instructions", instructions.ifBlank { "No instructions" }, onClick = { identitySheet = "instructions" })
+            AmayaNavigationRow(Icons.Default.Description, stringResource(R.string.instructions), instructions.ifBlank { stringResource(R.string.no_instructions) }, onClick = { identitySheet = "instructions" })
             AmayaDivider()
-            AmayaNavigationRow(Icons.Default.Psychology, "Group", "${group.name} · ${group.workspacePath}", onClick = {})
+            AmayaNavigationRow(Icons.Default.Psychology, stringResource(R.string.group), "${group.name} · ${group.workspacePath}", onClick = {})
         }
-        AmayaSection("Agent Context") {
-            AmayaNavigationRow(Icons.Default.AttachFile, "References", "${referenceCount(agent.referencePathsJson)} attached · private to this agent", onAddReference)
+        AmayaSection(stringResource(R.string.agent_context)) {
+            AmayaNavigationRow(Icons.Default.AttachFile, stringResource(R.string.references), pluralStringResource(R.plurals.private_references, referenceCount(agent.referencePathsJson), referenceCount(agent.referencePathsJson)), onAddReference)
             AmayaDivider()
-            AmayaNavigationRow(Icons.Default.Psychology, "Agent Memory", "Private saved memory for this agent", onOpenMemory)
+            AmayaNavigationRow(Icons.Default.Psychology, stringResource(R.string.agent_memory), stringResource(R.string.private_saved_memory_for_this_agent), onOpenMemory)
         }
-        AmayaSection("Automation") {
-            AmayaNavigationRow(Icons.Default.Alarm, "Reminders & Jobs", "Schedules owned by this agent", onOpenReminders)
+        AmayaSection(stringResource(R.string.automation)) {
+            AmayaNavigationRow(Icons.Default.Alarm, stringResource(R.string.reminders_jobs), stringResource(R.string.schedules_owned_by_this_agent), onOpenReminders)
         }
-        AmayaSection("Tools") {
-            AmayaSwitchRow("Workspace", "Read and change group workspace files", profile.workspace, { profile = profile.copy(workspace = it) })
+        AmayaSection(stringResource(R.string.tools)) {
+            AmayaSwitchRow(stringResource(R.string.workspace), stringResource(R.string.read_and_change_group_workspace_files), profile.workspace, { profile = profile.copy(workspace = it) })
             AmayaDivider()
-            AmayaSwitchRow("Terminal", "Run shell commands inside the workspace", profile.terminal, { profile = profile.copy(terminal = it) })
+            AmayaSwitchRow(stringResource(R.string.terminal), stringResource(R.string.run_shell_commands_inside_the_workspace), profile.terminal, { profile = profile.copy(terminal = it) })
             AmayaDivider()
-            AmayaSwitchRow("Browser", "Control the local browser", profile.browser, { profile = profile.copy(browser = it) })
+            AmayaSwitchRow(stringResource(R.string.browser), stringResource(R.string.control_the_local_browser), profile.browser, { profile = profile.copy(browser = it) })
             AmayaDivider()
-            AmayaSwitchRow("Web Search", "Search and read public web pages", profile.webSearch, { profile = profile.copy(webSearch = it) })
+            AmayaSwitchRow(stringResource(R.string.web_search), stringResource(R.string.search_and_read_public_web_pages), profile.webSearch, { profile = profile.copy(webSearch = it) })
             AmayaDivider()
-            AmayaSwitchRow("Skills", "View and manage reusable skills", profile.skills, { profile = profile.copy(skills = it) })
+            AmayaSwitchRow(stringResource(R.string.skills), stringResource(R.string.view_and_manage_reusable_skills), profile.skills, { profile = profile.copy(skills = it) })
             AmayaDivider()
-            AmayaSwitchRow("Reminders", "Create Android reminders and scheduled jobs", profile.reminders, { profile = profile.copy(reminders = it) })
+            AmayaSwitchRow(stringResource(R.string.reminders), stringResource(R.string.create_android_reminders_and_scheduled_jobs), profile.reminders, { profile = profile.copy(reminders = it) })
             AmayaDivider()
-            AmayaSwitchRow("Todo", "Maintain the live task list", profile.todo, { profile = profile.copy(todo = it) })
+            AmayaSwitchRow(stringResource(R.string.todo), stringResource(R.string.maintain_the_live_task_list), profile.todo, { profile = profile.copy(todo = it) })
             AmayaDivider()
-            AmayaSwitchRow("Delegation", "Delegate read-only work to group members", profile.subagents, { profile = profile.copy(subagents = it) })
+            AmayaSwitchRow(stringResource(R.string.delegation), stringResource(R.string.delegate_read_only_work_to_group_members), profile.subagents, { profile = profile.copy(subagents = it) })
         }
         OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("Delete Agent", color = MaterialTheme.colorScheme.error)
+            Text(stringResource(R.string.delete_agent), color = MaterialTheme.colorScheme.error)
         }
     }
 
     when (identitySheet) {
-        "name" -> AgentIdentitySheet("Agent name", name, { name = it }, { identitySheet = null })
-        "role" -> AgentIdentitySheet("Role", role, { role = it }, { identitySheet = null })
-        "instructions" -> AgentIdentitySheet("Instructions", instructions, { instructions = it }, { identitySheet = null }, multiline = true)
+        "name" -> AgentIdentitySheet(stringResource(R.string.agent_name), name, { name = it }, { identitySheet = null }, required = true)
+        "role" -> AgentIdentitySheet(stringResource(R.string.role), role, { role = it }, { identitySheet = null })
+        "instructions" -> AgentIdentitySheet(stringResource(R.string.instructions), instructions, { instructions = it }, { identitySheet = null }, multiline = true)
         null -> Unit
     }
 
@@ -138,10 +142,10 @@ fun LocalAgentConfigScreen(
 
     if (confirmDelete) AlertDialog(
         onDismissRequest = { confirmDelete = false },
-        title = { Text("Delete ${agent.name}?") },
-        text = { Text("This agent, its conversations, references, and private memory will be permanently deleted.") },
-        confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
+        title = { Text(stringResource(R.string.delete_named_item, agent.name)) },
+        text = { Text(stringResource(R.string.this_agent_its_conversations_references_and_private_memory_will_b)) },
+        confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } }
     )
 }
 
@@ -151,7 +155,8 @@ private fun AgentIdentitySheet(
     value: String,
     onValueChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    multiline: Boolean = false
+    multiline: Boolean = false,
+    required: Boolean = false
 ) {
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(onDismissRequest = onDismiss, title = title) {
         OutlinedTextField(
@@ -162,7 +167,7 @@ private fun AgentIdentitySheet(
             singleLine = !multiline,
             minLines = if (multiline) 5 else 1
         )
-        Button(onClick = { dismiss(onDismiss) }, enabled = title != "Agent name" || value.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Done") }
+        Button(onClick = { dismiss(onDismiss) }, enabled = !required || value.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.done)) }
     }
 }
 
@@ -176,13 +181,13 @@ private fun ModelSelectionSheet(
     onUseGlobal: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(onDismissRequest = onDismiss, title = "Default models") {
-        Text("Choose active Manage Models entries for this agent. Empty selection uses the global model.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(onDismissRequest = onDismiss, title = stringResource(R.string.default_models_sentence)) {
+        Text(stringResource(R.string.choose_active_manage_models_entries_for_this_agent_empty_selectio), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         val globalModel = models.firstOrNull { it.id == globalKey }
         androidx.compose.material3.FilterChip(
             selected = selectedKeys.isEmpty(),
             onClick = onUseGlobal,
-            label = { Text("Global default · ${globalModel?.name ?: "Not selected"}") }
+            label = { Text(stringResource(R.string.global_default_model, globalModel?.name ?: stringResource(R.string.not_selected))) }
         )
         models.forEach { model ->
             Row(

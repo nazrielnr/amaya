@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.components.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.LinearEasing
@@ -171,7 +174,7 @@ internal fun ComposerAttachmentButton(
         ) {
             Icon(
                 Icons.Default.Add,
-                contentDescription = "Attach",
+                contentDescription = stringResource(R.string.attach),
                 modifier = Modifier.size(23.dp),
                 tint = if (isStreaming) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
@@ -188,7 +191,7 @@ internal fun ComposerAttachmentButton(
             focusable = false
         ) {
             AmayaDropdownMenuItem(
-                text = "Attach file",
+                text = stringResource(R.string.attach_file),
                 icon = Icons.Default.AttachFile,
                 onClick = {
                     showMenu = false
@@ -197,7 +200,7 @@ internal fun ComposerAttachmentButton(
             )
             if (onAttachImage != null) {
                 AmayaDropdownMenuItem(
-                    text = "Attach image",
+                    text = stringResource(R.string.attach_image),
                     icon = Icons.Default.Image,
                     onClick = {
                         showMenu = false
@@ -234,14 +237,14 @@ internal fun ComposerSendButton(
         if (isStreaming) {
             Icon(
                 Icons.Default.Stop,
-                contentDescription = if (isCompressing) "Cancel compression" else "Stop",
+                contentDescription = if (isCompressing) stringResource(R.string.cancel_compression) else stringResource(R.string.stop),
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.error
             )
         } else {
             Icon(
                 Icons.AutoMirrored.Filled.Send,
-                contentDescription = "Send",
+                contentDescription = stringResource(R.string.send),
                 modifier = Modifier
                     .size(18.dp)
                     .offset(x = 1.dp), // optical alignment
@@ -270,9 +273,9 @@ internal fun CompactProgressPill(modifier: Modifier = Modifier, isDone: Boolean 
         verticalAlignment = Alignment.CenterVertically
     ) {
         val displayText = when {
-            isCanceled && isDone -> "Compact canceled"
-            isDone -> "Compacting done"
-            else -> "Compacting"
+            isCanceled && isDone -> stringResource(R.string.compact_canceled)
+            isDone -> stringResource(R.string.compacting_done)
+            else -> stringResource(R.string.compacting)
         }
         Text(
             displayText,
@@ -381,14 +384,12 @@ internal fun ComposerCommandPill(
     listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
 ) {
     if (mode == null) return
-    val actions = remember {
-        listOf(
-            ComposerSuggestion("Compact", "Compress context; optional focus after command", "/compact"),
-            ComposerSuggestion("Explain", "Explain selected context", "/explain"),
-            ComposerSuggestion("Review", "Review code or text", "/review"),
-            ComposerSuggestion("Plan", "Draft a concise implementation plan", "/plan")
-        )
-    }
+    val actions = listOf(
+            ComposerSuggestion(stringResource(R.string.compact), stringResource(R.string.compress_context_optional_focus_after_command), "/compact"),
+            ComposerSuggestion(stringResource(R.string.explain), stringResource(R.string.explain_selected_context), "/explain"),
+            ComposerSuggestion(stringResource(R.string.review), stringResource(R.string.review_code_or_text), "/review"),
+            ComposerSuggestion(stringResource(R.string.plan), stringResource(R.string.draft_a_concise_implementation_plan), "/plan")
+    )
     val filteredActions = actions.filter { query.isBlank() || it.label.contains(query, ignoreCase = true) }
     val filteredAgents = agents.filter {
         query.isBlank() || it.name.contains(query, ignoreCase = true) || it.role.contains(query, ignoreCase = true)
@@ -403,8 +404,8 @@ internal fun ComposerCommandPill(
             }
             val emptyLabel = when (mode) {
                 ComposerCommand.MENTIONS ->
-                    if (query.isBlank()) "No agents or workspace files" else "No matching agents or files"
-                ComposerCommand.ACTIONS -> "No matching commands"
+                    if (query.isBlank()) stringResource(R.string.no_agents_or_workspace_files) else stringResource(R.string.no_matching_agents_or_files)
+                ComposerCommand.ACTIONS -> stringResource(R.string.no_matching_commands)
             }
             // Deliberately a plain swap, not Crossfade: Crossfade keeps both branches composed, so
             // the card would measure max(list, placeholder) for the whole transition and only then
@@ -522,7 +523,7 @@ internal fun ReasoningEffortButton(
             ) {
                 Icon(
                     Icons.Outlined.Lightbulb,
-                    contentDescription = "Reasoning effort",
+                    contentDescription = stringResource(R.string.reasoning_effort),
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -570,11 +571,12 @@ internal fun ReasoningEffortButton(
     }
 }
 
+@Composable
 private fun com.amaya.intelligence.data.remote.api.ThinkingEffort.label(): String = when (this) {
-    com.amaya.intelligence.data.remote.api.ThinkingEffort.NONE -> "Off"
-    com.amaya.intelligence.data.remote.api.ThinkingEffort.LOW -> "Low"
-    com.amaya.intelligence.data.remote.api.ThinkingEffort.MEDIUM -> "Medium"
-    com.amaya.intelligence.data.remote.api.ThinkingEffort.HIGH -> "High"
+    com.amaya.intelligence.data.remote.api.ThinkingEffort.NONE -> stringResource(R.string.off)
+    com.amaya.intelligence.data.remote.api.ThinkingEffort.LOW -> stringResource(R.string.low)
+    com.amaya.intelligence.data.remote.api.ThinkingEffort.MEDIUM -> stringResource(R.string.medium)
+    com.amaya.intelligence.data.remote.api.ThinkingEffort.HIGH -> stringResource(R.string.high)
 }
 
 internal fun Modifier.pillShadowOverlay(topShadowAlpha: () -> Float): Modifier = this

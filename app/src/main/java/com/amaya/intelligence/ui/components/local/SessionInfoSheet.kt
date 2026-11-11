@@ -1,5 +1,9 @@
 package com.amaya.intelligence.ui.components.local
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
@@ -33,43 +37,43 @@ fun SessionInfoSheet(
 ) {
     StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Session Info"
+        title = stringResource(R.string.session_info)
     ) {
         SessionInfoRow(
             icon = Icons.Default.Error,
-            label = "Tokens used",
+            label = stringResource(R.string.tokens_used),
             value = if (totalTokens > 0) ContextWindowUtils.formatTokenCount(totalTokens) else "0"
         )
 
         if (inputTokens > 0 || outputTokens > 0) {
             SessionInfoRow(
                 icon = Icons.AutoMirrored.Filled.Login,
-                label = "Input tokens",
+                label = stringResource(R.string.input_tokens),
                 value = ContextWindowUtils.formatTokenCount(inputTokens)
             )
             SessionInfoRow(
                 icon = Icons.AutoMirrored.Filled.Logout,
-                label = "Output tokens",
+                label = stringResource(R.string.output_tokens),
                 value = ContextWindowUtils.formatTokenCount(outputTokens)
             )
         }
 
         SessionInfoRow(
             icon = Icons.Default.AccountTree,
-            label = "Provider",
-            value = providerNameOverride ?: providerId ?: "Unknown"
+            label = stringResource(R.string.provider),
+            value = providerNameOverride ?: providerId ?: stringResource(R.string.unknown)
         )
 
         SessionInfoRow(
             icon = Icons.Default.Psychology,
-            label = "Model",
+            label = stringResource(R.string.model),
             value = modelDisplayNameOverride ?: activeModel
         )
 
         SessionInfoRow(
             icon = Icons.Default.Alarm,
-            label = "Active reminders",
-            value = if (activeReminderCount > 0) "$activeReminderCount active" else "None",
+            label = stringResource(R.string.active_reminders),
+            value = if (activeReminderCount > 0) pluralStringResource(R.plurals.active_reminder_count, activeReminderCount, activeReminderCount) else stringResource(R.string.none),
             valueColor = if (activeReminderCount > 0) MaterialTheme.colorScheme.primary
                          else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
         )

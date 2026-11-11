@@ -1,5 +1,9 @@
 package com.amaya.intelligence.ui.screens.models
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -70,7 +74,7 @@ fun ManageModelsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Manage Models",
+                        stringResource(R.string.manage_models),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.primaryText,
@@ -90,8 +94,8 @@ fun ManageModelsScreen(
 
             ExtendedFloatingActionButton(
                 onClick = { sheet = ModelsSheet.PROVIDERS },
-                icon = { Icon(Icons.Default.Add, "Add provider") },
-                text = { Text("Provider") },
+                icon = { Icon(Icons.Default.Add, stringResource(R.string.add_provider)) },
+                text = { Text(stringResource(R.string.provider)) },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 elevation = FloatingActionButtonDefaults.elevation(4.dp),
@@ -183,10 +187,10 @@ private fun ConnectionsOverview(
         if (settings.connections.isEmpty()) {
             item {
                 com.amaya.intelligence.ui.components.shared.SettingsEmptyState(
-                    title = "No Models Configured",
-                    subtitle = "Add an API or subscription provider to start using AI models.",
+                    title = stringResource(R.string.no_models_configured),
+                    subtitle = stringResource(R.string.add_an_api_or_subscription_provider_to_start_using_ai_models),
                     icon = Icons.Default.SmartToy,
-                    buttonText = "Add Provider",
+                    buttonText = stringResource(R.string.add_provider_sentence),
                     onButtonClick = onAddProvider,
                     titleColor = colors.primaryText,
                     subtitleColor = colors.secondaryText,
@@ -196,11 +200,11 @@ private fun ConnectionsOverview(
             }
         } else {
             item {
-                com.amaya.intelligence.ui.screens.amaya.AmayaSection("Active Model") {
+                com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.active_model)) {
                     ModelSettingsRow(
                         icon = Icons.Default.Psychology,
-                        title = active?.second?.displayName ?: "Select Model",
-                        subtitle = active?.first?.name ?: "Choose a model for chat",
+                        title = active?.second?.displayName ?: stringResource(R.string.select_model),
+                        subtitle = active?.first?.name ?: stringResource(R.string.choose_a_model_for_chat),
                         colors = colors,
                         onClick = onSelectModel,
                         modelId = active?.second?.id,
@@ -209,12 +213,12 @@ private fun ConnectionsOverview(
                 }
             }
             item {
-                com.amaya.intelligence.ui.screens.amaya.AmayaSection("Providers") {
+                com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.providers)) {
                     settings.connections.forEachIndexed { index, connection ->
                         ModelSettingsRow(
                             icon = if (AmayaProviderRegistry.find(connection.providerId)?.isSubscription == true) Icons.Default.AccountCircle else Icons.Default.Api,
                             title = connection.name,
-                            subtitle = "${AmayaProviderRegistry.displayName(connection.providerId)} · ${connection.visibleModels.size} ${if (connection.visibleModels.size == 1) "model" else "models"}",
+                            subtitle = pluralStringResource(R.plurals.provider_model_count, connection.visibleModels.size, AmayaProviderRegistry.displayName(connection.providerId), connection.visibleModels.size),
                             colors = colors,
                             onClick = { onConnection(connection) }
                         )
@@ -231,7 +235,7 @@ private fun ConnectionsOverview(
 private fun ProviderPickerSheet(onDismiss: () -> Unit, onSelect: (ProviderConfig) -> Unit) {
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Select Provider",
+        title = stringResource(R.string.select_provider),
         scrollable = false
     ) {
         LazyColumn(contentPadding = com.amaya.intelligence.ui.components.shared.StandardModalSheetDefaults.ContentPadding, modifier = Modifier.fillMaxWidth().heightIn(max = com.amaya.intelligence.ui.components.shared.StandardModalSheetDefaults.MaxHeight)) {
@@ -248,7 +252,7 @@ private fun ProviderPickerSheet(onDismiss: () -> Unit, onSelect: (ProviderConfig
                                 Spacer(Modifier.width(14.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(provider.displayName, fontWeight = FontWeight.SemiBold)
-                                    Text(if (provider.isSubscription) "Sign in with your account" else if (provider.isCustom) "Custom endpoint" else "API key", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(if (provider.isSubscription) stringResource(R.string.sign_in_with_your_account) else if (provider.isCustom) stringResource(R.string.custom_endpoint) else stringResource(R.string.api_key), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Icon(Icons.Default.ChevronRight, null)
                             }
@@ -292,7 +296,7 @@ private fun ProviderSetupSheet(
             com.amaya.intelligence.ui.components.shared.AmayaTopBarButton(
                 icon = Icons.AutoMirrored.Filled.ArrowBack,
                 onClick = { dismiss(onBack) },
-                contentDescription = "Back"
+                contentDescription = stringResource(R.string.back)
             )
         }
     ) {
@@ -302,24 +306,24 @@ private fun ProviderSetupSheet(
                     Icon(if (codexAuthenticated) Icons.Default.CheckCircle else Icons.Default.AccountCircle, null)
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text(if (codexAuthenticated) "Connected" else "Not Connected", fontWeight = FontWeight.SemiBold)
+                        Text(if (codexAuthenticated) stringResource(R.string.connected) else stringResource(R.string.not_connected), fontWeight = FontWeight.SemiBold)
                         Text(codexAccount ?: subscriptionStateLabel(codexState), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             operation.error?.let { InlineError(it) }
             when {
-                codexAuthenticated -> Button(onClick = onSaveSubscription, modifier = Modifier.fillMaxWidth().height(54.dp)) { Text("Continue") }
+                codexAuthenticated -> Button(onClick = onSaveSubscription, modifier = Modifier.fillMaxWidth().height(54.dp)) { Text(stringResource(R.string.action_continue)) }
                 codexState is CodexAuthState.WaitingForManualCallback -> {
                     Text(
-                        "After OpenAI redirects to localhost, copy the complete URL from the browser address bar and paste it here.",
+                        stringResource(R.string.after_openai_redirects_to_localhost_copy_the_complete_url_from_th),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     OutlinedTextField(
                         value = callbackUrl,
                         onValueChange = { callbackUrl = it },
-                        label = { Text("Localhost callback URL") },
+                        label = { Text(stringResource(R.string.localhost_callback_url)) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3
                     )
@@ -327,38 +331,38 @@ private fun ProviderSetupSheet(
                         onClick = { onSubmitManualCallbackUrl(callbackUrl) },
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         enabled = callbackUrl.isNotBlank()
-                    ) { Text("Finish Sign In") }
+                    ) { Text(stringResource(R.string.finish_sign_in)) }
                     OutlinedButton(onClick = onCancelSignIn, modifier = Modifier.fillMaxWidth().height(54.dp)) {
-                        Text("Cancel Sign In")
+                        Text(stringResource(R.string.cancel_sign_in))
                     }
                 }
                 codexState is CodexAuthState.Starting || codexState is CodexAuthState.WaitingForBrowser || codexState is CodexAuthState.ExchangingToken -> {
-                    Button(onClick = onCancelSignIn, modifier = Modifier.fillMaxWidth().height(54.dp)) { Text("Cancel Sign In") }
+                    Button(onClick = onCancelSignIn, modifier = Modifier.fillMaxWidth().height(54.dp)) { Text(stringResource(R.string.cancel_sign_in)) }
                 }
                 else -> {
-                    Button(onClick = onSignIn, modifier = Modifier.fillMaxWidth().height(54.dp)) { Text("Sign In With OpenAI") }
+                    Button(onClick = onSignIn, modifier = Modifier.fillMaxWidth().height(54.dp)) { Text(stringResource(R.string.sign_in_with_openai)) }
                     OutlinedButton(onClick = onStartManualCallbackSignIn, modifier = Modifier.fillMaxWidth().height(54.dp)) {
-                        Text("Use Pasted Callback URL")
+                        Text(stringResource(R.string.use_pasted_callback_url))
                     }
                 }
             }
         } else {
-            OutlinedTextField(name, { name = it }, label = { Text("Connection Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.connection_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             if (provider.isCustom) {
-                OutlinedTextField(baseUrl, { baseUrl = it }, label = { Text("Base URL") }, placeholder = { Text("https://example.com/v1") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(baseUrl, { baseUrl = it }, label = { Text(stringResource(R.string.base_url)) }, placeholder = { Text("https://example.com/v1") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             } else {
-                Text("Requests use ${provider.defaultBaseUrl}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.requests_use_url, provider.defaultBaseUrl), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             OutlinedTextField(
                 apiKey,
                 { apiKey = it },
-                label = { Text(if (provider.credentialRequired) "API Key" else "API Key (Optional)") },
+                label = { Text(if (provider.credentialRequired) stringResource(R.string.api_key_sentence) else stringResource(R.string.api_key_optional)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     IconButton(onClick = { showKey = !showKey }) {
-                        Icon(if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, if (showKey) "Hide API key" else "Show API key")
+                        Icon(if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, if (showKey) stringResource(R.string.hide_api_key) else stringResource(R.string.show_api_key))
                     }
                 }
             )
@@ -366,7 +370,7 @@ private fun ProviderSetupSheet(
                 InlineError(it)
                 if (provider.isCustom) {
                     Text(
-                        "If this endpoint does not expose a model list, save it now, then add model IDs manually.",
+                        stringResource(R.string.if_this_endpoint_does_not_expose_a_model_list_save_it_now_then_ad),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -374,7 +378,7 @@ private fun ProviderSetupSheet(
                         onClick = { onSaveWithoutModelList(name, baseUrl, apiKey) },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                         enabled = !operation.loading && baseUrl.isNotBlank()
-                    ) { Text("Save Without Model List") }
+                    ) { Text(stringResource(R.string.save_without_model_list)) }
                 }
             }
             Button(
@@ -382,7 +386,7 @@ private fun ProviderSetupSheet(
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 enabled = !operation.loading && (!provider.credentialRequired || apiKey.isNotBlank()) && (!provider.isCustom || baseUrl.isNotBlank())
             ) {
-                if (operation.loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) else Text("Connect")
+                if (operation.loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.connect))
             }
         }
     }
@@ -411,13 +415,13 @@ private fun SelectModelSheet(settings: AiSettings, onSelect: (ModelOption) -> Un
     }
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Select Model",
+        title = stringResource(R.string.select_model),
         scrollable = false,
         actions = {
             com.amaya.intelligence.ui.components.shared.AmayaTopBarButton(
                 icon = Icons.Default.Search,
                 onClick = { showSearch = !showSearch },
-                contentDescription = "Search"
+                contentDescription = stringResource(R.string.search)
             )
         }
     ) {
@@ -433,18 +437,18 @@ private fun SelectModelSheet(settings: AiSettings, onSelect: (ModelOption) -> Un
                         leadingIcon = { Icon(Icons.Default.Search, null) },
                         trailingIcon = {
                             if (query.isNotBlank()) IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Default.Close, "Clear search")
+                                Icon(Icons.Default.Close, stringResource(R.string.clear_search))
                             }
                         },
-                        placeholder = { Text("Search models…") },
+                        placeholder = { Text(stringResource(R.string.search_models)) },
                         shape = RoundedCornerShape(14.dp)
                     )
                 }
             }
             if (allOptions.isEmpty()) {
-                item { Text("No models shown in chat", modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                item { Text(stringResource(R.string.no_models_shown_in_chat), modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
             } else if (options.isEmpty()) {
-                item { Text("No models found", modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                item { Text(stringResource(R.string.no_models_found), modifier = Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
             } else {
                 settings.connections.forEach { connection ->
                     val connectionModels = options.filter { it.connectionId == connection.id }
@@ -503,17 +507,19 @@ private fun SelectModelSheet(settings: AiSettings, onSelect: (ModelOption) -> Un
 
 
 
+@Composable
 private fun providerCategoryLabel(category: ProviderCategory): String = when (category) {
-    ProviderCategory.SUBSCRIPTION -> "SUBSCRIPTION"
-    ProviderCategory.API -> "API KEY"
-    ProviderCategory.CUSTOM -> "CUSTOM ENDPOINT"
+    ProviderCategory.SUBSCRIPTION -> stringResource(R.string.subscription)
+    ProviderCategory.API -> stringResource(R.string.api_key_sentence)
+    ProviderCategory.CUSTOM -> stringResource(R.string.custom_endpoint_sentence)
 }
 
+@Composable
 private fun subscriptionStateLabel(state: CodexAuthState): String = when (state) {
-    is CodexAuthState.Starting -> "Opening browser…"
-    is CodexAuthState.WaitingForBrowser -> "Waiting for browser…"
-    is CodexAuthState.WaitingForManualCallback -> "Paste the browser callback URL"
-    is CodexAuthState.ExchangingToken -> "Finishing sign in…"
+    is CodexAuthState.Starting -> stringResource(R.string.opening_browser)
+    is CodexAuthState.WaitingForBrowser -> stringResource(R.string.waiting_for_browser)
+    is CodexAuthState.WaitingForManualCallback -> stringResource(R.string.paste_the_browser_callback_url)
+    is CodexAuthState.ExchangingToken -> stringResource(R.string.finishing_sign_in)
     is CodexAuthState.Error -> state.message
-    else -> "Sign in to continue"
+    else -> stringResource(R.string.sign_in_to_continue)
 }

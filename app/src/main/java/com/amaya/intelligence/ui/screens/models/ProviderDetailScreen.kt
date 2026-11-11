@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.models
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -140,10 +143,10 @@ fun ProviderDetailScreen(
                 }
 
                 item {
-                    com.amaya.intelligence.ui.screens.amaya.AmayaSection("Configuration") {
+                    com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.configuration)) {
                         ModelSettingsRow(
                             icon = Icons.Default.Edit,
-                            title = "Provider Name",
+                            title = stringResource(R.string.provider_name),
                             subtitle = connection.name,
                             colors = colors,
                             onClick = { editingProviderName = true }
@@ -153,7 +156,7 @@ fun ProviderDetailScreen(
                             if (isCustomProvider) {
                                 ModelSettingsRow(
                                     Icons.Default.Link,
-                                    "Base URL",
+                                    stringResource(R.string.base_url),
                                     connection.baseUrl,
                                     colors,
                                     onClick = { editingBaseUrl = true }
@@ -162,8 +165,8 @@ fun ProviderDetailScreen(
                             }
                             ModelSettingsRow(
                                 Icons.Default.Key,
-                                "Change API Key",
-                                if (hasCredential) "API key saved" else "Add API key",
+                                stringResource(R.string.change_api_key),
+                                if (hasCredential) stringResource(R.string.api_key_saved) else stringResource(R.string.add_api_key),
                                 colors,
                                 onClick = { editingApiKey = true }
                             )
@@ -184,10 +187,10 @@ fun ProviderDetailScreen(
                         leadingIcon = { Icon(Icons.Default.Search, null, tint = colors.secondaryText) },
                         trailingIcon = {
                             if (query.isNotBlank()) IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Default.Close, "Clear search", tint = colors.secondaryText)
+                                Icon(Icons.Default.Close, stringResource(R.string.clear_search), tint = colors.secondaryText)
                             }
                         },
-                        placeholder = { Text("Search models…", color = colors.secondaryText) },
+                        placeholder = { Text(stringResource(R.string.search_models), color = colors.secondaryText) },
                         shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = colors.groupSurface,
@@ -201,7 +204,7 @@ fun ProviderDetailScreen(
                 }
 
                 item {
-                    com.amaya.intelligence.ui.screens.amaya.AmayaSection("Models") {
+                    com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.models)) {
                         if (filteredModels.isEmpty()) {
                             Box(
                                 Modifier
@@ -212,7 +215,7 @@ fun ProviderDetailScreen(
                                 if (operation.loading) {
                                     CircularProgressIndicator(Modifier.size(28.dp))
                                 } else {
-                                    Text("No models found", color = colors.secondaryText)
+                                    Text(stringResource(R.string.no_models_found), color = colors.secondaryText)
                                 }
                             }
                         } else {
@@ -244,7 +247,7 @@ fun ProviderDetailScreen(
 
                 item {
                     Spacer(Modifier.height(AmayaGroupedSettingsTokens.inlineTextSpacing))
-                    com.amaya.intelligence.ui.screens.amaya.AmayaSection("Danger Zone") {
+                    com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.danger_zone)) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -254,7 +257,7 @@ fun ProviderDetailScreen(
                                 .padding(horizontal = 16.dp, vertical = 16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Delete Provider", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                            Text(stringResource(R.string.delete_provider), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                         }
                     }
                 }
@@ -281,7 +284,7 @@ fun ProviderDetailScreen(
                             if (!refreshingModels) {
                                 refreshingModels = true
                                 refreshTurns += 1
-                                Toast.makeText(context, "Refreshing models…", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.refreshing_models), Toast.LENGTH_SHORT).show()
                                 viewModel.refresh(
                                     connection = connection,
                                     onSuccess = { refreshed ->
@@ -300,7 +303,7 @@ fun ProviderDetailScreen(
                         },
                         modifier = Modifier.padding(end = 8.dp),
                         iconModifier = Modifier.rotate(refreshRotation),
-                        contentDescription = "Refresh models"
+                        contentDescription = stringResource(R.string.refresh_models)
                     )
                 },
                 modifier = Modifier
@@ -311,8 +314,8 @@ fun ProviderDetailScreen(
             )
             ExtendedFloatingActionButton(
                 onClick = { addingCustomModel = true },
-                icon = { Icon(Icons.Default.Add, "Add custom model") },
-                text = { Text("Custom Model") },
+                icon = { Icon(Icons.Default.Add, stringResource(R.string.add_custom_model)) },
+                text = { Text(stringResource(R.string.custom_model)) },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 elevation = FloatingActionButtonDefaults.elevation(4.dp),
@@ -399,10 +402,10 @@ fun ProviderDetailScreen(
     if (confirmDeleteProvider) {
         com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
             onDismissRequest = { confirmDeleteProvider = false },
-            title = "Delete Provider"
+            title = stringResource(R.string.delete_provider)
         ) {
             Text(
-                "This removes the provider, its configured models, and any saved credentials.",
+                stringResource(R.string.this_removes_the_provider_its_configured_models_and_any_saved_cre),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -420,14 +423,14 @@ fun ProviderDetailScreen(
                 modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 if (operation.loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Text("Delete Provider")
+                else Text(stringResource(R.string.delete_provider))
             }
             OutlinedButton(
                 onClick = { confirmDeleteProvider = false },
                 enabled = !operation.loading,
                 modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     }
@@ -447,24 +450,24 @@ private fun AddCustomModelSheet(
 
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Add Custom Model"
+        title = stringResource(R.string.add_custom_model_sentence)
     ) {
         OutlinedTextField(
             value = modelId,
             onValueChange = { modelId = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Model ID") },
-            supportingText = { Text("Use the ID accepted by this provider.") },
+            label = { Text(stringResource(R.string.model_id)) },
+            supportingText = { Text(stringResource(R.string.use_the_id_accepted_by_this_provider)) },
             singleLine = true
         )
         OutlinedTextField(
             value = displayName,
             onValueChange = { displayName = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Display name (optional)") },
+            label = { Text(stringResource(R.string.display_name_optional)) },
             singleLine = true
         )
-        if (duplicate) InlineError("A model with this ID already exists.")
+        if (duplicate) InlineError(stringResource(R.string.a_model_with_this_id_already_exists))
         Button(
             onClick = {
                 onSave(
@@ -478,7 +481,7 @@ private fun AddCustomModelSheet(
             modifier = Modifier.fillMaxWidth().height(52.dp)
         ) {
             if (operation.loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-            else Text("Add Model")
+            else Text(stringResource(R.string.add_model))
         }
     }
 }
@@ -494,15 +497,15 @@ private fun BaseUrlSheet(
 
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Base URL"
+        title = stringResource(R.string.base_url)
     ) {
         OutlinedTextField(
             value = baseUrl,
             onValueChange = { baseUrl = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Base URL") },
+            label = { Text(stringResource(R.string.base_url)) },
             placeholder = { Text("https://example.com/v1") },
-            supportingText = { Text("Use the API root, without /models or a query.") },
+            supportingText = { Text(stringResource(R.string.use_the_api_root_without_models_or_a_query)) },
             singleLine = true
         )
         Button(
@@ -511,7 +514,7 @@ private fun BaseUrlSheet(
             modifier = Modifier.fillMaxWidth().height(52.dp)
         ) {
             if (operation.loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-            else Text("Save Base URL")
+            else Text(stringResource(R.string.save_base_url))
         }
     }
 }
@@ -527,13 +530,13 @@ private fun ProviderNameSheet(
 
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Provider Name"
+        title = stringResource(R.string.provider_name)
     ) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Provider name") },
+            label = { Text(stringResource(R.string.provider_name_sentence)) },
             singleLine = true
         )
         Button(
@@ -542,7 +545,7 @@ private fun ProviderNameSheet(
             modifier = Modifier.fillMaxWidth().height(52.dp)
         ) {
             if (operation.loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-            else Text("Save Name")
+            else Text(stringResource(R.string.save_name))
         }
     }
 }
@@ -560,10 +563,10 @@ private fun ApiKeySheet(
 
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Change API Key"
+        title = stringResource(R.string.change_api_key)
     ) {
         Text(
-            "Update the API key for $providerName.",
+            stringResource(R.string.update_provider_key, providerName),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -571,14 +574,14 @@ private fun ApiKeySheet(
             value = apiKey,
             onValueChange = { apiKey = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(if (credentialRequired) "New API key" else "New API key (optional)") },
+            label = { Text(if (credentialRequired) stringResource(R.string.new_api_key) else stringResource(R.string.new_api_key_optional)) },
             singleLine = true,
             visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
                 IconButton(onClick = { showKey = !showKey }) {
                     Icon(
                         if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        if (showKey) "Hide API key" else "Show API key"
+                        if (showKey) stringResource(R.string.hide_api_key) else stringResource(R.string.show_api_key)
                     )
                 }
             }
@@ -589,7 +592,7 @@ private fun ApiKeySheet(
             modifier = Modifier.fillMaxWidth().height(52.dp)
         ) {
             if (operation.loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-            else Text("Update API Key")
+            else Text(stringResource(R.string.update_api_key))
         }
     }
 }
@@ -618,18 +621,18 @@ private fun ModelConfigurationSheet(
 
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Configure Model"
+        title = stringResource(R.string.configure_model)
     ) {
         OutlinedTextField(
             value = displayName,
             onValueChange = { displayName = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Display name") },
+            label = { Text(stringResource(R.string.display_name)) },
             singleLine = true
         )
-        TokenField("Context window", contextWindow) { contextWindow = it }
-        TokenField("Max input", maxInput) { maxInput = it }
-        TokenField("Max output", maxOutput) { maxOutput = it }
+        TokenField(stringResource(R.string.context_window), contextWindow) { contextWindow = it }
+        TokenField(stringResource(R.string.max_input), maxInput) { maxInput = it }
+        TokenField(stringResource(R.string.max_output), maxOutput) { maxOutput = it }
         candidate.exceptionOrNull()?.message?.let { message -> InlineError(message) }
         Button(
             onClick = { candidate.getOrNull()?.let(onSave) },
@@ -637,7 +640,7 @@ private fun ModelConfigurationSheet(
             modifier = Modifier.fillMaxWidth().height(52.dp)
         ) {
             if (operation.loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-            else Text("Save")
+            else Text(stringResource(R.string.save))
         }
     }
 }
@@ -648,7 +651,7 @@ private fun TokenField(label: String, value: String, onValueChange: (String) -> 
         value = value,
         onValueChange = { input -> if (input.all(Char::isDigit)) onValueChange(input) },
         label = { Text(label) },
-        placeholder = { Text("Auto") },
+        placeholder = { Text(stringResource(R.string.auto)) },
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
@@ -716,7 +719,7 @@ fun ModernModelToggleRow(
         }
         Icon(
             Icons.Default.ChevronRight,
-            "Configure ${model.displayName}",
+            stringResource(R.string.configure_named_model, model.displayName),
             tint = colors.secondaryText,
             modifier = Modifier.size(AmayaGroupedSettingsTokens.rowChevronSize)
         )

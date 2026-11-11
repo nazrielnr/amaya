@@ -31,6 +31,9 @@
 - If the right location is unclear, trace the nearest related modules, controllers, services, or mappers before editing.
 - Before wrapping up, crosscheck the touched area's git diff and nearby recent commits.
 
+## Localization
+- Android UI uses English default resources and Simplified Chinese resources under `app/src/main/res/`; see `app/AGENTS.md` for locale maintenance.
+
 ## Area Routing
 - Extension work belongs under `amaya-remote-extension/AGENTS.md`.
 - Android-wide work belongs under `app/AGENTS.md`.

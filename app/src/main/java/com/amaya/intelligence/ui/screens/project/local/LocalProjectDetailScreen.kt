@@ -1,5 +1,9 @@
 package com.amaya.intelligence.ui.screens.project.local
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
@@ -52,57 +56,57 @@ fun LocalProjectDetailScreen(
     var confirmDelete by remember(project.id) { mutableStateOf(false) }
 
     AmayaScaffold(project.name, snackbarHostState, onNavigateBack) {
-        AmayaSection("Identity") {
-            AmayaNavigationRow(Icons.Default.Badge, "Project name", project.name, onClick = { name = project.name; editSheet = ProjectEditSheet.NAME })
+        AmayaSection(stringResource(R.string.identity)) {
+            AmayaNavigationRow(Icons.Default.Badge, stringResource(R.string.project_name), project.name, onClick = { name = project.name; editSheet = ProjectEditSheet.NAME })
             AmayaDivider()
-            AmayaNavigationRow(Icons.Default.Description, "Instructions", project.instructions.ifBlank { "No project instructions" }, onClick = { instructions = project.instructions; editSheet = ProjectEditSheet.INSTRUCTIONS })
+            AmayaNavigationRow(Icons.Default.Description, stringResource(R.string.instructions), project.instructions.ifBlank { stringResource(R.string.no_project_instructions) }, onClick = { instructions = project.instructions; editSheet = ProjectEditSheet.INSTRUCTIONS })
             AmayaDivider()
-            AmayaNavigationRow(Icons.Default.Folder, "Workspace", project.rootPath, onClick = {})
+            AmayaNavigationRow(Icons.Default.Folder, stringResource(R.string.workspace), project.rootPath, onClick = {})
         }
-        AmayaSection("Project") {
-            AmayaNavigationRow(Icons.Default.Memory, "Project Memory", "$memoryCount saved", onOpenMemory)
+        AmayaSection(stringResource(R.string.project)) {
+            AmayaNavigationRow(Icons.Default.Memory, stringResource(R.string.project_memory), pluralStringResource(R.plurals.saved_memories, memoryCount, memoryCount), onOpenMemory)
             AmayaDivider()
-            AmayaNavigationRow(Icons.Default.AttachFile, "References", "${referenceCount(project.referencePathsJson)} attached · add text document", onAddReference)
+            AmayaNavigationRow(Icons.Default.AttachFile, stringResource(R.string.references), pluralStringResource(R.plurals.attached_references, referenceCount(project.referencePathsJson), referenceCount(project.referencePathsJson)), onAddReference)
         }
         OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("Delete Project", color = MaterialTheme.colorScheme.error)
+            Text(stringResource(R.string.delete_project), color = MaterialTheme.colorScheme.error)
         }
     }
 
     when (editSheet) {
         ProjectEditSheet.NAME -> StandardModalBottomSheet(
             onDismissRequest = { editSheet = null },
-            title = "Project name"
+            title = stringResource(R.string.project_name)
         ) {
-            com.amaya.intelligence.ui.screens.amaya.AmayaSection("Settings") {
+            com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.settings)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Project name") }, singleLine = true)
+                    OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.project_name)) }, singleLine = true)
                     Button(
                         onClick = { onSaveName(name.trim()); editSheet = null },
                         enabled = name.isNotBlank(),
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Save Name") }
+                    ) { Text(stringResource(R.string.save_name)) }
                 }
             }
         }
         ProjectEditSheet.INSTRUCTIONS -> StandardModalBottomSheet(
             onDismissRequest = { editSheet = null },
-            title = "Project instructions"
+            title = stringResource(R.string.project_instructions)
         ) {
-            com.amaya.intelligence.ui.screens.amaya.AmayaSection("Settings") {
+            com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.settings)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     OutlinedTextField(
                         instructions,
                         { instructions = it },
                         Modifier.fillMaxWidth(),
-                        label = { Text("Instructions") },
-                        supportingText = { Text("Applied to every conversation in this project") },
+                        label = { Text(stringResource(R.string.instructions)) },
+                        supportingText = { Text(stringResource(R.string.applied_to_every_conversation_in_this_project)) },
                         minLines = 5
                     )
                     Button(
                         onClick = { onSaveInstructions(instructions.trim()); editSheet = null },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Save Instructions") }
+                    ) { Text(stringResource(R.string.save_instructions)) }
                 }
             }
         }
@@ -111,10 +115,10 @@ fun LocalProjectDetailScreen(
 
     if (confirmDelete) AlertDialog(
         onDismissRequest = { confirmDelete = false },
-        title = { Text("Delete ${project.name}?") },
-        text = { Text("Project conversations and imported references will be deleted. Workspace files stay unchanged.") },
-        confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
+        title = { Text(stringResource(R.string.delete_named_item, project.name)) },
+        text = { Text(stringResource(R.string.project_conversations_and_imported_references_will_be_deleted_wor)) },
+        confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } }
     )
 }
 

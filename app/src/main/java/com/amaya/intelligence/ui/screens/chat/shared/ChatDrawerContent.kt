@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.chat.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -258,7 +261,7 @@ fun ChatDrawerContent(
                     ) {
                         Icon(
                             imageVector = Icons.Default.LinkOff,
-                            contentDescription = "Disconnect session",
+                            contentDescription = stringResource(R.string.disconnect_session),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -280,9 +283,9 @@ fun ChatDrawerContent(
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = when (assistantMode) {
-                            com.amaya.intelligence.domain.models.AssistantMode.CHAT -> "Chat"
-                            com.amaya.intelligence.domain.models.AssistantMode.PROJECT -> "Project Chat"
-                            com.amaya.intelligence.domain.models.AssistantMode.AGENT -> "Agent"
+                            com.amaya.intelligence.domain.models.AssistantMode.CHAT -> stringResource(R.string.chat)
+                            com.amaya.intelligence.domain.models.AssistantMode.PROJECT -> stringResource(R.string.project_chat)
+                            com.amaya.intelligence.domain.models.AssistantMode.AGENT -> stringResource(R.string.agent)
                         },
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.SemiBold
@@ -306,8 +309,8 @@ fun ChatDrawerContent(
     conversationToDelete?.let { conv ->
         AlertDialog(
             onDismissRequest = { conversationToDelete = null },
-            title = { Text("Delete Conversation?") },
-            text = { Text("\"${conv.title.ifEmpty { "New Chat" }}\" will be permanently deleted.") },
+            title = { Text(stringResource(R.string.delete_conversation)) },
+            text = { Text(stringResource(R.string.delete_conversation_message, conv.title.ifEmpty { stringResource(R.string.new_chat) })) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -317,12 +320,12 @@ fun ChatDrawerContent(
                         }
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { conversationToDelete = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -381,7 +384,7 @@ internal fun ConversationDrawerItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             HyperText(
-                text = conv.title.ifEmpty { "New Chat" },
+                text = conv.title.ifEmpty { stringResource(R.string.new_chat) },
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal,
                     fontSize = 15.sp,

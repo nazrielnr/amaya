@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.cronjob.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 
@@ -20,7 +23,6 @@ import com.amaya.intelligence.data.local.entity.CronRecurringType
 import com.amaya.intelligence.data.local.entity.CronSessionMode
 
 
-import com.amaya.intelligence.ui.res.UiStrings
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,8 +78,8 @@ fun CronJobEditSheet(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text(UiStrings.Labels.TITLE) },
-                    placeholder = { Text(UiStrings.Placeholders.TITLE_EXAMPLE) },
+                    label = { Text(stringResource(R.string.title)) },
+                    placeholder = { Text(stringResource(R.string.e_g_buy_groceries)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
@@ -87,8 +89,8 @@ fun CronJobEditSheet(
                 OutlinedTextField(
                     value = prompt,
                     onValueChange = { prompt = it },
-                    label = { Text(UiStrings.CronJob.MESSAGE_REMINDER) },
-                    placeholder = { Text(UiStrings.Placeholders.REMINDER_MESSAGE_EXAMPLE) },
+                    label = { Text(stringResource(R.string.message_reminder)) },
+                    placeholder = { Text(stringResource(R.string.what_should_amaya_remind_you_of)) },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3,
                     shape = RoundedCornerShape(12.dp),

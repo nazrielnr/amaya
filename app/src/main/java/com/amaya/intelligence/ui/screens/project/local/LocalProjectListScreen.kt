@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.project.local
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,16 +42,16 @@ fun LocalProjectListScreen(
     onOpenProject: (ProjectEntity) -> Unit
 ) {
     Box(Modifier.fillMaxSize()) {
-        AmayaScaffold("Projects", snackbarHostState, onNavigateBack) {
+        AmayaScaffold(stringResource(R.string.projects), snackbarHostState, onNavigateBack) {
             if (projects.isEmpty()) {
                 SettingsEmptyState(
-                    title = "No projects yet",
-                    subtitle = "Add a workspace, then give it a custom project name.",
+                    title = stringResource(R.string.no_projects_yet),
+                    subtitle = stringResource(R.string.add_a_workspace_then_give_it_a_custom_project_name),
                     icon = Icons.Default.FolderOpen,
                     modifier = Modifier.padding(top = AmayaGroupedSettingsTokens.emptyStateScreenTopSpacing)
                 )
             } else {
-                AmayaSection("Projects") {
+                AmayaSection(stringResource(R.string.projects)) {
                     projects.forEach { project ->
                         Card(
                             onClick = { onOpenProject(project) },
@@ -61,7 +64,7 @@ fun LocalProjectListScreen(
                                 }
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Tag, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("Project ID ${project.id}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(R.string.project_id_label, project.id), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Text(project.rootPath, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -72,8 +75,8 @@ fun LocalProjectListScreen(
         }
         ExtendedFloatingActionButton(
             onClick = onAddProject,
-            icon = { Icon(Icons.Default.Add, "Add project") },
-            text = { Text("Project") },
+            icon = { Icon(Icons.Default.Add, stringResource(R.string.add_project)) },
+            text = { Text(stringResource(R.string.project)) },
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             elevation = FloatingActionButtonDefaults.elevation(4.dp),

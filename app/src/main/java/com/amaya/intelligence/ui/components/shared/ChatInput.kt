@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.components.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import com.amaya.intelligence.domain.models.AssistantMode
 import com.amaya.intelligence.domain.models.ConversationMode
 import com.amaya.intelligence.domain.models.parseComposerReferences
@@ -64,12 +67,12 @@ fun ChatInput(
     onShowConversationModeSelector: () -> Unit = {},
     workspacePath: String? = null,
     assistantMode: AssistantMode = AssistantMode.CHAT,
-    ownerLabel: String = "Chat",
+    ownerLabel: String = stringResource(R.string.chat),
     showWorkspaceCard: Boolean = true,
     onWorkspaceClick: () -> Unit = {},
     mentionAgents: List<ChatMentionAgent> = emptyList(),
     onSearchWorkspaceFiles: suspend (String) -> List<com.amaya.intelligence.domain.models.ProjectFileEntry> = { emptyList() },
-    modelLabel: String = "Select Model",
+    modelLabel: String = stringResource(R.string.select_model),
     modelId: String = "",
     modelProviderId: String? = null,
     modelIconType: String? = null,
@@ -182,7 +185,7 @@ fun ChatInput(
                     )
                     Text(
                         text = conversationModeLabel
-                            ?: if (conversationMode == ConversationMode.PLANNING) "Planning" else "Fast",
+                            ?: if (conversationMode == ConversationMode.PLANNING) stringResource(R.string.planning) else stringResource(R.string.fast),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -223,7 +226,7 @@ fun ChatInput(
                             .clickable { onClearAttachment() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Remove",
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.remove),
                             modifier = Modifier.size(9.dp),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
@@ -246,7 +249,7 @@ fun ChatInput(
                     Icon(Icons.Default.Image, contentDescription = null,
                         modifier = Modifier.size(13.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                    Text(text = attachedImageName ?: "Image",
+                    Text(text = attachedImageName ?: stringResource(R.string.image),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -257,7 +260,7 @@ fun ChatInput(
                             .clickable { onClearImageAttachment() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Remove",
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.remove),
                             modifier = Modifier.size(9.dp),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
@@ -267,9 +270,9 @@ fun ChatInput(
 
         val placeholderText = remember(assistantMode, hasWorkspace, wsName) {
             when (assistantMode) {
-                AssistantMode.CHAT -> "Ask anything"
-                AssistantMode.PROJECT -> "Ask about $wsName"
-                AssistantMode.AGENT -> "Message the agent group"
+                AssistantMode.CHAT -> stringResource(R.string.ask_anything)
+                AssistantMode.PROJECT -> stringResource(R.string.ask_about_workspace, wsName)
+                AssistantMode.AGENT -> stringResource(R.string.message_the_agent_group)
             }
         }
         val placeholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.46f)

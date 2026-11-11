@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.components.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -172,7 +175,7 @@ fun StandardModalBottomSheet(
                     com.amaya.intelligence.ui.components.shared.AmayaTopBarButton(
                         icon = Icons.Default.Close,
                         onClick = state::dismiss,
-                        contentDescription = "Dismiss",
+                        contentDescription = stringResource(R.string.dismiss),
                         modifier = Modifier.align(Alignment.CenterEnd)
                     )
                 }
@@ -211,7 +214,7 @@ fun PermissionSheetBody(
     onPrimary: () -> Unit,
     onSecondary: (() -> Unit)? = null,
     primaryLabel: String? = null,
-    secondaryLabel: String = "Skip"
+    secondaryLabel: String = stringResource(R.string.skip)
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -234,7 +237,7 @@ fun PermissionSheetBody(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "System flow",
+                        text = stringResource(R.string.system_flow),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -271,7 +274,7 @@ fun PermissionSheetBody(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Granted",
+                            text = stringResource(R.string.granted),
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
@@ -293,7 +296,7 @@ fun PermissionSheetBody(
                     contentColor = MaterialTheme.colorScheme.surface
                 )
             ) {
-                Text(primaryLabel ?: if (granted) "Next" else spec.actionLabel, fontWeight = FontWeight.SemiBold)
+                Text(primaryLabel ?: if (granted) stringResource(R.string.next) else spec.actionLabel, fontWeight = FontWeight.SemiBold)
             }
 
             if (onSecondary != null) {

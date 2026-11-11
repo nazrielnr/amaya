@@ -91,13 +91,13 @@ class ChatViewModel @Inject constructor(
 
     val ownerLabel = uiState.mapLatest { state ->
         when (state.assistantMode) {
-            com.amaya.intelligence.domain.models.AssistantMode.CHAT -> "Chat"
+            com.amaya.intelligence.domain.models.AssistantMode.CHAT -> null
             com.amaya.intelligence.domain.models.AssistantMode.PROJECT ->
-                state.ownerId?.toLongOrNull()?.let { projectDao.getById(it)?.name } ?: "Project"
+                state.ownerId?.toLongOrNull()?.let { projectDao.getById(it)?.name }
             com.amaya.intelligence.domain.models.AssistantMode.AGENT ->
-                state.agentId?.let { agentDao.getById(it)?.name } ?: "Agent"
+                state.agentId?.let { agentDao.getById(it)?.name }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "Chat")
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val activeAgentGroupLabel = uiState.mapLatest { state ->
         if (state.assistantMode != com.amaya.intelligence.domain.models.AssistantMode.AGENT) return@mapLatest ""

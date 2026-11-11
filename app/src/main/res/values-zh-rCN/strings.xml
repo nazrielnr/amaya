@@ -418,7 +418,7 @@
     <string name="requests_use_url">请求地址：%1$s</string>
     <string name="update_provider_key">更新 %1$s 的 API 密钥。</string>
     <string name="configure_named_model">配置 %1$s</string>
-    <string name="providers_and_models">%1$d 个模型服务商 · %2$d 个模型</string>
+    <string name="providers_and_models">%1$s · %2$s</string>
     <string name="active_mcp_servers">已启用 %1$d / %2$d 个</string>
     <string name="update_version_title">更新 %1$s</string>
     <string name="reconnecting_named_server">正在重新连接 %1$s 服务器…</string>
@@ -465,7 +465,7 @@
         <item quantity="other">%1$d 个聊天</item>
     </plurals>
     <plurals name="tool_count_suffix">
-        <item quantity="other"> · %1$d 个工具</item>
+        <item quantity="other">\u0020· %1$d 个工具</item>
     </plurals>
     <plurals name="active_reminder_count">
         <item quantity="other">已启用 %1$d 个</item>
@@ -480,4 +480,21 @@
     <string name="follow_system">跟随系统</string>
     <string name="report_issues_or_suggest_features">报告问题或提出建议</string>
     <string name="connection_setup">连接设置</string>
+    <string name="skip">跳过</string>
+    <string name="system_flow">系统操作</string>
+    <string name="granted">已授权</string>
+    <string name="next">下一步</string>
+    <string name="prompt_summarize">总结这份文档</string>
+    <string name="prompt_draft_email">起草一封邮件，收件人是\u0020</string>
+    <string name="prompt_explain">解释这个概念</string>
+    <string name="prompt_write_code">编写一个脚本</string>
+    <string name="prompt_rewrite">改写这段文本</string>
+    <string name="prompt_research">研究这个主题</string>
+    <string name="prompt_review">审阅这段代码</string>
+    <plurals name="provider_count">
+        <item quantity="other">%1$d 个模型服务商</item>
+    </plurals>
+    <plurals name="model_count">
+        <item quantity="other">%1$d 个模型</item>
+    </plurals>
 </resources>

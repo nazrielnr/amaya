@@ -418,7 +418,7 @@
     <string name="requests_use_url">Requests use %1$s</string>
     <string name="update_provider_key">Update the API key for %1$s.</string>
     <string name="configure_named_model">Configure %1$s</string>
-    <string name="providers_and_models">%1$d providers · %2$d models</string>
+    <string name="providers_and_models">%1$s · %2$s</string>
     <string name="active_mcp_servers">%1$d of %2$d active</string>
     <string name="update_version_title">Update %1$s</string>
     <string name="reconnecting_named_server">Reconnecting to %1$s server...</string>
@@ -473,8 +473,8 @@
         <item quantity="other">%1$d chats</item>
     </plurals>
     <plurals name="tool_count_suffix">
-        <item quantity="one"> · %1$d tool</item>
-        <item quantity="other"> · %1$d tools</item>
+        <item quantity="one">\u0020· %1$d tool</item>
+        <item quantity="other">\u0020· %1$d tools</item>
     </plurals>
     <plurals name="active_reminder_count">
         <item quantity="one">%1$d active</item>
@@ -493,4 +493,23 @@
     <string name="english" translatable="false">English</string>
     <string name="report_issues_or_suggest_features">Report issues or suggest features</string>
     <string name="connection_setup">Connection Setup</string>
+    <string name="skip">Skip</string>
+    <string name="system_flow">System flow</string>
+    <string name="granted">Granted</string>
+    <string name="next">Next</string>
+    <string name="prompt_summarize">Summarize this document</string>
+    <string name="prompt_draft_email">Draft an email to\u0020</string>
+    <string name="prompt_explain">Explain this concept</string>
+    <string name="prompt_write_code">Write a script</string>
+    <string name="prompt_rewrite">Rewrite this text</string>
+    <string name="prompt_research">Research this topic</string>
+    <string name="prompt_review">Review this code</string>
+    <plurals name="provider_count">
+        <item quantity="one">%1$d provider</item>
+        <item quantity="other">%1$d providers</item>
+    </plurals>
+    <plurals name="model_count">
+        <item quantity="one">%1$d model</item>
+        <item quantity="other">%1$d models</item>
+    </plurals>
 </resources>

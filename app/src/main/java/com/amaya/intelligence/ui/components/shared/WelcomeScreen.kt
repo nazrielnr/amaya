@@ -80,13 +80,13 @@ fun ScrollablePills(
     data class PillItem(val icon: ImageVector, val label: String, val prompt: String)
 
     val pills = listOf(
-        PillItem(Icons.Default.Description, stringResource(R.string.summarize), "Summarize this document"),
-        PillItem(Icons.Default.Email, stringResource(R.string.draft_email), "Draft an email to "),
-        PillItem(Icons.Default.Lightbulb, stringResource(R.string.explain), "Explain this concept"),
-        PillItem(Icons.Default.Code, stringResource(R.string.write_code), "Write a script"),
-        PillItem(Icons.Default.Edit, stringResource(R.string.rewrite), "Rewrite this text"),
-        PillItem(Icons.Default.Search, stringResource(R.string.research), "Research this topic"),
-        PillItem(Icons.Default.CheckCircle, stringResource(R.string.review), "Review this code")
+        PillItem(Icons.Default.Description, stringResource(R.string.summarize), stringResource(R.string.prompt_summarize)),
+        PillItem(Icons.Default.Email, stringResource(R.string.draft_email), stringResource(R.string.prompt_draft_email)),
+        PillItem(Icons.Default.Lightbulb, stringResource(R.string.explain), stringResource(R.string.prompt_explain)),
+        PillItem(Icons.Default.Code, stringResource(R.string.write_code), stringResource(R.string.prompt_write_code)),
+        PillItem(Icons.Default.Edit, stringResource(R.string.rewrite), stringResource(R.string.prompt_rewrite)),
+        PillItem(Icons.Default.Search, stringResource(R.string.research), stringResource(R.string.prompt_research)),
+        PillItem(Icons.Default.CheckCircle, stringResource(R.string.review), stringResource(R.string.prompt_review))
     )
 
     Row(

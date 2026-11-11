@@ -407,7 +407,9 @@ private fun GlobalSettings(
         IosSettingsRow(
             Icons.Default.SmartToy,
             stringResource(R.string.manage_models),
-            if (settings.connections.isEmpty()) stringResource(R.string.no_providers_configured) else stringResource(R.string.providers_and_models, settings.connections.size, modelCount),
+            if (settings.connections.isEmpty()) stringResource(R.string.no_providers_configured) else stringResource(R.string.providers_and_models,
+                pluralStringResource(R.plurals.provider_count, settings.connections.size, settings.connections.size),
+                pluralStringResource(R.plurals.model_count, modelCount, modelCount)),
             true,
             true,
             onModels

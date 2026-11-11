@@ -81,7 +81,12 @@ fun ChatScreen(
     val effectiveReminderCount = if (activeReminderCount >= 0) activeReminderCount else localReminderCount
     val scrollEventFlow = viewModel.scrollEvent
     val conversationsFlow = viewModel.conversations
-    val ownerLabel by viewModel.ownerLabel.collectAsState()
+    val ownerName by viewModel.ownerLabel.collectAsState()
+    val ownerLabel = ownerName ?: stringResource(when (uiState.assistantMode) {
+        com.amaya.intelligence.domain.models.AssistantMode.CHAT -> R.string.chat
+        com.amaya.intelligence.domain.models.AssistantMode.PROJECT -> R.string.project
+        com.amaya.intelligence.domain.models.AssistantMode.AGENT -> R.string.agent
+    })
     val activeAgentGroupLabel by viewModel.activeAgentGroupLabel.collectAsState()
     val activeAgentMembers by viewModel.activeAgentMembers.collectAsState()
     val activeDelegationTasks by viewModel.activeDelegationTasks.collectAsState()

@@ -497,4 +497,13 @@
     <plurals name="model_count">
         <item quantity="other">%1$d 个模型</item>
     </plurals>
+
+    <!-- App-owned provider configuration errors. -->
+    <string name="provider_api_key_required">请填写 API 密钥</string>
+    <string name="provider_base_url_required">请填写 API 基础地址</string>
+    <string name="provider_valid_url_required">请输入包含 https:// 等协议前缀的有效网址</string>
+    <string name="provider_url_no_credentials">API 基础地址中不能包含用户名或密码</string>
+    <string name="provider_url_no_query_or_fragment">API 基础地址中不能包含查询参数或片段标识</string>
+    <string name="provider_api_root_required">基础地址应指向 API 根路径，例如 https://example.com/v1</string>
+    <string name="provider_public_https_required">公网模型服务商地址必须使用 HTTPS</string>
 </resources>

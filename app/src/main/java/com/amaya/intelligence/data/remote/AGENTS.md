@@ -44,7 +44,7 @@ data/remote/
 ## Key Source Code
 - `api/AiSettings.kt`: provider connections, active model selection, credential access, and settings persistence.
 - `api/ProviderRegistry.kt`: stable provider presets and adapter mapping; no model catalog or inferred metadata.
-- `api/ProviderModelService.kt`: provider-owned model discovery, GitHub catalog mapping, and provider URL validation.
+- `api/ProviderModelService.kt`: provider-owned model discovery, GitHub catalog mapping, and provider URL validation. App-owned configuration failures carry Android string resource IDs for locale-aware UI rendering; remote server error details are preserved.
 - `api/GeminiProvider.kt`: Gemini request/response models and streaming parsing.
 - `api/OpenAiProvider.kt`: OpenAI Responses, compatible Chat Completions, and subscription transport orchestration; DTOs live under `provider/openai/`.
 - `api/OpenAiRequestCodec.kt`: testable OpenAI request-shape helpers.

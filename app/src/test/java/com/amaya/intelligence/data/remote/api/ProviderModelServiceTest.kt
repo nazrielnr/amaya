@@ -1,5 +1,6 @@
 package com.amaya.intelligence.data.remote.api
 
+import com.amaya.intelligence.R
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -35,7 +36,8 @@ class ProviderModelServiceTest {
             "http://ai.example.com/v1"
         )
 
-        assertTrue(result.exceptionOrNull()?.message?.contains("HTTPS") == true)
+        assertEquals(R.string.provider_public_https_required,
+            (result.exceptionOrNull() as ProviderConfigurationException).messageRes)
     }
 
     @Test
@@ -45,7 +47,8 @@ class ProviderModelServiceTest {
             "ai.example.com/v1"
         )
 
-        assertTrue(result.isFailure)
+        assertEquals(R.string.provider_valid_url_required,
+            (result.exceptionOrNull() as ProviderConfigurationException).messageRes)
     }
 
     @Test

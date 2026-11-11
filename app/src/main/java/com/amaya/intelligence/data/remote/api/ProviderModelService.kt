@@ -1,5 +1,7 @@
 package com.amaya.intelligence.data.remote.api
 
+import androidx.annotation.StringRes
+import com.amaya.intelligence.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
@@ -23,7 +25,7 @@ class ProviderModelService @Inject constructor(
         runCatching {
             val provider = AmayaProviderRegistry.require(providerId)
             require(!provider.isSubscription) { "Subscription models must come from the authenticated runtime" }
-            if (provider.credentialRequired) require(apiKey.isNotBlank()) { "API key is required" }
+            if (provider.credentialRequired) requireConfiguration(apiKey.isNotBlank(), R.string.provider_api_key_required)
             val baseUrl = resolveBaseUrl(provider, baseUrlOverride)
             val request = when {
                 provider.id == "github_models" -> githubModelsRequest(apiKey)
@@ -51,18 +53,23 @@ class ProviderModelService @Inject constructor(
 
     private fun resolveBaseUrl(provider: ProviderConfig, override: String): HttpUrl {
         val raw = if (provider.isCustom) override.trim() else provider.defaultBaseUrl.orEmpty()
-        require(raw.isNotBlank()) { "Base URL is required" }
-        val url = raw.toHttpUrlOrNull() ?: error("Enter a valid URL including https://")
-        require(url.username.isEmpty() && url.password.isEmpty()) { "Base URL must not contain credentials" }
-        require(url.query == null && url.fragment == null) { "Base URL must not contain a query or fragment" }
-        require(
+        requireConfiguration(raw.isNotBlank(), R.string.provider_base_url_required)
+        val url = raw.toHttpUrlOrNull() ?: throw ProviderConfigurationException(R.string.provider_valid_url_required)
+        requireConfiguration(url.username.isEmpty() && url.password.isEmpty(), R.string.provider_url_no_credentials)
+        requireConfiguration(url.query == null && url.fragment == null, R.string.provider_url_no_query_or_fragment)
+        requireConfiguration(
             !url.encodedPath.trimEnd('/').endsWith("/models") &&
-                !url.encodedPath.trimEnd('/').endsWith("/chat/completions")
-        ) { "Base URL must point to the API root, such as https://example.com/v1" }
+                !url.encodedPath.trimEnd('/').endsWith("/chat/completions"),
+            R.string.provider_api_root_required
+        )
         if (url.scheme == "http" && !isPrivateHost(url.host)) {
-            error("Public provider URLs must use HTTPS")
+            throw ProviderConfigurationException(R.string.provider_public_https_required)
         }
         return url
+    }
+
+    private fun requireConfiguration(condition: Boolean, @StringRes messageRes: Int) {
+        if (!condition) throw ProviderConfigurationException(messageRes)
     }
 
     private fun openAiModelsRequest(baseUrl: HttpUrl, apiKey: String): Request {
@@ -174,3 +181,6 @@ class ProviderModelService @Inject constructor(
             parts[0] == 172 && parts[1] in 16..31
     }
 }
+
+/** App-owned input errors are resolved in the UI locale; server errors remain untouched. */
+internal class ProviderConfigurationException(@StringRes val messageRes: Int) : IllegalArgumentException()

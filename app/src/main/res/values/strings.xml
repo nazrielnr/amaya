@@ -512,4 +512,13 @@
         <item quantity="one">%1$d model</item>
         <item quantity="other">%1$d models</item>
     </plurals>
+
+    <!-- App-owned provider configuration errors. -->
+    <string name="provider_api_key_required">API key is required</string>
+    <string name="provider_base_url_required">Base URL is required</string>
+    <string name="provider_valid_url_required">Enter a valid URL including https://</string>
+    <string name="provider_url_no_credentials">Base URL must not contain credentials</string>
+    <string name="provider_url_no_query_or_fragment">Base URL must not contain a query or fragment</string>
+    <string name="provider_api_root_required">Base URL must point to the API root, such as https://example.com/v1</string>
+    <string name="provider_public_https_required">Public provider URLs must use HTTPS</string>
 </resources>

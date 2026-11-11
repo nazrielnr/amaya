@@ -147,13 +147,20 @@ class ProviderModelService @Inject constructor(
             val capabilities = item.optJSONArray("capabilities")?.let { array ->
                 (0 until array.length()).map { array.optString(it).lowercase() }
             }.orEmpty()
+            // Capability tags are optional and are not an exhaustive input-modality list.
+            // DeepSeek-compatible catalogs declare image input via input_modalities;
+            // missing metadata must not prevent sending an image to the provider.
+            val inputModalities = item.optJSONArray("input_modalities")?.let { array ->
+                (0 until array.length()).map { array.optString(it).trim().lowercase() }
+                    .filter { it.isNotBlank() }
+            }.orEmpty()
             ConfiguredModel(
                 id = id,
                 displayName = displayName,
                 contextWindowTokens = contextWindow,
                 maxOutputTokens = maxOutput,
                 supportsTools = capabilities.isEmpty() || capabilities.any { "tool" in it || "function" in it },
-                supportsImages = capabilities.any { "image" in it || "vision" in it || "multimodal" in it }
+                supportsImages = inputModalities.isEmpty() || "image" in inputModalities
             )
         }.distinctBy { it.id }.sortedBy { it.displayName.lowercase() }
     }

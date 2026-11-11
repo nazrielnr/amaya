@@ -731,8 +731,15 @@ fun ModernModelToggleRow(
 internal fun mergeConfiguredModels(
     savedModels: List<ConfiguredModel>,
     refreshedModels: List<ConfiguredModel>
-): List<ConfiguredModel> =
-    (refreshedModels + savedModels)
+): List<ConfiguredModel> {
+    val refreshedById = refreshedModels.associateBy { it.id }
+    return (refreshedModels + savedModels.map { saved ->
+        // Keep user configuration, but replace stale image metadata from older catalogs.
+        refreshedById[saved.id]?.let { refreshed ->
+            saved.copy(supportsImages = refreshed.supportsImages)
+        } ?: saved
+    })
         .associateBy { it.id }
         .values
         .sortedBy { it.displayName.lowercase() }
+}

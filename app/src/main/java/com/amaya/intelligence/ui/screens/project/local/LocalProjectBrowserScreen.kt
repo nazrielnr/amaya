@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.project.local
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import android.os.Environment
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -104,8 +107,8 @@ fun LocalProjectBrowserScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { onWorkspaceSelected(currentPath) },
-                icon = { Icon(Icons.Default.Check, "Select") },
-                text = { Text("Select This Folder", style = MaterialTheme.typography.labelLarge) },
+                icon = { Icon(Icons.Default.Check, stringResource(R.string.select)) },
+                text = { Text(stringResource(R.string.select_this_folder), style = MaterialTheme.typography.labelLarge) },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shape = MaterialTheme.shapes.large,
@@ -135,7 +138,7 @@ fun LocalProjectBrowserScreen(
                         .padding(bottom = 16.dp),
                     placeholder = {
                         Text(
-                            "Search files...",
+                            stringResource(R.string.search_files),
                             style = MaterialTheme.typography.bodyLarge,
                             color = colors.secondaryText
                         )
@@ -180,7 +183,7 @@ fun LocalProjectBrowserScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                         filteredFiles.isEmpty() -> com.amaya.intelligence.ui.components.shared.SettingsEmptyState(
-                            title = if (searchQuery.isNotEmpty()) "No files match your search" else "This folder is empty",
+                            title = if (searchQuery.isNotEmpty()) stringResource(R.string.no_files_match_your_search) else stringResource(R.string.this_folder_is_empty),
                             subtitle = "",
                             icon = Icons.Default.FolderOpen,
                             modifier = Modifier.align(Alignment.Center)
@@ -241,7 +244,7 @@ fun LocalProjectBrowserScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Workspace",
+                        stringResource(R.string.workspace),
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(start = 12.dp),
                         fontWeight = FontWeight.SemiBold
@@ -254,7 +257,7 @@ fun LocalProjectBrowserScreen(
                     com.amaya.intelligence.ui.components.shared.AmayaTopBarButton(
                         icon = if (showHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                         onClick = { showHidden = !showHidden },
-                        contentDescription = "Toggle hidden files",
+                        contentDescription = stringResource(R.string.toggle_hidden_files),
                         modifier = Modifier.padding(end = 12.dp)
                     )
                 },

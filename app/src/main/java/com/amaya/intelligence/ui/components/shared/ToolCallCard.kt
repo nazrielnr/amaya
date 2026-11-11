@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.components.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import com.amaya.intelligence.domain.models.*
 
 import androidx.compose.animation.*
@@ -314,7 +317,7 @@ internal fun ToolCardContent(
                         thickness = 1.dp
                     )
                     Text(
-                        text = execution.metadata["approvalReason"]?.takeIf { it.isNotBlank() } ?: "Waiting for approval",
+                        text = execution.metadata["approvalReason"]?.takeIf { it.isNotBlank() } ?: stringResource(R.string.waiting_for_approval),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -347,7 +350,7 @@ internal fun ToolCardContent(
                         ) {
                             Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Decline")
+                            Text(stringResource(R.string.decline))
                         }
                         Button(
                             onClick = {
@@ -361,7 +364,7 @@ internal fun ToolCardContent(
                         ) {
                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Approve")
+                            Text(stringResource(R.string.approve))
                         }
                     }
                 }
@@ -615,14 +618,14 @@ internal fun SubagentChildCard(
                     ToolStatus.SUCCESS -> Surface(
                         shape = RoundedCornerShape(20.dp), color = iosGreen.copy(alpha = 0.15f)
                     ) {
-                        Text("Done", style = MaterialTheme.typography.labelSmall,
+                        Text(stringResource(R.string.done), style = MaterialTheme.typography.labelSmall,
                             color = iosGreen, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                     }
                     ToolStatus.ERROR -> Surface(
                         shape = RoundedCornerShape(20.dp), color = iosRed.copy(alpha = 0.15f)
                     ) {
-                        Text("Failed", style = MaterialTheme.typography.labelSmall,
+                        Text(stringResource(R.string.failed), style = MaterialTheme.typography.labelSmall,
                             color = iosRed, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                     }
@@ -633,7 +636,7 @@ internal fun SubagentChildCard(
                         tint = iosBlue
                     )
                     ToolStatus.PENDING -> Text(
-                        "Pending", style = MaterialTheme.typography.labelSmall,
+                        stringResource(R.string.pending), style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                 }

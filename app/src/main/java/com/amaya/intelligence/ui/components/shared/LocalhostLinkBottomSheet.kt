@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.components.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -146,7 +149,7 @@ fun LocalhostLinkBottomSheet(
             copyError = null
             onDismiss()
         },
-        title = "Localhost Redirect"
+        title = stringResource(R.string.localhost_redirect)
     ) {
         LocalhostWarningSection(linkInfo = linkInfo, localIp = localIp)
 
@@ -167,7 +170,7 @@ fun LocalhostLinkBottomSheet(
                         copySuccess = false
                     }
                 } catch (e: Exception) {
-                    copyError = "Failed to copy: ${e.message}"
+                    copyError = context.getString(R.string.copy_failed_detail, e.message.orEmpty())
                     copySuccess = false
                 }
             },
@@ -177,7 +180,7 @@ fun LocalhostLinkBottomSheet(
                         uriHandler.openUri(url)
                         onOpenLink?.invoke(url)
                     } catch (_: Exception) {
-                        Toast.makeText(context, "No browser found to open link", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.no_browser_found_to_open_link), Toast.LENGTH_SHORT).show()
                     }
                 }
             },
@@ -216,13 +219,13 @@ private fun LocalhostWarningSection(linkInfo: LocalhostLinkInfo, localIp: String
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "External Connection",
+                    text = stringResource(R.string.external_connection),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "This link points to a service running on your local network. You will be redirected to ${linkInfo.displayText} via ${localIp}. Please ensure you trust the source before proceeding.",
+                    text = stringResource(R.string.localhost_redirect_description, linkInfo.displayText, localIp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 20.sp
@@ -236,7 +239,7 @@ private fun LocalhostWarningSection(linkInfo: LocalhostLinkInfo, localIp: String
 private fun LocalhostUrlDisplay(url: String) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "Full Address",
+            text = stringResource(R.string.full_address),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -287,7 +290,7 @@ private fun LocalhostActionButtons(
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                "Open in Browser",
+                stringResource(R.string.open_in_browser),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -324,7 +327,7 @@ private fun LocalhostActionButtons(
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        if (success) "Link Copied!" else "Copy to Clipboard",
+                        if (success) stringResource(R.string.link_copied) else stringResource(R.string.copy_to_clipboard),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )

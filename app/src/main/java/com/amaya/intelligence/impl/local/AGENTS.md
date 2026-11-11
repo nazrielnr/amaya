@@ -12,6 +12,7 @@ Local/core behavior is the active audit and repair focus. Remote-session, Antigr
 - This is the correct place for local tool orchestration, background services, browser control, and non-remote behaviors.
 - Keep remote API assumptions out of this layer.
 - Prefer Android-native patterns for services, background work, and local state.
+- Local conversation renaming uses the existing save mutex and cancels pending title generation; automatic titles must not overwrite a user-entered name.
 - Local chat must persist or resolve the active conversation id before starting a model turn when downstream session-memory or reflection code needs a stable session id.
 - Before changing local runtime flow, crosscheck the current workspace diff and recent commits for the touched subtree.
 

@@ -16,7 +16,7 @@ class ReferenceDocumentRepository @Inject constructor(
         val displayName = context.contentResolver.query(uri, arrayOf("_display_name"), null, null, null)?.use { cursor ->
             cursor.takeIf { it.moveToFirst() }?.getString(0)
         }?.takeIf(String::isNotBlank) ?: "reference.txt"
-        val safeName = displayName.replace(Regex("[^A-Za-z0-9._ -]"), "_")
+        val safeName = sanitizeReferenceFileName(displayName)
         val directory = File(context.filesDir, "references/$ownerType/$ownerId").apply { mkdirs() }
         val target = File(directory, "${System.currentTimeMillis()}_$safeName")
         try {
@@ -44,7 +44,7 @@ class ReferenceDocumentRepository @Inject constructor(
         val clean = content.trim()
         require(clean.isNotBlank()) { "Reference content is required" }
         require(clean.toByteArray().size <= MAX_FILE_BYTES) { "Reference must be at most 1 MB" }
-        val safeName = name.trim().takeIf(String::isNotBlank)?.replace(Regex("[^A-Za-z0-9._ -]"), "_") ?: "note"
+        val safeName = sanitizeReferenceFileName(name.trim().ifBlank { "note" })
         val directory = File(context.filesDir, "references/$ownerType/$ownerId").apply { mkdirs() }
         File(directory, "${System.currentTimeMillis()}_$safeName.txt").apply { writeText(clean) }.absolutePath
     }
@@ -89,3 +89,7 @@ class ReferenceDocumentRepository @Inject constructor(
         const val MAX_REFERENCE_CHARS = 8_000
     }
 }
+
+/** Keep user-visible Unicode names while excluding separators and control characters. */
+internal fun sanitizeReferenceFileName(name: String): String =
+    name.replace(Regex("[^\\p{L}\\p{M}\\p{N}._ -]"), "_")

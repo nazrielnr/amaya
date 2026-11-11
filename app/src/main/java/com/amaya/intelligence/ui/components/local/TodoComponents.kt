@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.components.local
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -115,10 +118,10 @@ fun TodoSheet(
 
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Task Plan",
+        title = stringResource(R.string.task_plan),
         actions = {
             Text(
-                "${items.count { it.status == TodoStatus.COMPLETED }} of ${items.size} completed",
+                stringResource(R.string.completed_task_count, items.count { it.status == TodoStatus.COMPLETED }, items.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -144,8 +147,8 @@ internal fun TodoItemRow(item: TodoItem, shimmerProgress: Float) {
     val isCompleted = item.status == TodoStatus.COMPLETED
     val isPending   = item.status == TodoStatus.PENDING
 
-    val label = if (isActive) item.activeForm ?: item.content ?: "Task ${item.id}"
-                else item.content ?: "Task ${item.id}"
+    val label = if (isActive) item.activeForm ?: item.content ?: stringResource(R.string.task_id_label, item.id)
+                else item.content ?: stringResource(R.string.task_id_label, item.id)
 
     val iosGreen  = Color(0xFF34C759)
     val iosBlue   = Color(0xFF007AFF)
@@ -237,9 +240,9 @@ internal fun TodoItemRow(item: TodoItem, shimmerProgress: Float) {
             }
             Text(
                 text  = when (item.status) {
-                    TodoStatus.COMPLETED   -> "Completed"
-                    TodoStatus.IN_PROGRESS -> "In progress"
-                    TodoStatus.PENDING     -> "Pending"
+                    TodoStatus.COMPLETED   -> stringResource(R.string.completed)
+                    TodoStatus.IN_PROGRESS -> stringResource(R.string.in_progress)
+                    TodoStatus.PENDING     -> stringResource(R.string.pending)
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = when (item.status) {

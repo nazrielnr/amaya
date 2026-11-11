@@ -1,5 +1,9 @@
 package com.amaya.intelligence.ui.screens.agent.local
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,15 +59,15 @@ fun LocalAgentListScreen(
     var instructions by remember { mutableStateOf("") }
 
     Box(Modifier.fillMaxSize()) {
-        AmayaScaffold("AI Agents", snackbarHostState, onNavigateBack) {
+        AmayaScaffold(stringResource(R.string.ai_agents), snackbarHostState, onNavigateBack) {
             if (groups.isEmpty()) {
                 SettingsEmptyState(
-                    title = "No agent groups yet",
-                    subtitle = "Create a group, then add specialized agents.",
+                    title = stringResource(R.string.no_agent_groups_yet),
+                    subtitle = stringResource(R.string.create_a_group_then_add_specialized_agents),
                     icon = Icons.Default.Groups,
                     modifier = Modifier.padding(top = AmayaGroupedSettingsTokens.emptyStateScreenTopSpacing)
                 )
-            } else AmayaSection("Agent Groups") {
+            } else AmayaSection(stringResource(R.string.agent_groups)) {
                 groups.forEach { group ->
                     val count = agents.count { it.groupId == group.id }
                     Card(onClick = { onOpenGroup(group) }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
@@ -74,9 +78,9 @@ fun LocalAgentListScreen(
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Tag, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("Group ID ${group.id}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.group_id_label, group.id), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text("$count agent${if (count == 1) "" else "s"} · ${group.workspacePath}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(pluralStringResource(R.plurals.agents_in_workspace, count, count, group.workspacePath), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -84,8 +88,8 @@ fun LocalAgentListScreen(
         }
         ExtendedFloatingActionButton(
             onClick = { creatingGroup = true },
-            icon = { Icon(Icons.Default.Add, "Add agent group") },
-            text = { Text("Group") },
+            icon = { Icon(Icons.Default.Add, stringResource(R.string.add_agent_group)) },
+            text = { Text(stringResource(R.string.group)) },
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             elevation = FloatingActionButtonDefaults.elevation(4.dp),
@@ -98,13 +102,13 @@ fun LocalAgentListScreen(
 
     if (creatingGroup) AlertDialog(
         onDismissRequest = { creatingGroup = false },
-        title = { Text("New agent group") },
+        title = { Text(stringResource(R.string.new_agent_group)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Group name") }, singleLine = true)
-                OutlinedTextField(instructions, { instructions = it }, Modifier.fillMaxWidth(), label = { Text("Shared instructions") }, minLines = 3)
+                OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.group_name)) }, singleLine = true)
+                OutlinedTextField(instructions, { instructions = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.shared_instructions)) }, minLines = 3)
                 OutlinedButton(onClick = onSelectWorkspace, modifier = Modifier.fillMaxWidth()) {
-                    Text(selectedWorkspace ?: "Select workspace")
+                    Text(selectedWorkspace ?: stringResource(R.string.select_workspace))
                 }
             }
         },
@@ -112,8 +116,8 @@ fun LocalAgentListScreen(
             TextButton(
                 onClick = { onCreateGroup(name.trim(), instructions.trim(), selectedWorkspace.orEmpty()); creatingGroup = false },
                 enabled = name.isNotBlank() && !selectedWorkspace.isNullOrBlank()
-            ) { Text("Create") }
+            ) { Text(stringResource(R.string.create)) }
         },
-        dismissButton = { TextButton(onClick = { creatingGroup = false }) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = { creatingGroup = false }) { Text(stringResource(R.string.cancel)) } }
     )
 }

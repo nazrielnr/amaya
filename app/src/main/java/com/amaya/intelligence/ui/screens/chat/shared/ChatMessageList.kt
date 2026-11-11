@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.chat.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -422,7 +425,7 @@ private fun ChatScrollToBottomButton(
             ) {
                 Icon(
                     Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Scroll to bottom",
+                    contentDescription = stringResource(R.string.scroll_to_bottom),
                     modifier = Modifier.size(20.dp)
                 )
             }

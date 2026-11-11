@@ -31,6 +31,9 @@
 - If the right location is unclear, trace the nearest related modules, controllers, services, or mappers before editing.
 - Before wrapping up, crosscheck the touched area's git diff and nearby recent commits.
 
+## Localization
+- Android UI uses English default resources and Simplified Chinese resources under `app/src/main/res/`; see `app/AGENTS.md` for locale maintenance.
+
 ## Area Routing
 - Extension work belongs under `amaya-remote-extension/AGENTS.md`.
 - Android-wide work belongs under `app/AGENTS.md`.
@@ -107,3 +110,5 @@ amaya/
 - `scripts/audit-android-code.py`: reusable Python inventory for large files, long lines, dead-code/import candidates, package/manifest drift, exact duplicate blocks, hardcoded literals, stale markers, and empty directories.
 - `scripts/map-android-filetree.py`: deterministic Android text-file tree with per-file line counts; output: `docs/local/audits/ANDROID-FILETREE-LINE-MAP.md`.
 - Deferred remote/bridge work: see `docs/local/audits/VISION-HOLD.md`; focus audits on local/core paths until the product direction is explicit.
+
+- Local attachment selection and Chat/Project conversation renaming are documented in `app/AGENTS.md`; these fixes do not change provider protocols or schemas.

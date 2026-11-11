@@ -1,5 +1,7 @@
 package com.amaya.intelligence.ui.activities.shared
 
+import com.amaya.intelligence.R
+
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -47,21 +49,21 @@ class LocalReferenceListActivity : AppCompatActivity() {
                 LaunchedEffect(message.value) { message.value?.let { snackbarHostState.showSnackbar(it); message.value = null } }
                 val items by paths
                 ReferenceListScreen(
-                    title = when (ownerType) { "project" -> "Project References"; "agent_group" -> "Shared References"; else -> "Agent References" },
+                    title = when (ownerType) { "project" -> getString(R.string.project_references); "agent_group" -> getString(R.string.shared_references); else -> getString(R.string.agent_references) },
                     paths = items,
                     snackbarHostState = snackbarHostState,
                     onNavigateBack = { finish() },
                     onAdd = { picker.launch(arrayOf("text/*")) },
                     onAddManual = { name, content -> lifecycleScope.launch {
                         repository.saveManual(ownerType, ownerId, name, content)
-                            .onSuccess { append(it); refresh(); message.value = "Saved" }
-                            .onFailure { message.value = "Save failed: ${it.message}" }
+                            .onSuccess { append(it); refresh(); message.value = getString(R.string.saved) }
+                            .onFailure { message.value = getString(R.string.save_failed_detail, it.message.orEmpty()) }
                     } },
                     onDelete = { path -> lifecycleScope.launch {
                         val json = currentPathsJson()
                         repository.remove(ownerType, ownerId, json, path)
-                            .onSuccess { replacePaths(it); refresh(); message.value = "Deleted" }
-                            .onFailure { message.value = "Delete failed: ${it.message}" }
+                            .onSuccess { replacePaths(it); refresh(); message.value = getString(R.string.deleted) }
+                            .onFailure { message.value = getString(R.string.delete_failed_detail, it.message.orEmpty()) }
                     } }
                 )
             }

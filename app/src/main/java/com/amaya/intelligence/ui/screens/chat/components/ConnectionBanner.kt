@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.chat.components
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -10,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.amaya.intelligence.domain.models.ConnectionState
-import com.amaya.intelligence.ui.res.UiStrings
 
 /**
  * Banner showing connection status for remote sessions.
@@ -51,9 +53,9 @@ fun ConnectionBanner(
                 Spacer(Modifier.width(12.dp))
                 Text(
                     text = if (connectionState == ConnectionState.CONNECTING)
-                        UiStrings.Connection.RECONNECTING
+                        stringResource(R.string.reconnecting_to_server)
                     else
-                        UiStrings.Connection.DISCONNECTED,
+                        stringResource(R.string.disconnected_from_server_attempting_to_reconnect),
                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f)

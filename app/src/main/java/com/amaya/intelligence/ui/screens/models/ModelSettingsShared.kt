@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.models
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,7 +31,7 @@ import com.amaya.intelligence.ui.screens.amaya.IosAmayaColors
 fun InlineError(message: String) {
     Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.errorContainer) {
         Column(Modifier.fillMaxWidth().padding(14.dp)) {
-            Text("Could Not Complete Action", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onErrorContainer)
+            Text(stringResource(R.string.could_not_complete_action), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onErrorContainer)
             Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
         }
     }

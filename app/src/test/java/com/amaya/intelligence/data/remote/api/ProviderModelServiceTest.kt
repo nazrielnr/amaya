@@ -1,8 +1,14 @@
 package com.amaya.intelligence.data.remote.api
 
+import com.amaya.intelligence.R
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.runBlocking
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Protocol
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.OkHttpClient
 
 class ProviderModelServiceTest {
@@ -35,7 +41,8 @@ class ProviderModelServiceTest {
             "http://ai.example.com/v1"
         )
 
-        assertTrue(result.exceptionOrNull()?.message?.contains("HTTPS") == true)
+        assertEquals(R.string.provider_public_https_required,
+            (result.exceptionOrNull() as ProviderConfigurationException).messageRes)
     }
 
     @Test
@@ -45,7 +52,8 @@ class ProviderModelServiceTest {
             "ai.example.com/v1"
         )
 
-        assertTrue(result.isFailure)
+        assertEquals(R.string.provider_valid_url_required,
+            (result.exceptionOrNull() as ProviderConfigurationException).messageRes)
     }
 
     @Test
@@ -86,5 +94,52 @@ class ProviderModelServiceTest {
         )
 
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun readsDeclaredImageInputFromDeepSeekCatalog() = runBlocking {
+        val models = discoverModels("""
+            {"data":[
+                {"id":"deepseek-flash","name":"DeepSeek-V4.1-Flash",
+                 "context_window":1048576,"max_output_tokens":393216,
+                 "input_modalities":["text","image"],"output_modalities":["text"]},
+                {"id":"text-only-model","input_modalities":["text"]}
+            ]}
+        """.trimIndent()).associateBy { it.id }
+
+        val flash = models.getValue("deepseek-flash")
+        assertEquals("DeepSeek-V4.1-Flash", flash.displayName)
+        assertEquals(1048576, flash.contextWindowTokens)
+        assertEquals(393216, flash.maxOutputTokens)
+        assertTrue(flash.supportsImages)
+        assertEquals(false, models.getValue("text-only-model").supportsImages)
+    }
+
+    @Test
+    fun absentModalityMetadataDoesNotDeclareImageInputUnsupported() = runBlocking {
+        val models = discoverModels("""
+            {"data":[
+                {"id":"omitted"},
+                {"id":"empty","input_modalities":[]},
+                {"id":"tools-tag","capabilities":["tools"]},
+                {"id":"vision-tag","capabilities":["vision"]},
+                {"id":"normalized","input_modalities":[" TEXT "," IMAGE "]}
+            ]}
+        """.trimIndent())
+
+        assertEquals(5, models.size)
+        assertTrue(models.all { it.supportsImages })
+    }
+
+    private suspend fun discoverModels(catalog: String): List<ConfiguredModel> {
+        // Return a catalog locally: these tests never contact a model service.
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1)
+                .code(200).message("OK")
+                .body(catalog.toResponseBody("application/json".toMediaType())).build()
+        }.build()
+        return ProviderModelService(client).testAndListModels(
+            "custom_openai_compatible", "https://catalog.example.invalid/v1", ""
+        ).getOrThrow()
     }
 }

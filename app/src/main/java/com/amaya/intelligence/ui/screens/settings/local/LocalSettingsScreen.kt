@@ -1,7 +1,12 @@
 package com.amaya.intelligence.ui.screens.settings.local
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -41,7 +46,6 @@ import com.amaya.intelligence.data.remote.api.McpConfig
 import com.amaya.intelligence.domain.models.UpdateInfo
 import com.amaya.intelligence.ui.components.shared.SettingsBackButton
 import com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet
-import com.amaya.intelligence.ui.res.UiStrings
 import com.amaya.intelligence.ui.screens.amaya.AmayaGroupedSettingsTokens
 import com.amaya.intelligence.ui.screens.amaya.amayaFloatingActionButtonAboveTabBarPadding
 import kotlinx.coroutines.launch
@@ -56,8 +60,8 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 
-enum class SettingsScope(val label: String) {
-    GLOBAL("Global"), PROJECT("Project"), AGENT("Agent")
+enum class SettingsScope(@androidx.annotation.StringRes val label: Int) {
+    GLOBAL(R.string.global), PROJECT(R.string.project), AGENT(R.string.agent)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,6 +79,7 @@ fun LocalSettingsScreen(
     onNavigateToAboutYou: () -> Unit,
     onNavigateToSkills: () -> Unit,
     updateStatus: String?,
+    isDownloadingUpdate: Boolean,
     updateInfo: UpdateInfo?,
     onCheckForUpdate: () -> Unit,
     onInstallUpdate: () -> Unit,
@@ -127,6 +132,7 @@ fun LocalSettingsScreen(
                             onSkills = onNavigateToSkills,
                             onTerminal = onNavigateToTerminal,
                             updateStatus = updateStatus,
+                            isDownloadingUpdate = isDownloadingUpdate,
                             updateInfo = updateInfo,
                             onCheckForUpdate = onCheckForUpdate,
                             onInstallUpdate = onInstallUpdate,
@@ -158,8 +164,8 @@ fun LocalSettingsScreen(
             if (selectedScope != SettingsScope.GLOBAL) {
                 ExtendedFloatingActionButton(
                     onClick = { addSheet = selectedScope },
-                    icon = { Icon(Icons.Default.Add, if (selectedScope == SettingsScope.PROJECT) "Add project" else "Add agent group") },
-                    text = { Text(if (selectedScope == SettingsScope.PROJECT) "Project" else "Agent") },
+                    icon = { Icon(Icons.Default.Add, if (selectedScope == SettingsScope.PROJECT) stringResource(R.string.add_project) else stringResource(R.string.add_agent_group)) },
+                    text = { Text(if (selectedScope == SettingsScope.PROJECT) stringResource(R.string.project) else stringResource(R.string.agent)) },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     elevation = FloatingActionButtonDefaults.elevation(4.dp),
@@ -170,7 +176,7 @@ fun LocalSettingsScreen(
                 )
             }
             TopAppBar(
-                title = { Text("Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 12.dp)) },
+                title = { Text(stringResource(R.string.settings), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 12.dp)) },
                 navigationIcon = { SettingsBackButton(onClick = onNavigateBack) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, scrolledContainerColor = Color.Transparent),
                 modifier = Modifier.statusBarsPadding().padding(horizontal = 12.dp),
@@ -181,18 +187,18 @@ fun LocalSettingsScreen(
 
     when (addSheet) {
         SettingsScope.PROJECT -> AddOwnerSheet(
-            title = "New project",
-            nameLabel = "Project name",
-            instructionsLabel = "Project instructions",
+            title = stringResource(R.string.new_project),
+            nameLabel = stringResource(R.string.project_name),
+            instructionsLabel = stringResource(R.string.project_instructions),
             workspace = selectedProjectWorkspace,
             onSelectWorkspace = onSelectProjectWorkspace,
             onCreate = { name, instructions, workspace -> onCreateProject(name, instructions, workspace); addSheet = null },
             onDismiss = { addSheet = null }
         )
         SettingsScope.AGENT -> AddOwnerSheet(
-            title = "New agent group",
-            nameLabel = "Agent group name",
-            instructionsLabel = "Shared instructions",
+            title = stringResource(R.string.new_agent_group),
+            nameLabel = stringResource(R.string.agent_group_name),
+            instructionsLabel = stringResource(R.string.shared_instructions),
             workspace = selectedAgentWorkspace,
             onSelectWorkspace = onSelectAgentWorkspace,
             onCreate = { name, instructions, workspace -> onCreateAgentGroup(name, instructions, workspace); addSheet = null },
@@ -311,11 +317,11 @@ private fun FloatingPillTabBar(
                                 SettingsScope.PROJECT -> Icons.Default.FolderOpen
                                 SettingsScope.AGENT -> Icons.Default.SmartToy
                             }
-                            Icon(icon, contentDescription = scope.label, tint = contentColor, modifier = Modifier.size(22.dp))
+                            Icon(icon, contentDescription = stringResource(scope.label), tint = contentColor, modifier = Modifier.size(22.dp))
 
                             if (visibilityFraction > 0.01f) {
                                 Text(
-                                    text = scope.label,
+                                    text = stringResource(scope.label),
                                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                                     color = contentColor,
                                     modifier = Modifier
@@ -371,12 +377,12 @@ private fun AddOwnerSheet(
     StandardModalBottomSheet(onDismissRequest = onDismiss, title = title) {
         OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(nameLabel) }, singleLine = true)
         OutlinedTextField(instructions, { instructions = it }, Modifier.fillMaxWidth(), label = { Text(instructionsLabel) }, minLines = 4)
-        OutlinedButton(onClick = onSelectWorkspace, modifier = Modifier.fillMaxWidth()) { Text(workspace ?: "Select workspace") }
+        OutlinedButton(onClick = onSelectWorkspace, modifier = Modifier.fillMaxWidth()) { Text(workspace ?: stringResource(R.string.select_workspace)) }
         Button(
             onClick = { onCreate(name.trim(), instructions.trim(), workspace.orEmpty()) },
             enabled = name.isNotBlank() && !workspace.isNullOrBlank(),
             modifier = Modifier.fillMaxWidth()
-        ) { Text("Create") }
+        ) { Text(stringResource(R.string.create)) }
     }
 }
 
@@ -389,6 +395,7 @@ private fun GlobalSettings(
     onSkills: () -> Unit,
     onTerminal: () -> Unit,
     updateStatus: String?,
+    isDownloadingUpdate: Boolean,
     updateInfo: UpdateInfo?,
     onCheckForUpdate: () -> Unit,
     onInstallUpdate: () -> Unit,
@@ -399,44 +406,50 @@ private fun GlobalSettings(
         val modelCount = settings.connections.sumOf { it.visibleModels.size }
         IosSettingsRow(
             Icons.Default.SmartToy,
-            UiStrings.Settings.MANAGE_MODELS,
-            if (settings.connections.isEmpty()) "No providers configured" else "${settings.connections.size} providers · $modelCount models",
+            stringResource(R.string.manage_models),
+            if (settings.connections.isEmpty()) stringResource(R.string.no_providers_configured) else stringResource(R.string.providers_and_models,
+                pluralStringResource(R.plurals.provider_count, settings.connections.size, settings.connections.size),
+                pluralStringResource(R.plurals.model_count, modelCount, modelCount)),
             true,
             true,
             onModels
         )
     }
-    com.amaya.intelligence.ui.screens.amaya.AmayaSection("Knowledge") {
-        IosSettingsRow(Icons.Default.Person, "About You", "Global saved profile and preferences", true, false, onAboutYou)
+    com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.knowledge)) {
+        IosSettingsRow(Icons.Default.Person, stringResource(R.string.about_you), stringResource(R.string.global_saved_profile_and_preferences), true, false, onAboutYou)
         IosSettingsDivider()
-        IosSettingsRow(Icons.Default.Psychology, "Skills", "Universal reusable workflows", false, true, onSkills)
+        IosSettingsRow(Icons.Default.Psychology, stringResource(R.string.skills), stringResource(R.string.universal_reusable_workflows), false, true, onSkills)
     }
-    com.amaya.intelligence.ui.screens.amaya.AmayaSection("Execution") {
-        IosSettingsRow(Icons.Default.Terminal, "Terminal Policy", "Global trusted and declined commands", true, true, onTerminal)
+    com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.execution)) {
+        IosSettingsRow(Icons.Default.Terminal, stringResource(R.string.terminal_policy), stringResource(R.string.global_trusted_and_declined_commands), true, true, onTerminal)
     }
-    com.amaya.intelligence.ui.screens.amaya.AmayaSection("Integrations") {
+    com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.integrations)) {
         val mcp = remember(settings.mcpConfigJson) { McpConfig.fromJson(settings.mcpConfigJson) }
         val active = mcp.servers.count { it.enabled }
         IosSettingsRow(
             Icons.Default.Extension,
-            UiStrings.Settings.MCP_SERVERS,
-            if (mcp.servers.isEmpty()) UiStrings.Settings.NO_SERVERS_CONFIGURED else "$active of ${mcp.servers.size} active",
+            stringResource(R.string.mcp_servers),
+            if (mcp.servers.isEmpty()) stringResource(R.string.no_servers_configured) else stringResource(R.string.active_mcp_servers, active, mcp.servers.size),
             true,
             true,
             onMcp
         )
     }
-    com.amaya.intelligence.ui.screens.amaya.AmayaSection("Appearance") { IosThemeRow(settings.theme, onSelectTheme) }
+    com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.appearance)) {
+        IosThemeRow(settings.theme, onSelectTheme)
+        IosSettingsDivider()
+        IosLanguageRow()
+    }
     var showUpdateSheet by remember(updateInfo) { mutableStateOf(updateInfo != null) }
-    com.amaya.intelligence.ui.screens.amaya.AmayaSection("About") {
-        IosSettingsRow(Icons.Default.Info, UiStrings.Settings.VERSION, com.amaya.intelligence.BuildConfig.VERSION_NAME, true, false) {
+    com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.about)) {
+        IosSettingsRow(Icons.Default.Info, stringResource(R.string.version), com.amaya.intelligence.BuildConfig.VERSION_NAME, true, false) {
             onSnackbar("Amaya Intelligence v${com.amaya.intelligence.BuildConfig.VERSION_NAME}")
         }
         IosSettingsDivider()
         IosSettingsRow(
             Icons.Default.SystemUpdate,
-            if (updateInfo?.isNewer == true) "View update" else UiStrings.Settings.CHECK_FOR_UPDATE,
-            updateStatus ?: "Check GitHub Releases for a signed APK",
+            if (updateInfo?.isNewer == true) stringResource(R.string.view_update) else stringResource(R.string.check_for_update),
+            updateStatus ?: stringResource(R.string.check_github_releases_for_a_signed_apk),
             false,
             false
         ) {
@@ -446,6 +459,7 @@ private fun GlobalSettings(
             UpdateDetailsSheet(
                 update = updateInfo,
                 status = updateStatus,
+                isDownloadingUpdate = isDownloadingUpdate,
                 onDismiss = { showUpdateSheet = false },
                 onDownload = onInstallUpdate,
                 onCheckAgain = onCheckForUpdate
@@ -453,7 +467,7 @@ private fun GlobalSettings(
         }
         IosSettingsDivider()
         val context = androidx.compose.ui.platform.LocalContext.current
-        IosSettingsRow(Icons.AutoMirrored.Filled.Help, UiStrings.Settings.HELP_FEEDBACK, UiStrings.Settings.HELP_FEEDBACK_SUBTITLE, false, true) {
+        IosSettingsRow(Icons.AutoMirrored.Filled.Help, stringResource(R.string.help_feedback), stringResource(R.string.report_issues_or_suggest_features), false, true) {
             context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/nazrielnr/amaya/pulls")))
         }
     }
@@ -463,30 +477,31 @@ private fun GlobalSettings(
 private fun UpdateDetailsSheet(
     update: UpdateInfo,
     status: String?,
+    isDownloadingUpdate: Boolean,
     onDismiss: () -> Unit,
     onDownload: () -> Unit,
     onCheckAgain: () -> Unit
 ) {
-    StandardModalBottomSheet(onDismissRequest = onDismiss, title = "Update ${update.tagName}") {
+    StandardModalBottomSheet(onDismissRequest = onDismiss, title = stringResource(R.string.update_version_title, update.tagName)) {
         Text(
-            text = if (update.isNewer) "A signed APK is available." else "You already have this release.",
+            text = if (update.isNewer) stringResource(R.string.a_signed_apk_is_available) else stringResource(R.string.you_already_have_this_release),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text("Release notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.release_notes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Text(
-            text = update.changelog.ifBlank { "No release notes were provided." },
+            text = update.changelog.ifBlank { stringResource(R.string.no_release_notes_were_provided) },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         status?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
-        val downloading = status?.startsWith("Downloading update...") == true
+        val downloading = isDownloadingUpdate
         if (update.isNewer) {
             Button(onClick = onDownload, enabled = !downloading, modifier = Modifier.fillMaxWidth()) {
-                Text(if (downloading) "Downloading…" else "Download and install")
+                Text(if (downloading) stringResource(R.string.downloading) else stringResource(R.string.download_and_install))
             }
         }
-        OutlinedButton(onClick = onCheckAgain, enabled = !downloading, modifier = Modifier.fillMaxWidth()) { Text("Check again") }
+        OutlinedButton(onClick = onCheckAgain, enabled = !downloading, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.check_again)) }
     }
 }
 
@@ -497,13 +512,13 @@ private fun ProjectListSettings(
 ) {
     if (projects.isEmpty()) {
         com.amaya.intelligence.ui.components.shared.SettingsEmptyState(
-            title = "No projects yet",
-            subtitle = "Create a project to organize workspace instructions",
+            title = stringResource(R.string.no_projects_yet),
+            subtitle = stringResource(R.string.create_a_project_to_organize_workspace_instructions),
             icon = Icons.Default.FolderOpen,
             modifier = Modifier.padding(top = AmayaGroupedSettingsTokens.emptyStateTabTopSpacing)
         )
     } else {
-        com.amaya.intelligence.ui.screens.amaya.AmayaSection("Projects") {
+        com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.projects)) {
             projects.forEachIndexed { index, project ->
                 IosSettingsRow(Icons.Default.FolderOpen, project.name, project.rootPath, index == 0, false) { onOpenProject(project) }
                 IosSettingsDivider()
@@ -520,19 +535,19 @@ private fun AgentListSettings(
 ) {
     if (groups.isEmpty()) {
         com.amaya.intelligence.ui.components.shared.SettingsEmptyState(
-            title = "No agent groups yet",
-            subtitle = "Create a group, then add specialized agents",
+            title = stringResource(R.string.no_agent_groups_yet),
+            subtitle = stringResource(R.string.create_a_group_then_add_specialized_agents_sentence),
             icon = Icons.Default.Groups,
             modifier = Modifier.padding(top = AmayaGroupedSettingsTokens.emptyStateTabTopSpacing)
         )
     } else {
-        com.amaya.intelligence.ui.screens.amaya.AmayaSection("Agent Groups") {
+        com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.agent_groups)) {
             groups.forEachIndexed { index, group ->
                 val count = agents.count { it.groupId == group.id }
                 IosSettingsRow(
                     Icons.Default.Groups,
                     group.name,
-                    "$count agent${if (count == 1) "" else "s"} · ${group.workspacePath}",
+                    pluralStringResource(R.plurals.agents_in_workspace, count, count, group.workspacePath),
                     index == 0,
                     false
                 ) { onOpenGroup(group) }
@@ -589,14 +604,72 @@ private fun IosThemeRow(selectedTheme: String, onSelectTheme: (String) -> Unit) 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Palette, null, tint = colors.iconTint)
             Spacer(Modifier.width(12.dp))
-            Text(UiStrings.Settings.THEME, style = MaterialTheme.typography.bodyLarge, color = colors.primaryText)
+            Text(stringResource(R.string.theme), style = MaterialTheme.typography.bodyLarge, color = colors.primaryText)
         }
         Spacer(Modifier.height(12.dp))
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            val values = listOf("system" to UiStrings.Settings.SYSTEM, "light" to UiStrings.Settings.LIGHT, "dark" to UiStrings.Settings.DARK)
+            val values = listOf("system" to stringResource(R.string.system), "light" to stringResource(R.string.light), "dark" to stringResource(R.string.dark))
             values.forEachIndexed { index, (value, label) ->
                 SegmentedButton(selected = selectedTheme == value, onClick = { onSelectTheme(value) }, shape = SegmentedButtonDefaults.itemShape(index, values.size)) { Text(label) }
             }
         }
+    }
+}
+
+@Composable
+private fun IosLanguageRow() {
+    var showPicker by remember { mutableStateOf(false) }
+    val selectedLanguage = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()[0]?.language
+    val options = listOf(
+        "" to stringResource(R.string.follow_system),
+        "zh-CN" to stringResource(R.string.chinese_simplified),
+        "en" to stringResource(R.string.english)
+    )
+    val selectedTag = when (selectedLanguage) {
+        "zh" -> "zh-CN"
+        "en" -> "en"
+        else -> ""
+    }
+    IosSettingsRow(
+        Icons.Default.Language,
+        stringResource(R.string.language),
+        options.first { it.first == selectedTag }.second,
+        false,
+        true
+    ) { showPicker = true }
+    if (showPicker) {
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            title = { Text(stringResource(R.string.language)) },
+            text = {
+                Column {
+                    options.forEach { (tag, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = tag == selectedTag,
+                                    role = androidx.compose.ui.semantics.Role.RadioButton,
+                                    onClick = {
+                                        showPicker = false
+                                        androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                                            androidx.core.os.LocaleListCompat.forLanguageTags(tag)
+                                        )
+                                    }
+                                )
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = tag == selectedTag, onClick = null)
+                            Spacer(Modifier.width(12.dp))
+                            Text(label, modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPicker = false }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
     }
 }

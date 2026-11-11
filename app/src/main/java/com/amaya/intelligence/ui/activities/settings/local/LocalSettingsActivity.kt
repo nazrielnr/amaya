@@ -1,5 +1,7 @@
 package com.amaya.intelligence.ui.activities.settings.local
 
+import com.amaya.intelligence.R
+
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -87,6 +89,7 @@ class LocalSettingsActivity : AppCompatActivity() {
                     onNavigateToAboutYou = { LocalMemoryAreaActivity.start(this, MemoryArea.USER) },
                     onNavigateToSkills = { LocalSkillsActivity.start(this) },
                     updateStatus = updateStatus,
+                    isDownloadingUpdate = isDownloadingUpdate,
                     updateInfo = updateInfo,
                     onCheckForUpdate = ::checkForUpdate,
                     onInstallUpdate = ::installUpdate,
@@ -119,7 +122,7 @@ class LocalSettingsActivity : AppCompatActivity() {
     }
 
     private fun checkForUpdate() {
-        updateStatus = "Checking for updates..."
+        updateStatus = getString(R.string.checking_for_updates)
         updateInfo = null
         updateUrl = null
         lifecycleScope.launch {
@@ -127,9 +130,9 @@ class LocalSettingsActivity : AppCompatActivity() {
             updateInfo = update
             updateUrl = update?.takeIf { it.isNewer }?.downloadUrl
             updateStatus = when {
-                update == null -> "Could not check for updates"
-                update.isNewer -> "Version ${update.versionName} is available"
-                else -> "App is up to date"
+                update == null -> getString(R.string.could_not_check_for_updates)
+                update.isNewer -> getString(R.string.version_available, update.versionName)
+                else -> getString(R.string.app_is_up_to_date)
             }
         }
     }
@@ -142,21 +145,21 @@ class LocalSettingsActivity : AppCompatActivity() {
             return
         }
         isDownloadingUpdate = true
-        updateStatus = "Downloading update..."
+        updateStatus = getString(R.string.downloading_update)
         lifecycleScope.launch {
             appUpdateInstaller.download(url) { downloaded, total ->
                 runOnUiThread {
                     updateStatus = if (total != null) {
-                        "Downloading update... ${downloaded * 100 / total}%"
+                        getString(R.string.downloading_update_percent, downloaded * 100 / total)
                     } else {
-                        "Downloading update... ${downloaded / 1024 / 1024} MB"
+                        getString(R.string.downloading_update_mb, downloaded / 1024 / 1024)
                     }
                 }
             }.onSuccess {
-                updateStatus = "Downloaded. Opening Android installer..."
+                updateStatus = getString(R.string.downloaded_opening_android_installer)
                 appUpdateInstaller.install(it)
             }.onFailure {
-                updateStatus = it.message ?: "Could not download update"
+                updateStatus = it.message ?: getString(R.string.could_not_download_update)
             }
             isDownloadingUpdate = false
         }

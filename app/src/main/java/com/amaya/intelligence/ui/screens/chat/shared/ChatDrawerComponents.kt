@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.chat.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
@@ -306,6 +309,7 @@ internal fun IosRowSeparator(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 internal fun IosChildRow(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
@@ -315,16 +319,20 @@ internal fun IosChildRow(
     unread: Boolean = false,
     isLastChild: Boolean = false,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isDark = isSystemInDarkTheme()
     val colors = iosDrawerColors(isDark)
 
     Surface(
-        onClick = onClick,
         color = if (selected) colors.activeBackground else Color.Transparent,
         shape = RoundedCornerShape(0.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth().combinedClickable(
+            onClick = onClick,
+            onLongClick = onLongClick,
+            onLongClickLabel = if (onLongClick != null) stringResource(R.string.conversation_actions) else null
+        )
     ) {
         Row(
             modifier = Modifier

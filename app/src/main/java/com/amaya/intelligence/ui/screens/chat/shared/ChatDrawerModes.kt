@@ -1,5 +1,9 @@
 package com.amaya.intelligence.ui.screens.chat.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -92,7 +96,7 @@ internal fun DrawerSearchContent(
                         decorationBox = { inner ->
                             if (searchQuery.isEmpty()) {
                                 Text(
-                                    "Search conversations",
+                                    stringResource(R.string.search_conversations),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = colors.secondaryText
                                 )
@@ -116,7 +120,7 @@ internal fun DrawerSearchContent(
                 }
             }
             Text(
-                "Cancel",
+                stringResource(R.string.cancel),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clickable { onCancel() }
@@ -136,7 +140,7 @@ internal fun DrawerSearchContent(
                         modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No conversations yet",
+                        Text(stringResource(R.string.no_conversations_yet),
                             style = MaterialTheme.typography.bodyMedium,
                             color = colors.secondaryText)
                     }
@@ -146,7 +150,7 @@ internal fun DrawerSearchContent(
                         modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No results for \"$searchQuery\"",
+                        Text(stringResource(R.string.no_search_results, searchQuery),
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.secondaryText)
                     }
@@ -164,7 +168,7 @@ internal fun DrawerSearchContent(
                                 .padding(horizontal = 14.dp, vertical = 10.dp)
                         ) {
                             HyperText(
-                                text = conv.title.ifEmpty { "New Chat" },
+                                text = conv.title.ifEmpty { stringResource(R.string.new_chat) },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = colors.primaryText.copy(alpha = 0.85f),
                                 modifier = Modifier.fillMaxWidth().fadingEdge()
@@ -270,7 +274,7 @@ internal fun DrawerNormalContent(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Default.Search,
-                        contentDescription = "Search",
+                        contentDescription = stringResource(R.string.search),
                         tint = colors.iconTint,
                         modifier = Modifier.size(20.dp)
                     )
@@ -292,7 +296,7 @@ internal fun DrawerNormalContent(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Default.Settings,
-                        contentDescription = "Settings",
+                        contentDescription = stringResource(R.string.settings),
                         tint = colors.iconTint,
                         modifier = Modifier.size(20.dp)
                     )
@@ -313,7 +317,7 @@ internal fun DrawerNormalContent(
         ) {
             if (showLocalHierarchy) {
                 Text(
-                    "AGENTS",
+                    stringResource(R.string.agents_sentence),
                     style = MaterialTheme.typography.labelSmall,
                     color = colors.secondaryText,
                     modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
@@ -322,7 +326,7 @@ internal fun DrawerNormalContent(
                     if (agentGroups.isEmpty()) {
                         IosRowWithChevron(
                             icon = Icons.Default.SmartToy,
-                            title = "Manage Agents",
+                            title = stringResource(R.string.manage_agents),
                             showChevron = false,
                             onClick = onNavigateToAgents
                         )
@@ -333,7 +337,7 @@ internal fun DrawerNormalContent(
                             IosRowWithChevron(
                                 icon = Icons.Default.Groups,
                                 title = group.name,
-                                subtitle = "${members.size} agents",
+                                subtitle = pluralStringResource(R.plurals.agent_count, members.size, members.size),
                                 expanded = expanded,
                                 selected = assistantMode == com.amaya.intelligence.domain.models.AssistantMode.AGENT && group.name == ownerLabel && !expanded,
                                 onClick = { expandedGroupId = if (expanded) null else group.id }
@@ -351,7 +355,7 @@ internal fun DrawerNormalContent(
                                         IosChildRow(
                                             icon = Icons.Default.SmartToy,
                                             title = agent.name,
-                                            subtitle = agent.role.ifBlank { "Agent" },
+                                            subtitle = agent.role.ifBlank { stringResource(R.string.agent) },
                                             selected = assistantMode == com.amaya.intelligence.domain.models.AssistantMode.AGENT && session?.id?.toString() == activeConversationId,
                                             streaming = session?.id?.let { id -> runningSessions.any { it.conversationId == id } } == true,
                                             unread = session?.id?.let { id -> unreadSet.contains(id) } == true,
@@ -368,7 +372,7 @@ internal fun DrawerNormalContent(
 
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "PROJECTS",
+                    stringResource(R.string.projects_sentence),
                     style = MaterialTheme.typography.labelSmall,
                     color = colors.secondaryText,
                     modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
@@ -377,7 +381,7 @@ internal fun DrawerNormalContent(
                     if (projects.isEmpty()) {
                         IosRowWithChevron(
                             icon = Icons.Default.FolderOpen,
-                            title = "Manage Projects",
+                            title = stringResource(R.string.manage_projects),
                             showChevron = false,
                             onClick = onNavigateToWorkspace
                         )
@@ -389,7 +393,7 @@ internal fun DrawerNormalContent(
                             IosRowWithChevron(
                                 icon = Icons.Default.FolderOpen,
                                 title = project.name,
-                                subtitle = "${sessions.size} chats",
+                                subtitle = pluralStringResource(R.plurals.chat_count, sessions.size, sessions.size),
                                 expanded = expanded,
                                 selected = assistantMode == com.amaya.intelligence.domain.models.AssistantMode.PROJECT && project.name == ownerLabel && !expanded,
                                 onClick = { expandedProjectId = if (expanded) null else project.id }
@@ -403,19 +407,20 @@ internal fun DrawerNormalContent(
                                     // New Chat for this Project
                                     IosChildRow(
                                         icon = Icons.Default.Add,
-                                        title = "New Chat",
+                                        title = stringResource(R.string.new_chat),
                                         selected = false,
                                         isLastChild = sessions.isEmpty(),
                                         onClick = { onOpenProject(project, null) }
                                     )
                                     sessions.forEachIndexed { sIndex, session ->
                                         IosChildRow(
-                                            title = session.title.ifBlank { "New chat" },
+                                            title = session.title.ifBlank { stringResource(R.string.new_chat_sentence) },
                                             selected = session.id.toString() == activeConversationId,
                                             streaming = runningSessions.any { it.conversationId == session.id },
                                             unread = unreadSet.contains(session.id),
                                             isLastChild = sIndex == sessions.lastIndex,
-                                            onClick = { onOpenProject(project, session.id) }
+                                            onClick = { onOpenProject(project, session.id) },
+                                            onLongClick = { onConversationLongClick(session) }
                                         )
                                     }
                                 }
@@ -430,7 +435,7 @@ internal fun DrawerNormalContent(
                     .sortedByDescending { it.updatedAt }
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "CHATS",
+                    stringResource(R.string.chats),
                     style = MaterialTheme.typography.labelSmall,
                     color = colors.secondaryText,
                     modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
@@ -438,7 +443,7 @@ internal fun DrawerNormalContent(
                 IosGroupSurface(modifier = Modifier.fillMaxWidth()) {
                     IosRowWithChevron(
                         icon = Icons.Default.Add,
-                        title = "New Chat",
+                        title = stringResource(R.string.new_chat),
                         showChevron = false,
                         onClick = onOpenChat
                     )
@@ -447,7 +452,7 @@ internal fun DrawerNormalContent(
                         val isActive = conv.id.toString() == activeConversationId
                         IosRowWithChevron(
                             icon = null,
-                            title = conv.title.ifBlank { "New chat" },
+                            title = conv.title.ifBlank { stringResource(R.string.new_chat_sentence) },
                             showChevron = false,
                             selected = isActive,
                             trailingProgress = runningSessions.any { it.conversationId == conv.id },
@@ -461,7 +466,7 @@ internal fun DrawerNormalContent(
                 IosGroupSurface(Modifier.fillMaxWidth()) {
                     if (showOpencodeRow) IosRowWithChevron(Icons.Default.Terminal, "Opencode", onClick = { onNavigateToOpencode?.invoke() })
                     if (showOpencodeRow && showRemoteSessionRow) IosRowSeparator()
-                    if (showRemoteSessionRow) IosRowWithChevron(Icons.Default.Devices, "Remote Session", onClick = onNavigateToRemoteSession)
+                    if (showRemoteSessionRow) IosRowWithChevron(Icons.Default.Devices, stringResource(R.string.remote_session), onClick = onNavigateToRemoteSession)
                 }
             }
         } // End Upper Section
@@ -533,7 +538,7 @@ internal fun DrawerNormalContent(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "No conversations yet",
+                            stringResource(R.string.no_conversations_yet),
                             style = MaterialTheme.typography.bodyMedium,
                             color = colors.secondaryText
                         )

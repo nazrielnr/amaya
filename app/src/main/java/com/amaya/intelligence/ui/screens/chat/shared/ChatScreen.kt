@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.chat.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import com.amaya.intelligence.ui.viewmodels.ChatViewModel
 
 import android.net.Uri
@@ -44,7 +47,6 @@ import com.amaya.intelligence.ui.theme.LocalAmayaGradients
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -78,7 +80,12 @@ fun ChatScreen(
     val effectiveReminderCount = if (activeReminderCount >= 0) activeReminderCount else localReminderCount
     val scrollEventFlow = viewModel.scrollEvent
     val conversationsFlow = viewModel.conversations
-    val ownerLabel by viewModel.ownerLabel.collectAsState()
+    val ownerName by viewModel.ownerLabel.collectAsState()
+    val ownerLabel = ownerName ?: stringResource(when (uiState.assistantMode) {
+        com.amaya.intelligence.domain.models.AssistantMode.CHAT -> R.string.chat
+        com.amaya.intelligence.domain.models.AssistantMode.PROJECT -> R.string.project
+        com.amaya.intelligence.domain.models.AssistantMode.AGENT -> R.string.agent
+    })
     val activeAgentGroupLabel by viewModel.activeAgentGroupLabel.collectAsState()
     val activeAgentMembers by viewModel.activeAgentMembers.collectAsState()
     val activeDelegationTasks by viewModel.activeDelegationTasks.collectAsState()
@@ -134,10 +141,8 @@ fun ChatScreen(
     val inputBarHeight = remember { mutableIntStateOf(0) }
     val conversationKey = uiState.conversationId.orEmpty()
     val composerKey = "${uiState.assistantMode}:${uiState.ownerId}:${uiState.agentId}:${uiState.conversationId}"
-    var attachedFilePath by remember(composerKey) { mutableStateOf<String?>(null) }
-    var attachedImageBase64 by remember(composerKey) { mutableStateOf<String?>(null) }
-    var attachedImageMimeType by remember(composerKey) { mutableStateOf<String?>(null) }
-    var attachedImageName by remember(composerKey) { mutableStateOf<String?>(null) }
+    var attachment by remember(composerKey) { mutableStateOf<ChatAttachment?>(null) }
+    var pickerError by remember(composerKey) { mutableStateOf<String?>(null) }
     var showConversationModeSheet by remember { mutableStateOf(false) }
     var showAgentMenu by remember { mutableStateOf(false) }
     var showDeleteAgentChatSheet by remember { mutableStateOf(false) }
@@ -153,100 +158,25 @@ fun ChatScreen(
 
     val serverIp = uiState.serverIp ?: localIp
 
-    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                val resolvedPath = withContext(Dispatchers.IO) {
-                    var path: String? = null
-                    try {
-                        context.contentResolver.query(uri, arrayOf("_data"), null, null, null)?.use { cursor ->
-                            if (cursor.moveToFirst()) path = cursor.getString(0)
-                        }
-                    } catch (_: Exception) { }
-
-                    if (path == null) {
-                        val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: "file"
-                        val cacheFile = File(context.cacheDir, "attach_$fileName")
-                        try {
-                            context.contentResolver.openInputStream(uri)?.use { input ->
-                                cacheFile.outputStream().use { output -> input.copyTo(output) }
-                            }
-                            path = cacheFile.absolutePath
-                        } catch (_: Exception) { }
-                    }
-                    path
-                }
-                attachedFilePath = resolvedPath
+    fun attachUri(uri: Uri?, imageOnly: Boolean = false) {
+        if (uri == null) return
+        scope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { loadChatAttachment(context, uri, imageOnly) } }
+            result.onSuccess {
+                attachment = it
+                pickerError = null
+            }.onFailure {
+                pickerError = it.message ?: context.getString(R.string.could_not_read_attachment)
             }
         }
     }
-
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                val result = withContext(Dispatchers.IO) {
-                    try {
-                        val contentResolver = context.contentResolver
-                        val rawMimeType = contentResolver.getType(uri) ?: "image/*"
-                        val fileName = uri.lastPathSegment?.substringAfterLast("/") ?: "image"
-
-                        val inputStream = contentResolver.openInputStream(uri)
-                        if (inputStream == null) return@withContext null
-
-                        val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
-                        inputStream.close()
-
-                        if (bitmap == null) return@withContext null
-
-                        val maxDim = 2048
-                        val width = bitmap.width
-                        val height = bitmap.height
-                        val scaledBitmap = if (width > maxDim || height > maxDim) {
-                            val scale = maxDim.toFloat() / maxOf(width, height)
-                            val newWidth = (width * scale).toInt()
-                            val newHeight = (height * scale).toInt()
-                            android.graphics.Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
-                        } else {
-                            bitmap
-                        }
-
-                        val maxBinarySize = 135_000 // ~135KB binary = ~180KB base64
-                        var quality = 85
-                        var bytes: ByteArray
-                        val outputStream = java.io.ByteArrayOutputStream()
-
-                        do {
-                            outputStream.reset()
-                            scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, outputStream)
-                            bytes = outputStream.toByteArray()
-                            quality -= 10
-                        } while (bytes.size > maxBinarySize && quality >= 30)
-
-                        outputStream.close()
-
-                        val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-                        if (scaledBitmap !== bitmap) scaledBitmap.recycle()
-                        bitmap.recycle()
-
-                        Triple(base64, "image/jpeg", fileName.removeSuffix(".png").removeSuffix(".webp") + ".jpg")
-                    } catch (e: Exception) {
-                        com.amaya.intelligence.util.errorLog("ChatScreen", "Image processing failed", e)
-                        null
-                    }
-                }
-                result?.let { (base64, mime, name) ->
-                    attachedImageBase64 = base64
-                    attachedImageMimeType = mime
-                    attachedImageName = name
-                }
-            }
-        }
-    }
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> attachUri(uri) }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> attachUri(uri, imageOnly = true) }
 
     val activeModelKey = uiState.activeModelKey
     val selectedModelItem = uiState.modelOptions.firstOrNull { it.id == activeModelKey }
     val selectedModel = uiState.selectedModel.ifBlank { selectedModelItem?.modelId.orEmpty() }
-    val selectedModelFallbackLabel = config?.selectedModelFallbackLabel ?: "Select Model"
+    val selectedModelFallbackLabel = stringResource(config?.selectedModelFallbackLabel ?: R.string.select_model)
 
     val onToolAccept: ((ToolExecution) -> Unit)? = remember(viewModel) {
         { execution: ToolExecution ->
@@ -299,7 +229,7 @@ fun ChatScreen(
     val activeAgentName = allAgents.firstOrNull { it.id == uiState.agentId }?.name
     val topBarTitle = when (uiState.assistantMode) {
         com.amaya.intelligence.domain.models.AssistantMode.CHAT -> activeConversationTitle?.takeIf { uiState.messages.isNotEmpty() }.orEmpty()
-        com.amaya.intelligence.domain.models.AssistantMode.PROJECT -> activeConversationTitle?.takeIf { uiState.messages.isNotEmpty() } ?: "New Chat"
+        com.amaya.intelligence.domain.models.AssistantMode.PROJECT -> activeConversationTitle?.takeIf { uiState.messages.isNotEmpty() } ?: stringResource(R.string.new_chat)
         com.amaya.intelligence.domain.models.AssistantMode.AGENT -> activeAgentName ?: ownerLabel
     }
     val topBarSubtitle = if (isRemoteMode) null else when (uiState.assistantMode) {
@@ -346,6 +276,7 @@ fun ChatScreen(
                     conversations = conversations,
                     onLoadConversation = doLoadConversation,
                     onDeleteConversation = doDeleteConversation,
+                    onRenameConversation = if (isRemoteMode) null else { id, title -> viewModel.renameConversation(id, title) },
                     onClearConversation = doClearConversation,
                     onNavigateToSettings = onNavigateToSettings,
                     onNavigateToWorkspace = onNavigateToWorkspace,
@@ -500,10 +431,13 @@ fun ChatScreen(
                 connectionState = connectionState,
                 drawerOpen = drawerVisible,
                 bgColor = bgColor,
-                attachedFilePath = attachedFilePath,
-                attachedImageBase64 = attachedImageBase64,
-                attachedImageMimeType = attachedImageMimeType,
-                attachedImageName = attachedImageName,
+                attachedFilePath = (attachment as? ChatAttachment.Document)?.path,
+                attachedImageBase64 = (attachment as? ChatAttachment.Image)?.base64,
+                attachedImageMimeType = (attachment as? ChatAttachment.Image)?.mimeType,
+                attachedImageName = (attachment as? ChatAttachment.Image)?.name,
+                pickerError = pickerError,
+                onClearPickerError = { pickerError = null },
+                onClearFileAttachment = { attachment = null },
                 filePicker = filePicker,
                 imagePicker = imagePicker,
                 keyboardController = keyboardController,
@@ -512,11 +446,7 @@ fun ChatScreen(
                 onSendMessage = doSendMessage,
                 supportsImages = selectedModelItem?.supportsImages == true,
                 onSendMessageWithImage = doSendMessageWithImage,
-                onClearImageAttachment = {
-                    attachedImageBase64 = null
-                    attachedImageMimeType = null
-                    attachedImageName = null
-                },
+                onClearImageAttachment = { attachment = null },
                 onStopGeneration = doStopGeneration,
                 onCancelCompactConversation = doCancelCompactConversation,
                 onNavigateToWorkspace = onNavigateToWorkspace,
@@ -549,16 +479,16 @@ fun ChatScreen(
         var deleteContext by remember(uiState.conversationId) { mutableStateOf(false) }
         StandardModalBottomSheet(
             onDismissRequest = { showDeleteAgentChatSheet = false },
-            title = "Delete chat"
+            title = stringResource(R.string.delete_chat)
         ) {
-            Text("Clear this agent chat from the screen and history.")
+            Text(stringResource(R.string.clear_this_agent_chat_from_the_screen_and_history))
             Row(
                 modifier = Modifier.fillMaxWidth().clickable { deleteContext = !deleteContext },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Checkbox(checked = deleteContext, onCheckedChange = { deleteContext = it })
                 Spacer(Modifier.width(8.dp))
-                Text("Delete context too")
+                Text(stringResource(R.string.delete_context_too))
             }
             Button(
                 onClick = {
@@ -567,11 +497,11 @@ fun ChatScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) { Text("Yes") }
+            ) { Text(stringResource(R.string.yes)) }
             OutlinedButton(
                 onClick = { showDeleteAgentChatSheet = false },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("No") }
+            ) { Text(stringResource(R.string.no)) }
         }
     }
 

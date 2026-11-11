@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.chat.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -44,9 +47,9 @@ data class ChatScreenConfig(
     val showScrollablePills: Boolean,
     val showStreamingIndicator: Boolean,
 
-    val selectedModelFallbackLabel: String = "Select Model",
-    val streamingLabel: String = "Streaming",
-    val idleLabel: String = "Idle",
+    @androidx.annotation.StringRes val selectedModelFallbackLabel: Int = R.string.select_model,
+    @androidx.annotation.StringRes val streamingLabel: Int = R.string.streaming,
+    @androidx.annotation.StringRes val idleLabel: Int = R.string.idle,
     
     // Tool interaction callbacks (remote only)
     val onToolAccept: ((ToolExecution) -> Unit)? = null,
@@ -87,9 +90,9 @@ fun localChatScreenConfig(
     showSessionInfoButton = true,
     showScrollablePills = true,
     showStreamingIndicator = false,
-    selectedModelFallbackLabel = "Select Model",
-    streamingLabel = "Streaming",
-    idleLabel = "Idle",
+    selectedModelFallbackLabel = R.string.select_model,
+    streamingLabel = R.string.streaming,
+    idleLabel = R.string.idle,
     onToolAccept = null,
     onToolDecline = null,
     onBackPressed = onClearConversation,
@@ -129,9 +132,9 @@ fun remoteChatScreenConfig(
     showSessionInfoButton = false,
     showScrollablePills = false,
     showStreamingIndicator = true,
-    selectedModelFallbackLabel = "Select Model",
-    streamingLabel = "Streaming",
-    idleLabel = "Idle",
+    selectedModelFallbackLabel = R.string.select_model,
+    streamingLabel = R.string.streaming,
+    idleLabel = R.string.idle,
     onToolAccept = onToolAccept,
     onToolDecline = onToolDecline,
     onBackPressed = onExit,
@@ -168,9 +171,9 @@ fun windowsBridgeChatScreenConfig(
     onToolDecline = onToolDecline
 ).copy(
     showConversationModeSelector = false,
-    selectedModelFallbackLabel = "Select Model",
-    streamingLabel = "Windows Bridge streaming",
-    idleLabel = "Windows Bridge ready",
+    selectedModelFallbackLabel = R.string.select_model,
+    streamingLabel = R.string.windows_bridge_streaming,
+    idleLabel = R.string.windows_bridge_ready,
     welcomeContent = { onPromptClick, _, _, _, _ ->
         com.amaya.intelligence.ui.components.remote.RemoteWelcomeScreen(
             onPromptClick = onPromptClick,
@@ -212,7 +215,7 @@ fun LocalDrawerFooter(
                     tint = MaterialTheme.colorScheme.primary)
             }
             Spacer(Modifier.width(14.dp))
-            Text("Remote Connection", style = MaterialTheme.typography.bodyLarge,
+            Text(stringResource(R.string.remote_connection), style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f))
@@ -244,7 +247,7 @@ fun LocalDrawerFooter(
                     tint = MaterialTheme.colorScheme.primary)
             }
             Spacer(Modifier.width(14.dp))
-            Text("Settings", style = MaterialTheme.typography.bodyLarge,
+            Text(stringResource(R.string.settings), style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f))
@@ -286,7 +289,7 @@ fun RemoteDrawerFooter(
                     tint = MaterialTheme.colorScheme.error)
             }
             Spacer(Modifier.width(14.dp))
-            Text("Exit Remote Session", style = MaterialTheme.typography.bodyLarge,
+            Text(stringResource(R.string.exit_remote_session), style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.weight(1f))

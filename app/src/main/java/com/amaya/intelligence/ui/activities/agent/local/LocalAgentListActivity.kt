@@ -1,5 +1,7 @@
 package com.amaya.intelligence.ui.activities.agent.local
 
+import com.amaya.intelligence.R
+
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -50,7 +52,7 @@ class LocalAgentListActivity : AppCompatActivity() {
                                     AgentGroupEntity(name = name, instructions = instructions, workspacePath = workspacePath)
                                 )
                                 LocalAgentDetailActivity.startForResult(this@LocalAgentListActivity, id)
-                            }.onFailure { snackbar.showSnackbar("Agent group name already exists") }
+                            }.onFailure { snackbar.showSnackbar(getString(R.string.agent_group_name_already_exists)) }
                         }
                     }
                 )

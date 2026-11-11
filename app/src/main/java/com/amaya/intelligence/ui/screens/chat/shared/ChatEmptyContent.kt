@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.chat.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
@@ -55,8 +58,8 @@ fun ChatEmptyContent(
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Text(
                     text = if (connectionState == ConnectionState.CONNECTING)
-                        "Connecting to Remote Session..."
-                    else "Disconnected. Trying to reconnect...",
+                        stringResource(R.string.connecting_to_remote_session)
+                    else stringResource(R.string.disconnected_trying_to_reconnect),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

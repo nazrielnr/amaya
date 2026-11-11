@@ -577,6 +577,18 @@ class LocalIntelligenceService @Inject constructor(
         }
     }
 
+    override suspend fun renameConversation(id: String, title: String): Boolean = withContext(Dispatchers.Main.immediate) {
+        val conversationId = id.toLongOrNull() ?: return@withContext false
+        val name = title.trim().takeIf(String::isNotBlank) ?: return@withContext false
+        titleJobs.remove(conversationId)?.cancelAndJoin()
+        conversationSaveMutex.withLock {
+            val conversation = conversationDao.getConversationHeader(conversationId) ?: return@withLock false
+            if (conversation.scope != "local" || conversation.assistantMode == AssistantMode.AGENT.name) return@withLock false
+            conversationDao.updateTitle(conversationId, name)
+            true
+        }
+    }
+
     override fun deleteConversation(id: String) {
         val longId = id.toLongOrNull() ?: return
         titleJobs.remove(longId)?.cancel()
@@ -847,9 +859,15 @@ class LocalIntelligenceService @Inject constructor(
         titleJobs.remove(conversationId)?.cancel()
         titleJobs[conversationId] = scope.launch {
             try {
+                val fallback = userMessage.split("\\s+".toRegex()).take(5).joinToString(" ").take(50)
+                val before = conversationDao.getConversationHeader(conversationId) ?: return@launch
+                // A name entered while the first response is running takes precedence.
+                if (before.title != fallback) return@launch
                 val title = aiRepository.generateTitle(userMessage, connection, selectedModel)
-                val conversation = conversationDao.getConversationById(conversationId) ?: return@launch
-                conversationDao.updateTitle(conversationId, title)
+                conversationSaveMutex.withLock {
+                    val current = conversationDao.getConversationHeader(conversationId) ?: return@withLock
+                    if (current.title == before.title) conversationDao.updateTitle(conversationId, title)
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {

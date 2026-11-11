@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.antigravity
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,7 +49,6 @@ import com.amaya.intelligence.ui.components.remote.WindowsBridgeChatPanelViewMod
 import com.amaya.intelligence.ui.components.remote.WindowsBridgeConnectionSetupSheet
 import androidx.compose.ui.graphics.Brush
 import com.amaya.intelligence.ui.components.shared.SettingsBackButton
-import com.amaya.intelligence.ui.res.UiStrings
 import com.amaya.intelligence.ui.res.UiDefaults
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -147,9 +149,9 @@ fun RemoteSessionScreen(
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 val providerName = selectedIde?.let { IdeProviderFactory.getIdeInfo(it)?.displayName }
-                                    ?: UiStrings.App.REMOTE_NAME
+                                    ?: stringResource(R.string.remote)
                                 Text(
-                                    "${UiStrings.Connection.CONNECTED_TO} $providerName",
+                                    "${stringResource(R.string.connected_to)} $providerName",
                                     style = MaterialTheme.typography.bodyLarge.copy(
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 15.sp,
@@ -179,7 +181,7 @@ fun RemoteSessionScreen(
                                 Icon(Icons.AutoMirrored.Filled.Chat, null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    UiStrings.Connection.OPEN_CHAT,
+                                    stringResource(R.string.open_chat),
                                     style = MaterialTheme.typography.labelMedium
                                 )
                             }
@@ -225,7 +227,7 @@ fun RemoteSessionScreen(
                     }
                     val totalRows = allIdes.size + 1 // +1 Windows Bridge
 
-                    RemoteSessionSection(UiStrings.Connection.REMOTE_CONNECTION) {
+                    RemoteSessionSection(stringResource(R.string.remote_connection)) {
                         allIdes.forEachIndexed { index, provider ->
                             val info = provider.info
                             val iconSpec = RemoteIdeIcon.resolve(info.id, isDark)
@@ -270,7 +272,7 @@ fun RemoteSessionScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        UiStrings.Connection.REMOTE_SESSION, 
+                        stringResource(R.string.remote_session),
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(start = 12.dp)
                     ) 
@@ -281,7 +283,7 @@ fun RemoteSessionScreen(
                 actions = {
                     if (isConnected) {
                         com.amaya.intelligence.ui.components.shared.AmayaTopBarTextButton(
-                            text = UiStrings.Connection.DISCONNECT,
+                            text = stringResource(R.string.disconnect),
                             icon = Icons.Default.LinkOff,
                             onClick = { client.disconnect() },
                             textColor = MaterialTheme.colorScheme.error,
@@ -672,7 +674,7 @@ private fun ConnectionSetupSheet(
     var showScanner by remember { mutableStateOf(false) }
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = UiStrings.Connection.CONNECTION_SETUP
+        title = stringResource(R.string.connection_setup)
     ) {
         if (showScanner) {
             QrScannerOverlay(
@@ -689,7 +691,7 @@ private fun ConnectionSetupSheet(
         OutlinedTextField(
             value = ipAddress,
             onValueChange = onIpChange,
-            label = { Text(UiStrings.Connection.IP_ADDRESS) },
+            label = { Text(stringResource(R.string.ip_address)) },
             placeholder = { Text("Enter IP address") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -705,7 +707,7 @@ private fun ConnectionSetupSheet(
         OutlinedTextField(
             value = port,
             onValueChange = onPortChange,
-            label = { Text(UiStrings.Connection.PORT) },
+            label = { Text(stringResource(R.string.port)) },
             placeholder = { Text("Enter port") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -732,7 +734,7 @@ private fun ConnectionSetupSheet(
                 )
             } else {
                 Text(
-                    UiStrings.Connection.CONNECT,
+                    stringResource(R.string.connect_to_workspace),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

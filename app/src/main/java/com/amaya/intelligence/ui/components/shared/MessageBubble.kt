@@ -1,5 +1,9 @@
 package com.amaya.intelligence.ui.components.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 import com.amaya.intelligence.domain.models.*
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
@@ -81,7 +85,7 @@ fun MessageBubble(
                             if (bitmap != null) {
                                 Image(
                                     bitmap = bitmap.asImageBitmap(),
-                                    contentDescription = attachment.fileName.ifBlank { "Attached image" },
+                                    contentDescription = attachment.fileName.ifBlank { stringResource(R.string.attached_image) },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .heightIn(max = 200.dp)
@@ -104,7 +108,7 @@ fun MessageBubble(
                 Column {
                     if (delegationSource != null) {
                         Text(
-                            text = "Delegation from $delegationSource",
+                            text = stringResource(R.string.delegation_from, delegationSource),
                             color = Color.White.copy(alpha = 0.78f),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.padding(start = hPad, top = 9.dp, end = hPad, bottom = 7.dp)
@@ -407,11 +411,11 @@ private fun WorkSummaryCard(
     val toolCount = steps.count {
         it is MessageStep.ToolCall && it.execution.name != "update_todo" && !isThinkingExecution(it.execution)
     }
-    val toolSuffix = if (toolCount > 0) " · $toolCount tool${if (toolCount == 1) "" else "s"}" else ""
+    val toolSuffix = if (toolCount > 0) pluralStringResource(R.plurals.tool_count_suffix, toolCount, toolCount) else ""
     val subtitle = if (isLive) {
-        "Working$toolSuffix"
+        stringResource(R.string.working_with_tools, toolSuffix)
     } else {
-        "Worked for ${formatWorkedDuration(message.timestamp, completedAt)}$toolSuffix"
+        stringResource(R.string.worked_duration, formatWorkedDuration(message.timestamp, completedAt), toolSuffix)
     }
     val shimmerProgress = rememberToolShimmerProgress(isLive)
 

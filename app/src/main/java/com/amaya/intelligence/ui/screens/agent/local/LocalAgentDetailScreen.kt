@@ -1,5 +1,9 @@
 package com.amaya.intelligence.ui.screens.agent.local
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,38 +72,38 @@ fun LocalAgentDetailScreen(
 
     Box(Modifier.fillMaxSize()) {
         AmayaScaffold(group.name, snackbarHostState, onNavigateBack) {
-            AmayaSection("Group") {
-                AmayaNavigationRow(Icons.Default.Badge, "Group name", group.name, onClick = { name = group.name; editSheet = "name" })
+            AmayaSection(stringResource(R.string.group)) {
+                AmayaNavigationRow(Icons.Default.Badge, stringResource(R.string.group_name), group.name, onClick = { name = group.name; editSheet = "name" })
                 AmayaDivider()
-                AmayaNavigationRow(Icons.Default.Description, "Shared instructions", group.instructions.ifBlank { "No shared instructions" }, onClick = { instructions = group.instructions; editSheet = "instructions" })
+                AmayaNavigationRow(Icons.Default.Description, stringResource(R.string.shared_instructions), group.instructions.ifBlank { stringResource(R.string.no_shared_instructions) }, onClick = { instructions = group.instructions; editSheet = "instructions" })
                 AmayaDivider()
-                AmayaNavigationRow(Icons.Default.Folder, "Workspace", group.workspacePath, onSelectWorkspace)
+                AmayaNavigationRow(Icons.Default.Folder, stringResource(R.string.workspace), group.workspacePath, onSelectWorkspace)
                 AmayaDivider()
-                AmayaNavigationRow(Icons.Default.AttachFile, "Shared References", "${referenceCount(group.referencePathsJson)} attached · add text document", onAddReference)
+                AmayaNavigationRow(Icons.Default.AttachFile, stringResource(R.string.shared_references), pluralStringResource(R.plurals.attached_references, referenceCount(group.referencePathsJson), referenceCount(group.referencePathsJson)), onAddReference)
             }
-            AmayaSection("Agents") {
+            AmayaSection(stringResource(R.string.agents)) {
                 if (agents.isEmpty()) {
                     SettingsEmptyState(
-                        title = "No agents in this group",
-                        subtitle = "Add a new role to get started.",
+                        title = stringResource(R.string.no_agents_in_this_group),
+                        subtitle = stringResource(R.string.add_a_new_role_to_get_started),
                         icon = Icons.Default.SmartToy,
-                        buttonText = "Create Agent",
+                        buttonText = stringResource(R.string.create_agent),
                         onButtonClick = { creatingAgent = true },
                         modifier = Modifier.padding(vertical = 24.dp)
                     )
                 } else agents.forEachIndexed { index, agent ->
                     if (index > 0) AmayaDivider()
-                    AmayaNavigationRow(Icons.Default.SmartToy, "${agent.name} · ID ${agent.localId}", agent.role.ifBlank { "No role" }, onClick = { onOpenAgent(agent) })
+                    AmayaNavigationRow(Icons.Default.SmartToy, "${agent.name} · ID ${agent.localId}", agent.role.ifBlank { stringResource(R.string.no_role) }, onClick = { onOpenAgent(agent) })
                 }
             }
             OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("Delete Group", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.delete_group), color = MaterialTheme.colorScheme.error)
             }
         }
         ExtendedFloatingActionButton(
             onClick = { creatingAgent = true },
-            icon = { Icon(Icons.Default.Add, "Add agent") },
-            text = { Text("Agent") },
+            icon = { Icon(Icons.Default.Add, stringResource(R.string.add_agent)) },
+            text = { Text(stringResource(R.string.agent)) },
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             elevation = FloatingActionButtonDefaults.elevation(4.dp),
@@ -111,42 +115,42 @@ fun LocalAgentDetailScreen(
     }
 
     when (editSheet) {
-        "name" -> StandardModalBottomSheet(onDismissRequest = { editSheet = null }, title = "Group name") {
-            com.amaya.intelligence.ui.screens.amaya.AmayaSection("Settings") {
+        "name" -> StandardModalBottomSheet(onDismissRequest = { editSheet = null }, title = stringResource(R.string.group_name)) {
+            com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.settings)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Group name") }, singleLine = true)
-                    Button(onClick = { onSaveGroupName(name.trim()); editSheet = null }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Save Name") }
+                    OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.group_name)) }, singleLine = true)
+                    Button(onClick = { onSaveGroupName(name.trim()); editSheet = null }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.save_name)) }
                 }
             }
         }
-        "instructions" -> StandardModalBottomSheet(onDismissRequest = { editSheet = null }, title = "Shared instructions") {
-            com.amaya.intelligence.ui.screens.amaya.AmayaSection("Settings") {
+        "instructions" -> StandardModalBottomSheet(onDismissRequest = { editSheet = null }, title = stringResource(R.string.shared_instructions)) {
+            com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.settings)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedTextField(instructions, { instructions = it }, Modifier.fillMaxWidth(), label = { Text("Instructions") }, minLines = 5)
-                    Button(onClick = { onSaveGroupInstructions(instructions.trim()); editSheet = null }, modifier = Modifier.fillMaxWidth()) { Text("Save Instructions") }
+                    OutlinedTextField(instructions, { instructions = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.instructions)) }, minLines = 5)
+                    Button(onClick = { onSaveGroupInstructions(instructions.trim()); editSheet = null }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.save_instructions)) }
                 }
             }
         }
         null -> Unit
     }
 
-    if (creatingAgent) StandardModalBottomSheet(onDismissRequest = { creatingAgent = false }, title = "New agent") {
-        com.amaya.intelligence.ui.screens.amaya.AmayaSection("Agent Details") {
+    if (creatingAgent) StandardModalBottomSheet(onDismissRequest = { creatingAgent = false }, title = stringResource(R.string.new_agent)) {
+        com.amaya.intelligence.ui.screens.amaya.AmayaSection(stringResource(R.string.agent_details)) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(agentName, { agentName = it }, Modifier.fillMaxWidth(), label = { Text("Agent name") }, singleLine = true)
-                OutlinedTextField(role, { role = it }, Modifier.fillMaxWidth(), label = { Text("Role") }, singleLine = true)
-                OutlinedTextField(agentInstructions, { agentInstructions = it }, Modifier.fillMaxWidth(), label = { Text("Instructions") }, minLines = 4)
-                Button(onClick = { onCreateAgent(agentName.trim(), role.trim(), agentInstructions.trim()); creatingAgent = false }, enabled = agentName.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Add Agent") }
+                OutlinedTextField(agentName, { agentName = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.agent_name)) }, singleLine = true)
+                OutlinedTextField(role, { role = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.role)) }, singleLine = true)
+                OutlinedTextField(agentInstructions, { agentInstructions = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.instructions)) }, minLines = 4)
+                Button(onClick = { onCreateAgent(agentName.trim(), role.trim(), agentInstructions.trim()); creatingAgent = false }, enabled = agentName.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.add_agent_sentence)) }
             }
         }
     }
 
     if (confirmDelete) AlertDialog(
         onDismissRequest = { confirmDelete = false },
-        title = { Text("Delete ${group.name}?") },
-        text = { Text("All agents, delegation tasks, group conversations, and imported references will be deleted. Workspace files stay unchanged.") },
-        confirmButton = { TextButton(onClick = { confirmDelete = false; onDeleteGroup() }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
+        title = { Text(stringResource(R.string.delete_named_item, group.name)) },
+        text = { Text(stringResource(R.string.all_agents_delegation_tasks_group_conversations_and_imported_refe)) },
+        confirmButton = { TextButton(onClick = { confirmDelete = false; onDeleteGroup() }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } }
     )
 }
 

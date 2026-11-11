@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.core.content.FileProvider
+import androidx.core.content.pm.PackageInfoCompat
 import com.amaya.intelligence.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -71,7 +72,7 @@ class AppUpdateInstaller @Inject constructor(
         val archive = context.packageManager.getPackageArchiveInfo(apk.path, PACKAGE_INFO_FLAGS)
             ?: error("Downloaded file is not an Android package")
         check(archive.packageName == context.packageName) { "Update is for a different app" }
-        check(archive.longVersionCode > BuildConfig.VERSION_CODE.toLong()) { "Update is not newer" }
+        check(PackageInfoCompat.getLongVersionCode(archive) > BuildConfig.VERSION_CODE.toLong()) { "Update is not newer" }
         check(signatures(archive).contentEquals(signatures(context.packageManager.getPackageInfo(context.packageName, PACKAGE_INFO_FLAGS)))) {
             "Update is not signed with this app's certificate"
         }

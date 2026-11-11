@@ -28,6 +28,7 @@ interface IntelligenceService {
     fun clearConversation()
     fun loadConversation(id: String)
     fun deleteConversation(id: String)
+    suspend fun renameConversation(id: String, title: String): Boolean = false
     fun clearVisibleHistory(deleteContext: Boolean) {}
     fun compactConversation(focus: String = "") {}
     fun cancelCompactConversation() {}

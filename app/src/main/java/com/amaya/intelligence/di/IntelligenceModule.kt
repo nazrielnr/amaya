@@ -121,6 +121,7 @@ object IntelligenceModule {
             override fun clearConversation() = active.clearConversation()
             override fun loadConversation(id: String) = active.loadConversation(id)
             override fun deleteConversation(id: String) = active.deleteConversation(id)
+            override suspend fun renameConversation(id: String, title: String) = active.renameConversation(id, title)
             override fun clearVisibleHistory(deleteContext: Boolean) = active.clearVisibleHistory(deleteContext)
             override fun compactConversation(focus: String) = active.compactConversation(focus)
             override fun cancelCompactConversation() = active.cancelCompactConversation()

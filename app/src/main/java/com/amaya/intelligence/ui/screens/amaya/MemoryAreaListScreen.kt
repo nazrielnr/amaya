@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.amaya
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -84,7 +87,7 @@ fun MemoryAreaListScreen(
             }
             item {
                 if (records.isNotEmpty()) {
-                    AmayaSection("Saved") {
+                    AmayaSection(stringResource(R.string.saved)) {
                         records.forEachIndexed { index, record ->
                             MemoryRecordCard(record = record, colors = colors, onDelete = { deleting = record })
                             if (index < records.lastIndex) AmayaDivider()
@@ -92,8 +95,8 @@ fun MemoryAreaListScreen(
                     }
                 } else {
                     com.amaya.intelligence.ui.components.shared.SettingsEmptyState(
-                        title = "No saved items",
-                        subtitle = if (area == MemoryArea.PROJECT && state.workspacePath == null) "Select a workspace first" else "Add a memory to get started",
+                        title = stringResource(R.string.no_saved_items),
+                        subtitle = if (area == MemoryArea.PROJECT && state.workspacePath == null) stringResource(R.string.select_a_workspace_first) else stringResource(R.string.add_a_memory_to_get_started),
                         icon = if (area == MemoryArea.PROJECT) androidx.compose.material.icons.Icons.Default.FolderOpen else androidx.compose.material.icons.Icons.Default.Person,
                         modifier = Modifier.padding(top = AmayaGroupedSettingsTokens.emptyStateListTopSpacing)
                     )
@@ -106,7 +109,7 @@ fun MemoryAreaListScreen(
         TopAppBar(
             title = {
                 Text(
-                    area.title,
+                    stringResource(if (area == MemoryArea.USER) R.string.about_you else R.string.project_memory),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(start = AmayaGroupedSettingsTokens.topBarTitleStartPadding),
                     fontWeight = FontWeight.SemiBold
@@ -129,8 +132,8 @@ fun MemoryAreaListScreen(
         if (showFab) {
             androidx.compose.material3.ExtendedFloatingActionButton(
                 onClick = { showAddSheet = true },
-                icon = { androidx.compose.material3.Icon(Icons.Default.Add, "Add Memory") },
-                text = { androidx.compose.material3.Text("Memory") },
+                icon = { androidx.compose.material3.Icon(Icons.Default.Add, stringResource(R.string.add_memory)) },
+                text = { androidx.compose.material3.Text(stringResource(R.string.memory)) },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(4.dp),
@@ -151,10 +154,10 @@ fun MemoryAreaListScreen(
     }
     deleting?.let { record -> androidx.compose.material3.AlertDialog(
         onDismissRequest = { deleting = null },
-        title = { Text("Delete memory?") },
+        title = { Text(stringResource(R.string.delete_memory_sentence)) },
         text = { Text(record.content) },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = { onDelete(record); deleting = null }) { Text("Delete") } },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = { deleting = null }) { Text("Cancel") } }
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { onDelete(record); deleting = null }) { Text(stringResource(R.string.delete)) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } }
     ) }
 }
 
@@ -170,7 +173,7 @@ private fun AddMemorySheet(
 
     com.amaya.intelligence.ui.components.shared.StandardModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Add ${area.title}"
+        title = stringResource(R.string.add_memory_area, stringResource(if (area == MemoryArea.USER) R.string.about_you else R.string.project_memory))
     ) {
         val cancel = { dismiss() }
         val save = { dismiss { onAdd(text) } }
@@ -189,14 +192,14 @@ private fun AddMemorySheet(
             horizontalArrangement = Arrangement.End
         ) {
             Button(onClick = cancel) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
             Spacer(Modifier.width(AmayaGroupedSettingsTokens.rowIconTextGap))
             Button(
                 onClick = save,
                 enabled = text.isNotBlank()
             ) {
-                Text("Save")
+                Text(stringResource(R.string.save))
             }
         }
     }
@@ -231,13 +234,14 @@ private fun MemoryRecordCard(record: MemoryRecord, colors: com.amaya.intelligenc
             }
         }
         IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, "Delete memory", tint = MaterialTheme.colorScheme.error)
+            Icon(Icons.Default.Delete, stringResource(R.string.delete_memory), tint = MaterialTheme.colorScheme.error)
         }
     }
 }
 
+@Composable
 private fun MemoryArea.inputLabel(): String = when (this) {
-    MemoryArea.USER -> "Preference or profile fact"
-    MemoryArea.PROJECT -> "Workspace or project fact"
+    MemoryArea.USER -> stringResource(R.string.preference_or_profile_fact)
+    MemoryArea.PROJECT -> stringResource(R.string.workspace_or_project_fact)
 }
 

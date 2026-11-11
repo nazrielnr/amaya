@@ -1,5 +1,8 @@
 package com.amaya.intelligence.ui.screens.chat.shared
 
+import com.amaya.intelligence.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -44,6 +47,9 @@ fun ChatBottomSection(
     drawerOpen: Boolean,
     bgColor: Color,
     attachedFilePath: String?,
+    onClearFileAttachment: () -> Unit,
+    pickerError: String? = null,
+    onClearPickerError: () -> Unit = {},
     attachedImageBase64: String? = null,
     attachedImageMimeType: String? = null,
     attachedImageName: String? = null,
@@ -74,16 +80,9 @@ fun ChatBottomSection(
     onCompactConversation: (String) -> Unit = {},
     onInputBarHeightChange: (Int) -> Unit
 ) {
-    var attachedPath by remember { mutableStateOf(attachedFilePath) }
-    var currentImageBase64 by remember { mutableStateOf(attachedImageBase64) }
-    var currentImageMimeType by remember { mutableStateOf(attachedImageMimeType) }
-    var currentImageName by remember { mutableStateOf(attachedImageName) }
-    var attachmentError by remember { mutableStateOf<String?>(null) }
-
-    // Sync with parent state changes
-    LaunchedEffect(attachedImageBase64) { currentImageBase64 = attachedImageBase64 }
-    LaunchedEffect(attachedImageMimeType) { currentImageMimeType = attachedImageMimeType }
-    LaunchedEffect(attachedImageName) { currentImageName = attachedImageName }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var attachmentError by remember(uiState.assistantMode, uiState.ownerId, uiState.agentId, uiState.conversationId) { mutableStateOf<String?>(null) }
+    val displayedAttachmentError = pickerError ?: attachmentError
 
     Column(
         modifier = modifier
@@ -106,7 +105,7 @@ fun ChatBottomSection(
                 .fillMaxWidth()
                 .onSizeChanged { onInputBarHeightChange(it.height) }
         ) {
-            AnimatedVisibility(visible = attachmentError != null) {
+            AnimatedVisibility(visible = displayedAttachmentError != null) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -115,8 +114,8 @@ fun ChatBottomSection(
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Error, null, tint = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.width(12.dp))
-                        Text(attachmentError.orEmpty(), Modifier.weight(1f), color = MaterialTheme.colorScheme.onErrorContainer)
-                        IconButton(onClick = { attachmentError = null }) { Icon(Icons.Default.Close, "Dismiss") }
+                        Text(displayedAttachmentError.orEmpty(), Modifier.weight(1f), color = MaterialTheme.colorScheme.onErrorContainer)
+                        IconButton(onClick = { attachmentError = null; onClearPickerError() }) { Icon(Icons.Default.Close, stringResource(R.string.dismiss)) }
                     }
                 }
             }
@@ -132,7 +131,7 @@ fun ChatBottomSection(
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                text = error.title,
+                                text = stringResource(R.string.could_not_complete_action),
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 style = MaterialTheme.typography.titleSmall
                             )
@@ -164,7 +163,7 @@ fun ChatBottomSection(
                         Spacer(Modifier.width(12.dp))
                         val sessionName = uiState.sessionMode.displayName()
                         Text(
-                            text = if (connectionState == ConnectionState.CONNECTING) "Reconnecting to $sessionName server..." else "Disconnected from $sessionName server. Attempting to reconnect...",
+                            text = if (connectionState == ConnectionState.CONNECTING) stringResource(R.string.reconnecting_named_server, sessionName) else stringResource(R.string.disconnected_named_server, sessionName),
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f)
@@ -179,18 +178,13 @@ fun ChatBottomSection(
                 isStreaming = uiState.isStreaming,
                 isCompressing = uiState.isCompressing,
                 isAutoCompacting = uiState.isAutoCompacting,
-                attachedFilePath = attachedPath,
-                attachedImageBase64 = currentImageBase64,
-                attachedImageName = currentImageName,
+                attachedFilePath = attachedFilePath,
+                attachedImageBase64 = attachedImageBase64,
+                attachedImageName = attachedImageName,
                 onAttachFile = { filePicker.launch("*/*") },
                 onAttachImage = if (supportsImages) ({ imagePicker?.launch("image/*") }) else null,
-                onClearAttachment = { attachedPath = null },
-                onClearImageAttachment = {
-                    currentImageBase64 = null
-                    currentImageMimeType = null
-                    currentImageName = null
-                    onClearImageAttachment()
-                },
+                onClearAttachment = onClearFileAttachment,
+                onClearImageAttachment = onClearImageAttachment,
                 conversationMode = uiState.conversationMode,
                 conversationModeLabel = resolveConversationModeLabel(uiState),
                 conversationModeIsFast = resolveConversationModeIsFast(uiState),
@@ -212,16 +206,20 @@ fun ChatBottomSection(
                 onEffortChange = onEffortChange,
                 onCompactConversation = onCompactConversation,
                 onCancelCompactConversation = onCancelCompactConversation,
-                onSendMessage = { text ->
+                onSendMessage = send@{ text ->
+                    if (attachedImageBase64 != null && !supportsImages) {
+                        inputText.value = text
+                        attachmentError = context.getString(R.string.model_does_not_support_images)
+                        return@send
+                    }
+                    attachmentError = null
+                    onClearPickerError()
                     keyboardController?.hide()
-                    val path = attachedPath
-                    val imgBase64 = currentImageBase64
-                    val imgMime = currentImageMimeType
-                    val imgName = currentImageName
-                    attachedPath = null
-                    currentImageBase64 = null
-                    currentImageMimeType = null
-                    currentImageName = null
+                    val path = attachedFilePath
+                    val imgBase64 = attachedImageBase64
+                    val imgMime = attachedImageMimeType
+                    val imgName = attachedImageName
+                    onClearFileAttachment()
                     onClearImageAttachment()
                     scope.launch {
                         when {
@@ -233,7 +231,7 @@ fun ChatBottomSection(
                                 val content = withContext(kotlinx.coroutines.Dispatchers.IO) {
                                     runCatching {
                                         val file = java.io.File(path)
-                                        require(file.isFile && file.length() <= 1_000_000) { "File must be text and at most 1 MB" }
+                                        require(file.isFile && file.length() <= 1_000_000) { context.getString(R.string.file_must_be_text_and_at_most_1_mb) }
                                         file.readText()
                                     }
                                 }
@@ -248,7 +246,7 @@ fun ChatBottomSection(
                                             append("\n</attachment>")
                                         })
                                     },
-                                    onFailure = { attachmentError = it.message ?: "Could not read attachment" }
+                                    onFailure = { attachmentError = it.message ?: context.getString(R.string.could_not_read_attachment) }
                                 )
                             }
                             else -> {
@@ -271,7 +269,7 @@ private fun resolveConversationModeLabel(state: ChatUiState): String? {
 }
 
 private fun resolveConversationModeIsFast(state: ChatUiState): Boolean {
-    // Treat "Build"/"Fast" style modes as execute-immediately. Everything else
+    // Treat "Build"/stringResource(R.string.fast) style modes as execute-immediately. Everything else
     // (Plan/Planning/Architect/Review) maps to the Lightbulb icon.
     val modeId = (state.conversationModeId ?: state.conversationMode.wireValue).lowercase()
     return modeId == "build" || modeId == "fast"
